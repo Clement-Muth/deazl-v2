@@ -1,13 +1,14 @@
 import type { OFFProduct, OFFProductFull } from "@/applications/catalog/domain/entities/catalog";
 
 const OFF_BASE = "https://world.openfoodfacts.org";
+const OFF_SEARCH_BASE = "https://search.openfoodfacts.org";
 const FIELDS = "code,product_name,brands,nutriscore_grade,ecoscore_grade,nova_group,image_thumb_url,categories_tags";
 const FULL_FIELDS = "code,product_name,brands,nutriscore_grade,ecoscore_grade,nova_group,image_front_url,additives_tags,ingredients_text,allergens_tags,nutriments,labels_tags";
 
 interface OFFRawProduct {
   code: string;
   product_name?: string;
-  brands?: string;
+  brands?: string | string[];
   nutriscore_grade?: string;
   ecoscore_grade?: string;
   nova_group?: number;
@@ -15,11 +16,17 @@ interface OFFRawProduct {
   categories_tags?: string[];
 }
 
+function parseBrand(brands: string | string[] | undefined): string | null {
+  if (!brands) return null;
+  if (Array.isArray(brands)) return brands[0]?.trim() || null;
+  return brands.split(",")[0].trim() || null;
+}
+
 function mapProduct(p: OFFRawProduct): OFFProduct {
   return {
     offId: p.code,
     name: p.product_name ?? "",
-    brand: p.brands?.split(",")[0].trim() || null,
+    brand: parseBrand(p.brands),
     category: p.categories_tags?.[0]?.replace(/^en:/, "") ?? null,
     imageUrl: p.image_thumb_url || null,
     nutriscoreGrade: p.nutriscore_grade?.toLowerCase() || null,
@@ -29,7 +36,7 @@ function mapProduct(p: OFFRawProduct): OFFProduct {
 }
 
 export async function searchOFF(query: string): Promise<OFFProduct[]> {
-  const url = `${OFF_BASE}/cgi/search.pl?search_terms=${encodeURIComponent(query)}&json=1&page_size=15&fields=${FIELDS}&search_simple=1&action=process`;
+  const url = `${OFF_SEARCH_BASE}/search?q=${encodeURIComponent(query)}&page_size=15&fields=${FIELDS}&json=1`;
 
   const res = await fetch(url, {
     next: { revalidate: 3600 },
@@ -39,7 +46,7 @@ export async function searchOFF(query: string): Promise<OFFProduct[]> {
   if (!res.ok) return [];
 
   const data = await res.json();
-  return (data.products ?? [])
+  return (data.hits ?? [])
     .filter((p: OFFRawProduct) => p.code && p.product_name)
     .map(mapProduct);
 }
@@ -63,7 +70,7 @@ export async function getOFFProductFull(offId: string): Promise<OFFProductFull |
   return {
     offId,
     name: p.product_name ?? "",
-    brand: p.brands?.split(",")?.[0]?.trim() || null,
+    brand: parseBrand(p.brands),
     imageUrl: p.image_front_url || null,
     nutriscoreGrade: p.nutriscore_grade?.toLowerCase() || null,
     ecoscoreGrade: p.ecoscore_grade?.toLowerCase() || null,

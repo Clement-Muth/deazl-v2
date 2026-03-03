@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getOFFProductFull } from "@/applications/catalog/infrastructure/openFoodFacts";
 import type { OFFProductFull } from "@/applications/catalog/domain/entities/catalog";
+import { projectUpdate } from "next/dist/build/swc/generated-native";
 
 export interface ProductPrice {
   price: number;
@@ -43,7 +44,8 @@ export async function getProductDetails(productId: string): Promise<ProductDetai
   if (!product) return null;
 
   const off = product.off_id ? await getOFFProductFull(product.off_id) : null;
-
+  
+  
   return {
     id: product.id,
     name: product.name,
