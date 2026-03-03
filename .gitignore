@@ -48,3 +48,4 @@ android/
 
 # Lingui compiled catalogs (generated — run `bun run i18n:compile`)
 src/locales/**/*.js
+src/locales/**/*.mjs
