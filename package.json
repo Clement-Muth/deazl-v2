@@ -2,9 +2,9 @@
   "name": "deazl-v2",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "scripts": {
     "dev": "next dev --port=3002",
+    "prebuild": "lingui compile",
     "build": "next build",
     "build:mobile": "next build && cap sync",
     "start": "next start",
@@ -14,8 +14,8 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report",
     "i18n:extract": "lingui extract",
-    "i18n:compile": "lingui compile",
-    "i18n:update": "lingui extract && lingui compile"
+    "i18n:compile": "lingui compile --namespace es",
+    "i18n:update": "lingui extract && lingui compile --namespace es"
   },
   "dependencies": {
     "@capacitor/core": "^8.1.0",

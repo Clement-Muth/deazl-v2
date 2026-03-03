@@ -1,9 +1,9 @@
 import { setupI18n } from "@lingui/core";
 import { type Locale, defaultLocale } from "./i18n";
 
-async function getMessages(locale: Locale) {
-  const { messages } = await import(`../../locales/${locale}/messages`);
-  return messages;
+export async function getMessages(locale: Locale = defaultLocale) {
+  const mod = await import(`../../locales/${locale}/messages`);
+  return (mod.messages ?? mod.default?.messages ?? {}) as Record<string, string>;
 }
 
 export async function getT(locale: Locale = defaultLocale) {

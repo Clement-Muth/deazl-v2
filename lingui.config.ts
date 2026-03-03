@@ -1,8 +1,8 @@
 import { defineConfig } from "@lingui/conf";
 
 export default defineConfig({
-  sourceLocale: "fr",
-  locales: ["fr", "en"],
+  sourceLocale: "en",
+  locales: ["en", "fr"],
   catalogs: [
     {
       path: "<rootDir>/src/locales/{locale}/messages",
@@ -10,4 +10,5 @@ export default defineConfig({
     },
   ],
   format: "po",
+  compileNamespace: "es",
 });

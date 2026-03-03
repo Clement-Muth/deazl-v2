@@ -45,3 +45,6 @@ android/
 /playwright-report/
 /test-results/
 .vercel
+
+# Lingui compiled catalogs (generated — run `bun run i18n:compile`)
+src/locales/**/*.js

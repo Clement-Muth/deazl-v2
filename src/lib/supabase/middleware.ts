@@ -25,30 +25,24 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
   const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/register") || pathname.startsWith("/auth/callback");
   const isOnboardingRoute = pathname.startsWith("/onboarding");
 
-  // Non authentifié → login
   if (!user && !isAuthRoute && !isOnboardingRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  // Authentifié + onboarding non complété → onboarding
-  // if (user && !user.user_metadata?.onboarding_completed && !isOnboardingRoute && !isAuthRoute) {
+  if (user && !user.user_metadata?.onboarding_completed && !isOnboardingRoute && !isAuthRoute) {
     const url = request.nextUrl.clone();
-    return supabaseResponse;
-    // url.pathname = "/onboarding/welcome";
+    url.pathname = "/onboarding/welcome";
     return NextResponse.redirect(url);
-  // }
+  }
 
-  // Authentifié + onboarding complété + sur onboarding → planning
   if (user && user.user_metadata?.onboarding_completed && isOnboardingRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/planning";

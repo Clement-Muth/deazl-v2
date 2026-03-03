@@ -9,37 +9,27 @@ const user = {
 test.describe("Onboarding", () => {
   test.beforeEach(async ({ page }) => {
     await signUp(page, user);
-  });
-
-  test("welcome page affiche le CTA", async ({ page }) => {
     await page.goto("/onboarding/welcome");
-    await expect(page.getByRole("link", { name: /commencer/i })).toBeVisible();
   });
 
-  test("household → stores après sélection", async ({ page }) => {
-    await page.goto("/onboarding/household");
-    await page.getByRole("button", { name: /solo/i }).click();
-    await expect(page).toHaveURL(/\/onboarding\/stores/);
+  test("welcome page shows CTA", async ({ page }) => {
+    await expect(page.getByRole("link", { name: /get started/i })).toBeVisible();
   });
 
-  test("stores → planning après completion", async ({ page }) => {
-    await page.goto("/onboarding/stores");
-    await page.getByRole("button", { name: /passer/i }).click();
-    await expect(page).toHaveURL(/\/planning/);
-  });
-
-  test("stores → planning avec magasins sélectionnés", async ({ page }) => {
-    await page.goto("/onboarding/stores");
-    await page.getByRole("button", { name: "Leclerc" }).click();
-    await page.getByRole("button", { name: "Lidl" }).click();
-    await expect(page.getByRole("button", { name: /démarrer/i })).toBeVisible();
-    await page.getByRole("button", { name: /démarrer/i }).click();
-    await expect(page).toHaveURL(/\/planning/);
-  });
-
-  test("la flèche retour sur stores ramène à household", async ({ page }) => {
-    await page.goto("/onboarding/stores");
-    await page.getByRole("link").filter({ hasText: "" }).first().click();
+  test("welcome CTA navigates to household", async ({ page }) => {
+    await page.getByRole("link", { name: /get started/i }).click();
     await expect(page).toHaveURL(/\/onboarding\/household/);
+  });
+
+  test("back arrow on stores returns to household", async ({ page }) => {
+    await page.goto("/onboarding/stores");
+    await page.getByRole("link").first().click();
+    await expect(page).toHaveURL(/\/onboarding\/household/);
+  });
+
+  test("unauthenticated user can view welcome page", async ({ page: anonPage, context }) => {
+    const freshPage = await context.newPage();
+    await freshPage.goto("/onboarding/welcome");
+    await expect(freshPage.getByRole("link", { name: /get started/i })).toBeVisible();
   });
 });

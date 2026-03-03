@@ -28,7 +28,7 @@ export default async function WelcomePage() {
 
   const features = [
     {
-      label: t(msg`Planifiez vos repas de la semaine`),
+      label: t(msg`Plan your meals for the week`),
       bg: "bg-primary-light",
       icon: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -37,7 +37,7 @@ export default async function WelcomePage() {
       ),
     },
     {
-      label: t(msg`Liste de courses générée automatiquement`),
+      label: t(msg`Shopping list generated automatically`),
       bg: "bg-orange-50",
       icon: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EA580C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -46,7 +46,7 @@ export default async function WelcomePage() {
       ),
     },
     {
-      label: t(msg`Comparaison des prix entre enseignes`),
+      label: t(msg`Price comparison across stores`),
       bg: "bg-red-50",
       icon: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -61,12 +61,12 @@ export default async function WelcomePage() {
 
       <div className="pointer-events-none flex justify-center pt-8">
         <div className="relative h-64 w-80">
-          <Sticker src="/img/broccoli.jpg" alt={t(msg`Brocoli`)} rotate="-rotate-12" style={{ left:  "0",     top: "12px"  }} delay={40}  size={72} />
-          <Sticker src="/img/carrot.jpg"   alt={t(msg`Carotte`)} rotate="rotate-12"  style={{ left: "178px", top:  "4px"  }} delay={80}  size={64} />
-          <Sticker src="/img/avocado.jpg"  alt={t(msg`Avocat`)}  rotate="-rotate-12" style={{ left:  "96px", top: "50px"  }} delay={0}   size={88} />
-          <Sticker src="/img/lemon.jpg"    alt={t(msg`Citron`)}  rotate="rotate-12"  style={{ left:  "20px", top: "150px" }} delay={120} size={64} />
-          <Sticker src="/img/tomato.jpg"   alt={t(msg`Tomate`)}  rotate="-rotate-8"  style={{ left: "200px", top: "150px" }} delay={160} size={80} />
-          <Sticker src="/img/leaf.jpg"     alt={t(msg`Feuille`)} rotate="rotate-18"  style={{ left: "160px", top: "130px" }} delay={200} size={46} />
+          <Sticker src="/img/broccoli.jpg" alt={t(msg`Broccoli`)} rotate="-rotate-12" style={{ left:  "0",     top: "12px"  }} delay={40}  size={72} />
+          <Sticker src="/img/carrot.jpg"   alt={t(msg`Carrot`)}   rotate="rotate-12"  style={{ left: "178px", top:  "4px"  }} delay={80}  size={64} />
+          <Sticker src="/img/avocado.jpg"  alt={t(msg`Avocado`)}  rotate="-rotate-12" style={{ left:  "96px", top: "50px"  }} delay={0}   size={88} />
+          <Sticker src="/img/lemon.jpg"    alt={t(msg`Lemon`)}    rotate="rotate-12"  style={{ left:  "20px", top: "150px" }} delay={120} size={64} />
+          <Sticker src="/img/tomato.jpg"   alt={t(msg`Tomato`)}   rotate="-rotate-8"  style={{ left: "200px", top: "150px" }} delay={160} size={80} />
+          <Sticker src="/img/leaf.jpg"     alt={t(msg`Leaf`)}     rotate="rotate-18"  style={{ left: "160px", top: "130px" }} delay={200} size={46} />
         </div>
       </div>
 
@@ -77,8 +77,8 @@ export default async function WelcomePage() {
             Deazl<span className="text-primary">.</span>
           </h1>
           <p className="mt-3 text-lg font-medium leading-relaxed text-gray-400">
-            {t(msg`Planifiez vos repas.`)}<br />
-            {t(msg`Faites vos courses malin.`)}
+            {t(msg`Plan your meals.`)}<br />
+            {t(msg`Shop smarter.`)}
           </p>
         </div>
 
@@ -102,12 +102,12 @@ export default async function WelcomePage() {
             href="/onboarding/household"
             className="flex w-full items-center justify-between rounded-2xl bg-primary px-6 py-4 text-base font-semibold text-white transition active:scale-[0.98]"
           >
-            <span>{t(msg`Commencer`)}</span>
+            <span>{t(msg`Get started`)}</span>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 12h14M12 5l7 7-7 7"/>
             </svg>
           </Link>
-          <p className="text-center text-xs text-gray-400">{t(msg`Gratuit · Configuration en 2 minutes`)}</p>
+          <p className="text-center text-xs text-gray-400">{t(msg`Free · Set up in 2 minutes`)}</p>
         </div>
 
       </div>

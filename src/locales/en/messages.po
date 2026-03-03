@@ -14,53 +14,53 @@ msgstr ""
 "Plural-Forms: \n"
 
 #: src/app/(onboarding)/onboarding/welcome/page.tsx:66
-msgid "Avocat"
+msgid "Avocado"
 msgstr "Avocado"
 
 #: src/app/(onboarding)/onboarding/welcome/page.tsx:64
-msgid "Brocoli"
+msgid "Broccoli"
 msgstr "Broccoli"
 
 #: src/app/(onboarding)/onboarding/welcome/page.tsx:65
-msgid "Carotte"
+msgid "Carrot"
 msgstr "Carrot"
 
-#: src/app/(onboarding)/onboarding/welcome/page.tsx:67
-msgid "Citron"
-msgstr "Lemon"
-
-#: src/app/(onboarding)/onboarding/welcome/page.tsx:105
-msgid "Commencer"
-msgstr "Get started"
-
-#: src/app/(onboarding)/onboarding/welcome/page.tsx:49
-msgid "Comparaison des prix entre enseignes"
-msgstr "Price comparison across stores"
-
-#: src/app/(onboarding)/onboarding/welcome/page.tsx:81
-msgid "Faites vos courses malin."
-msgstr "Shop smarter."
-
-#: src/app/(onboarding)/onboarding/welcome/page.tsx:69
-msgid "Feuille"
-msgstr "Leaf"
-
 #: src/app/(onboarding)/onboarding/welcome/page.tsx:110
-msgid "Gratuit · Configuration en 2 minutes"
+msgid "Free · Set up in 2 minutes"
 msgstr "Free · Set up in 2 minutes"
 
-#: src/app/(onboarding)/onboarding/welcome/page.tsx:40
-msgid "Liste de courses générée automatiquement"
-msgstr "Shopping list generated automatically"
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:105
+msgid "Get started"
+msgstr "Get started"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:69
+msgid "Leaf"
+msgstr "Leaf"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:67
+msgid "Lemon"
+msgstr "Lemon"
 
 #: src/app/(onboarding)/onboarding/welcome/page.tsx:31
-msgid "Planifiez vos repas de la semaine"
+msgid "Plan your meals for the week"
 msgstr "Plan your meals for the week"
 
 #: src/app/(onboarding)/onboarding/welcome/page.tsx:80
-msgid "Planifiez vos repas."
+msgid "Plan your meals."
 msgstr "Plan your meals."
 
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:49
+msgid "Price comparison across stores"
+msgstr "Price comparison across stores"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:81
+msgid "Shop smarter."
+msgstr "Shop smarter."
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:40
+msgid "Shopping list generated automatically"
+msgstr "Shopping list generated automatically"
+
 #: src/app/(onboarding)/onboarding/welcome/page.tsx:68
-msgid "Tomate"
+msgid "Tomato"
 msgstr "Tomato"

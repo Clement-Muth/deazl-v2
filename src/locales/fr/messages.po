@@ -13,54 +13,41 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
-#: src/app/(onboarding)/onboarding/welcome/page.tsx:66
-msgid "Avocat"
+msgid "Avocado"
 msgstr "Avocat"
 
-#: src/app/(onboarding)/onboarding/welcome/page.tsx:64
-msgid "Brocoli"
+msgid "Broccoli"
 msgstr "Brocoli"
 
-#: src/app/(onboarding)/onboarding/welcome/page.tsx:65
-msgid "Carotte"
+msgid "Carrot"
 msgstr "Carotte"
 
-#: src/app/(onboarding)/onboarding/welcome/page.tsx:67
-msgid "Citron"
-msgstr "Citron"
-
-#: src/app/(onboarding)/onboarding/welcome/page.tsx:105
-msgid "Commencer"
-msgstr "Commencer"
-
-#: src/app/(onboarding)/onboarding/welcome/page.tsx:49
-msgid "Comparaison des prix entre enseignes"
-msgstr "Comparaison des prix entre enseignes"
-
-#: src/app/(onboarding)/onboarding/welcome/page.tsx:81
-msgid "Faites vos courses malin."
-msgstr "Faites vos courses malin."
-
-#: src/app/(onboarding)/onboarding/welcome/page.tsx:69
-msgid "Feuille"
-msgstr "Feuille"
-
-#: src/app/(onboarding)/onboarding/welcome/page.tsx:110
-msgid "Gratuit · Configuration en 2 minutes"
+msgid "Free · Set up in 2 minutes"
 msgstr "Gratuit · Configuration en 2 minutes"
 
-#: src/app/(onboarding)/onboarding/welcome/page.tsx:40
-msgid "Liste de courses générée automatiquement"
-msgstr "Liste de courses générée automatiquement"
+msgid "Get started"
+msgstr "Commencer"
 
-#: src/app/(onboarding)/onboarding/welcome/page.tsx:31
-msgid "Planifiez vos repas de la semaine"
+msgid "Leaf"
+msgstr "Feuille"
+
+msgid "Lemon"
+msgstr "Citron"
+
+msgid "Plan your meals for the week"
 msgstr "Planifiez vos repas de la semaine"
 
-#: src/app/(onboarding)/onboarding/welcome/page.tsx:80
-msgid "Planifiez vos repas."
+msgid "Plan your meals."
 msgstr "Planifiez vos repas."
 
-#: src/app/(onboarding)/onboarding/welcome/page.tsx:68
-msgid "Tomate"
+msgid "Price comparison across stores"
+msgstr "Comparaison des prix entre enseignes"
+
+msgid "Shop smarter."
+msgstr "Faites vos courses malin."
+
+msgid "Shopping list generated automatically"
+msgstr "Liste de courses générée automatiquement"
+
+msgid "Tomato"
 msgstr "Tomate"
