@@ -22,6 +22,8 @@ export interface RecipeIngredient {
   unit: string;
   isOptional: boolean;
   sortOrder: number;
+  productId: string | null;
+  nutriscoreGrade: string | null;
 }
 
 export interface RecipeStep {

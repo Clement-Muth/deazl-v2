@@ -8,7 +8,7 @@ export async function getRecipe(id: string): Promise<Recipe | null> {
     .from("recipes")
     .select(`
       *,
-      recipe_ingredients(*),
+      recipe_ingredients(*, products(id, nutriscore_grade)),
       recipe_steps(*)
     `)
     .eq("id", id)
@@ -38,6 +38,8 @@ export async function getRecipe(id: string): Promise<Recipe | null> {
         unit: string;
         is_optional: boolean;
         sort_order: number;
+        product_id: string | null;
+        products: { id: string; nutriscore_grade: string | null } | null;
       }) => ({
         id: ing.id,
         recipeId: ing.recipe_id,
@@ -46,6 +48,8 @@ export async function getRecipe(id: string): Promise<Recipe | null> {
         unit: ing.unit,
         isOptional: ing.is_optional,
         sortOrder: ing.sort_order,
+        productId: ing.product_id,
+        nutriscoreGrade: ing.products?.nutriscore_grade ?? null,
       })),
     steps: (data.recipe_steps ?? [])
       .sort((a: { step_number: number }, b: { step_number: number }) => a.step_number - b.step_number)

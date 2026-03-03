@@ -4,6 +4,7 @@ import { Trans } from "@lingui/react/macro";
 import { initLinguiFromCookie } from "@/lib/i18n/server";
 import { getRecipe } from "@/applications/recipe/application/useCases/getRecipe";
 import { RecipeDeleteButton } from "@/applications/recipe/ui/components/recipeDeleteButton";
+import { IngredientList } from "@/applications/recipe/ui/components/ingredientList";
 
 interface RecipePageProps {
   params: Promise<{ id: string }>;
@@ -90,21 +91,7 @@ export default async function RecipePage({ params }: RecipePageProps) {
                 <Trans>Ingredients</Trans>
               </h2>
             </div>
-            <ul>
-              {recipe.ingredients.map((ing, i) => (
-                <li
-                  key={ing.id}
-                  className={`flex items-center justify-between gap-3 px-5 py-3.5 ${
-                    i < recipe.ingredients.length - 1 ? "border-b border-black/4" : ""
-                  }`}
-                >
-                  <span className="text-sm text-foreground">{ing.customName}</span>
-                  <span className="shrink-0 text-sm font-medium text-gray-400">
-                    {ing.quantity} {ing.unit}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <IngredientList ingredients={recipe.ingredients} recipeId={recipe.id} />
           </div>
         )}
 
