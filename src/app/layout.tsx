@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { LinguiProvider } from "@/lib/i18n/linguiProvider";
-import { defaultLocale } from "@/lib/i18n/i18n";
-import { getMessages } from "@/lib/i18n/server";
+import { LinguiClientProvider } from "@/lib/i18n/linguiProvider";
+import { getLocale, initLingui, getMessages } from "@/lib/i18n/server";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,14 +24,16 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const messages = await getMessages(defaultLocale);
+  const locale = await getLocale();
+  await initLingui(locale);
+  const messages = await getMessages(locale);
 
   return (
-    <html lang={defaultLocale}>
+    <html lang={locale}>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <LinguiProvider locale={defaultLocale} messages={messages}>
+        <LinguiClientProvider locale={locale} messages={messages}>
           {children}
-        </LinguiProvider>
+        </LinguiClientProvider>
       </body>
     </html>
   );

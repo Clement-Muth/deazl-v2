@@ -1,8 +1,12 @@
-export default function ShoppingPage() {
+import { Trans } from "@lingui/react/macro";
+import { initLinguiFromCookie } from "@/lib/i18n/server";
+
+export default async function ShoppingPage() {
+  await initLinguiFromCookie();
   return (
     <div className="p-4">
-      <h1 className="text-xl font-bold text-gray-900">Liste de courses</h1>
-      <p className="mt-1 text-sm text-gray-500">Vos courses</p>
+      <h1 className="text-xl font-bold text-gray-900"><Trans>Grocery list</Trans></h1>
+      <p className="mt-1 text-sm text-gray-500"><Trans>Your groceries</Trans></p>
     </div>
   );
 }

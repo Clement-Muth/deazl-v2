@@ -1,14 +1,33 @@
-import { setupI18n } from "@lingui/core";
-import { type Locale, defaultLocale } from "./i18n";
+import "server-only";
+import { cache } from "react";
+import { cookies } from "next/headers";
+import { setupI18n, type Messages } from "@lingui/core";
+import { setI18n } from "@lingui/react/server";
+import { type Locale, locales, defaultLocale } from "./i18n";
 
-export async function getMessages(locale: Locale = defaultLocale) {
+const getI18nInstance = cache(async (locale: Locale) => {
   const mod = await import(`../../locales/${locale}/messages`);
-  return (mod.messages ?? mod.default?.messages ?? {}) as Record<string, string>;
+  const messages = mod.messages ?? mod.default?.messages ?? {};
+  return setupI18n({ locale, messages: { [locale]: messages } });
+});
+
+export const getMessages = cache(async (locale: Locale) => {
+  const mod = await import(`../../locales/${locale}/messages`);
+  return (mod.messages ?? mod.default?.messages ?? {}) as Messages;
+});
+
+export async function initLingui(locale: Locale) {
+  const i18n = await getI18nInstance(locale);
+  setI18n(i18n);
+  return i18n;
 }
 
-export async function getT(locale: Locale = defaultLocale) {
-  const messages = await getMessages(locale);
-  const i18n = setupI18n({ locale, messages: { [locale]: messages } });
-  i18n.activate(locale);
-  return i18n.t.bind(i18n);
+export async function getLocale(): Promise<Locale> {
+  const cookieStore = await cookies();
+  const cookieLocale = cookieStore.get("deazl_locale")?.value as Locale | undefined;
+  return cookieLocale && locales.includes(cookieLocale) ? cookieLocale : defaultLocale;
+}
+
+export async function initLinguiFromCookie() {
+  return initLingui(await getLocale());
 }

@@ -12,7 +12,13 @@ export async function signUp(page: Page, user = TEST_USER) {
   await page.getByLabel("Email").fill(user.email);
   await page.getByLabel("Mot de passe").fill(user.password);
   await page.getByRole("button", { name: "Créer mon compte" }).click();
-  await page.waitForURL(/\/(onboarding|planning)/, { timeout: 10000 });
+  await Promise.race([
+    page.waitForURL(/\/(onboarding|planning)/),
+    page.locator("p.text-destructive").waitFor({ timeout: 10000 }),
+  ]);
+  if (!page.url().match(/\/(onboarding|planning)/)) {
+    await signIn(page, user);
+  }
 }
 
 export async function signIn(page: Page, user = TEST_USER) {

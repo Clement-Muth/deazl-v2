@@ -13,41 +13,204 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
+#. placeholder {0}: selected.length
+#: src/app/(onboarding)/onboarding/stores/page.tsx:78
+msgid "{0, plural, one {# store selected} other {# stores selected}}"
+msgstr "{0, plural, one {# magasin sélectionné} other {# magasins sélectionnés}}"
+
+#: src/applications/user/ui/components/auth/authForm.tsx:105
+msgid "Already have an account?"
+msgstr "Déjà un compte ?"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:67
 msgid "Avocado"
 msgstr "Avocat"
 
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:65
 msgid "Broccoli"
 msgstr "Brocoli"
 
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:66
 msgid "Carrot"
 msgstr "Carotte"
 
+#: src/applications/user/ui/components/auth/authForm.tsx:92
+msgid "Continue with Google"
+msgstr "Continuer avec Google"
+
+#: src/app/(onboarding)/onboarding/household/page.tsx:8
+msgid "Couple"
+msgstr "En couple"
+
+#: src/applications/user/ui/components/auth/authForm.tsx:71
+msgid "Create account"
+msgstr "Créer mon compte"
+
+#: src/app/(auth)/register/page.tsx:11
+msgid "Create an account"
+msgstr "Créer un compte"
+
+#: src/applications/user/ui/components/auth/authForm.tsx:98
+msgid "Don't have an account?"
+msgstr "Pas encore de compte ?"
+
+#: src/applications/user/ui/components/auth/authForm.tsx:38
+msgid "Email"
+msgstr "Email"
+
+#: src/app/(onboarding)/onboarding/household/page.tsx:9
+msgid "Family"
+msgstr "Famille"
+
+#: src/applications/user/ui/components/auth/authForm.tsx:27
+msgid "First name"
+msgstr "Prénom"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:111
 msgid "Free · Set up in 2 minutes"
 msgstr "Gratuit · Configuration en 2 minutes"
 
+#: src/applications/user/ui/components/navigation/navBar.tsx:26
+msgid "Fridge"
+msgstr "Frigo"
+
+#: src/app/(app)/pantry/page.tsx:8
+msgid "Fridge & Stock"
+msgstr "Frigo & Stock"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:106
 msgid "Get started"
 msgstr "Commencer"
 
+#: src/app/(app)/shopping/page.tsx:8
+msgid "Grocery list"
+msgstr "Liste de courses"
+
+#: src/app/(onboarding)/onboarding/household/page.tsx:20
+msgid "How many are you<0/>cooking for?"
+msgstr "Pour combien<0/>cuisinez-vous ?"
+
+#: src/app/(onboarding)/onboarding/household/page.tsx:10
+msgid "Large family"
+msgstr "Grande famille"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:70
 msgid "Leaf"
 msgstr "Feuille"
 
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:68
 msgid "Lemon"
 msgstr "Citron"
 
+#: src/applications/user/ui/components/auth/authForm.tsx:68
+#: src/applications/user/ui/components/auth/authForm.tsx:92
+msgid "Loading..."
+msgstr "Chargement..."
+
+#: src/applications/user/ui/components/auth/authForm.tsx:76
+msgid "or"
+msgstr "ou"
+
+#: src/applications/user/ui/components/auth/authForm.tsx:48
+msgid "Password"
+msgstr "Mot de passe"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:32
 msgid "Plan your meals for the week"
 msgstr "Planifiez vos repas de la semaine"
 
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:81
 msgid "Plan your meals."
 msgstr "Planifiez vos repas."
 
+#: src/app/(app)/planning/page.tsx:8
+#: src/applications/user/ui/components/navigation/navBar.tsx:11
+msgid "Planning"
+msgstr "Planning"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:50
 msgid "Price comparison across stores"
 msgstr "Comparaison des prix entre enseignes"
 
+#: src/app/(app)/recipes/page.tsx:8
+#: src/applications/user/ui/components/navigation/navBar.tsx:16
+msgid "Recipes"
+msgstr "Recettes"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:82
 msgid "Shop smarter."
 msgstr "Faites vos courses malin."
 
+#: src/applications/user/ui/components/navigation/navBar.tsx:21
+msgid "Shopping"
+msgstr "Courses"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:41
 msgid "Shopping list generated automatically"
 msgstr "Liste de courses générée automatiquement"
 
+#: src/app/(auth)/login/page.tsx:11
+#: src/applications/user/ui/components/auth/authForm.tsx:70
+#: src/applications/user/ui/components/auth/authForm.tsx:107
+msgid "Sign in"
+msgstr "Se connecter"
+
+#: src/applications/user/ui/components/auth/authForm.tsx:100
+msgid "Sign up"
+msgstr "S'inscrire"
+
+#: src/app/(onboarding)/onboarding/stores/page.tsx:93
+msgid "Skip this step"
+msgstr "Passer cette étape"
+
+#: src/app/(auth)/layout.tsx:22
+msgid "Smart meal planning & grocery management"
+msgstr "Planifiez vos repas, maîtrisez vos courses"
+
+#: src/app/(onboarding)/onboarding/household/page.tsx:7
+msgid "Solo"
+msgstr "Solo"
+
+#: src/app/(onboarding)/onboarding/stores/page.tsx:93
+msgid "Start"
+msgstr "Démarrer"
+
+#: src/app/(onboarding)/_components/onboardingLayoutClient.tsx:12
+msgid "Step 1 of 2"
+msgstr "Étape 1 sur 2"
+
+#: src/app/(onboarding)/_components/onboardingLayoutClient.tsx:13
+msgid "Step 2 of 2"
+msgstr "Étape 2 sur 2"
+
+#: src/app/(onboarding)/onboarding/stores/page.tsx:35
+msgid "To compare prices as accurately as possible."
+msgstr "Pour comparer les prix au plus juste."
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:69
 msgid "Tomato"
 msgstr "Tomate"
+
+#: src/app/(onboarding)/onboarding/household/page.tsx:23
+msgid "We'll adapt your recipe portions accordingly."
+msgstr "On adaptera les portions de vos recettes."
+
+#: src/app/(app)/pantry/page.tsx:9
+msgid "Your food stock"
+msgstr "Vos aliments en stock"
+
+#: src/app/(app)/shopping/page.tsx:9
+msgid "Your groceries"
+msgstr "Vos courses"
+
+#: src/app/(app)/planning/page.tsx:9
+msgid "Your meals for the week"
+msgstr "Vos repas de la semaine"
+
+#: src/app/(app)/recipes/page.tsx:9
+msgid "Your recipes"
+msgstr "Vos recettes"
+
+#: src/app/(onboarding)/onboarding/stores/page.tsx:32
+msgid "Your usual<0/>stores"
+msgstr "Vos magasins<0/>habituels"

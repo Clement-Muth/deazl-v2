@@ -2,31 +2,34 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLingui } from "@lingui/react/macro";
+import { msg } from "@lingui/core/macro";
 
 const navItems = [
   {
     href: "/planning",
-    label: "Planning",
+    label: msg`Planning`,
     paths: ["M3 4h18a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z", "M16 2v4M8 2v4M1 10h22", "M8 14h.01M12 14h.01M16 14h.01"],
   },
   {
     href: "/recipes",
-    label: "Recettes",
+    label: msg`Recipes`,
     paths: ["M12 2a7 7 0 0 1 7 7c0 4-3 6-3 9H8c0-3-3-5-3-9a7 7 0 0 1 7-7z", "M8 18h8", "M9 21h6"],
   },
   {
     href: "/shopping",
-    label: "Courses",
+    label: msg`Shopping`,
     paths: ["M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z", "M3 6h18", "M16 10a4 4 0 0 1-8 0"],
   },
   {
     href: "/pantry",
-    label: "Frigo",
+    label: msg`Fridge`,
     paths: ["M5 2h14a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z", "M5 10h14", "M9 6v2", "M9 14v4"],
   },
-] as const;
+];
 
 export function NavBar() {
+  const { t } = useLingui();
   const pathname = usePathname();
 
   return (
@@ -55,7 +58,7 @@ export function NavBar() {
                 {paths.map((d, i) => <path key={i} d={d} />)}
               </svg>
               <span className={`text-[10px] font-semibold tracking-wide ${isActive ? "text-white" : "text-gray-400"}`}>
-                {label}
+                {t(label)}
               </span>
             </Link>
           );

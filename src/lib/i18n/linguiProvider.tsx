@@ -1,13 +1,22 @@
 "use client";
 
 import { I18nProvider } from "@lingui/react";
-import { i18n } from "@lingui/core";
-import type { ReactNode } from "react";
+import { setupI18n, type Messages } from "@lingui/core";
+import { useMemo } from "react";
 import type { Locale } from "./i18n";
 
-type Messages = Record<string, string>;
-
-export function LinguiProvider({ locale, messages, children }: { locale: Locale; messages: Messages; children: ReactNode }) {
-  i18n.loadAndActivate({ locale, messages });
+export function LinguiClientProvider({
+  locale,
+  messages,
+  children,
+}: {
+  locale: Locale;
+  messages: Messages;
+  children: React.ReactNode;
+}) {
+  const i18n = useMemo(
+    () => setupI18n({ locale, messages: { [locale]: messages } }),
+    [locale]
+  );
   return <I18nProvider i18n={i18n}>{children}</I18nProvider>;
 }

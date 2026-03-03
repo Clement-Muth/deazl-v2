@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useLingui, Trans, Plural } from "@lingui/react/macro";
 import { completeOnboarding } from "@/applications/user/application/useCases/completeOnboarding";
 
 const STORES = [
@@ -9,6 +10,7 @@ const STORES = [
 ];
 
 export default function StoresPage() {
+  const { t } = useLingui();
   const [selected, setSelected] = useState<string[]>([]);
 
   function toggle(store: string) {
@@ -27,10 +29,10 @@ export default function StoresPage() {
 
         <div className="relative mb-8 mt-2">
           <h1 className="text-[28px] font-black leading-tight tracking-tight text-gray-900 animate-fade-up [animation-delay:80ms]">
-            Vos magasins<br />habituels
+            <Trans>Your usual<br />stores</Trans>
           </h1>
           <p className="mt-2 text-sm text-gray-400 animate-fade-up [animation-delay:160ms]">
-            Pour comparer les prix au plus juste.
+            <Trans>To compare prices as accurately as possible.</Trans>
           </p>
         </div>
 
@@ -73,7 +75,11 @@ export default function StoresPage() {
         <div className="bg-white px-6 pb-10 pt-1">
           {selected.length > 0 && (
             <p className="mb-2.5 text-center text-xs font-medium text-gray-400">
-              {selected.length} magasin{selected.length > 1 ? "s" : ""} sélectionné{selected.length > 1 ? "s" : ""}
+              <Plural
+                value={selected.length}
+                one="# store selected"
+                other="# stores selected"
+              />
             </p>
           )}
           <form action={completeOnboarding}>
@@ -84,7 +90,7 @@ export default function StoresPage() {
               type="submit"
               className="flex w-full items-center justify-between rounded-2xl bg-primary px-6 py-4 text-base font-semibold text-white transition active:scale-[0.98]"
             >
-              <span>{selected.length === 0 ? "Passer cette étape" : "Démarrer"}</span>
+              <span>{selected.length === 0 ? t`Skip this step` : t`Start`}</span>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
