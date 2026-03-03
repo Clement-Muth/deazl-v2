@@ -41,14 +41,12 @@ const navItems = [
     ),
   },
   {
-    href: "/pantry",
-    label: msg`Pantry`,
+    href: "/profile",
+    label: msg`Profile`,
     icon: (active: boolean) => (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? "white" : "#9CA3AF"} strokeWidth={active ? "2.2" : "1.8"} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M5 2h14a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" />
-        <line x1="5" y1="10" x2="19" y2="10" />
-        <line x1="9" y1="6" x2="9" y2="8" />
-        <line x1="9" y1="14" x2="9" y2="18" />
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
       </svg>
     ),
   },

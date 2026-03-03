@@ -3,8 +3,10 @@ import { notFound } from "next/navigation";
 import { Trans } from "@lingui/react/macro";
 import { initLinguiFromCookie } from "@/lib/i18n/server";
 import { getRecipe } from "@/applications/recipe/application/useCases/getRecipe";
+import { getRecipePricesByStore } from "@/applications/recipe/application/useCases/getRecipePricesByStore";
 import { RecipeDeleteButton } from "@/applications/recipe/ui/components/recipeDeleteButton";
 import { IngredientList } from "@/applications/recipe/ui/components/ingredientList";
+import { RecipePriceCard } from "@/applications/recipe/ui/components/recipePriceCard";
 
 interface RecipePageProps {
   params: Promise<{ id: string }>;
@@ -13,7 +15,10 @@ interface RecipePageProps {
 export default async function RecipePage({ params }: RecipePageProps) {
   await initLinguiFromCookie();
   const { id } = await params;
-  const recipe = await getRecipe(id);
+  const [recipe, storePrices] = await Promise.all([
+    getRecipe(id),
+    getRecipePricesByStore(id),
+  ]);
 
   if (!recipe) notFound();
 
@@ -104,6 +109,8 @@ export default async function RecipePage({ params }: RecipePageProps) {
             <IngredientList ingredients={recipe.ingredients} recipeId={recipe.id} />
           </div>
         )}
+
+        <RecipePriceCard stores={storePrices} />
 
         {recipe.steps.length > 0 && (
           <div className="overflow-hidden rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm">

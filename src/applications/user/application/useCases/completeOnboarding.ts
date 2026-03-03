@@ -3,20 +3,21 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
-export async function completeOnboarding(formData: FormData) {
+export async function completeOnboarding(storeIds: string[]): Promise<void> {
   const supabase = await createClient();
-  const stores = formData.getAll("stores") as string[];
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
-  const { error } = await supabase.auth.updateUser({
-    data: {
-      favorite_stores: stores,
-      onboarding_completed: true,
-    },
-  });
-
-  if (error) {
-    redirect("/onboarding/stores?error=true");
+  if (storeIds.length > 0) {
+    await supabase
+      .from("user_stores")
+      .upsert(
+        storeIds.map((store_id) => ({ user_id: user.id, store_id })),
+        { onConflict: "user_id,store_id" },
+      );
   }
+
+  await supabase.auth.updateUser({ data: { onboarding_completed: true } });
 
   redirect("/planning");
 }

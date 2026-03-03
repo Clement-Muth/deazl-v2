@@ -4,7 +4,8 @@ import { useState, useRef, useEffect, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { Trans } from "@lingui/react/macro";
 import { reportPrice } from "@/applications/catalog/application/useCases/reportPrice";
-import { STORE_BRANDS, type StoreBrand } from "@/applications/catalog/domain/storeBrands";
+import { getUserStores } from "@/applications/user/application/useCases/getUserStores";
+import type { UserStoreItem } from "@/applications/user/application/useCases/getUserStores";
 
 interface PriceReportSheetProps {
   productId: string;
@@ -24,7 +25,8 @@ export function PriceReportSheet({
   onClose,
 }: PriceReportSheetProps) {
   const [mounted, setMounted] = useState(false);
-  const [selectedStore, setSelectedStore] = useState<StoreBrand | null>(null);
+  const [stores, setStores] = useState<UserStoreItem[]>([]);
+  const [selectedStore, setSelectedStore] = useState<UserStoreItem | null>(null);
   const [price, setPrice] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [unit, setUnit] = useState(defaultUnit);
@@ -37,7 +39,10 @@ export function PriceReportSheet({
   const isDraggingRef = useRef(false);
   const isDismissingRef = useRef(false);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    getUserStores().then(setStores);
+  }, []);
 
   useEffect(() => {
     const sheet = sheetRef.current;
@@ -92,7 +97,7 @@ export function PriceReportSheet({
     }
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     if (!selectedStore) { setError("Sélectionne un magasin"); return; }
@@ -101,7 +106,7 @@ export function PriceReportSheet({
     if (isNaN(priceVal) || priceVal <= 0) { setError("Prix invalide"); return; }
     if (isNaN(qtyVal) || qtyVal <= 0) { setError("Quantité invalide"); return; }
     dismiss();
-    startTransition(async () => { await reportPrice(productId, recipeId, selectedStore, priceVal, qtyVal, unit); });
+    startTransition(async () => { await reportPrice(productId, recipeId, selectedStore.id, priceVal, qtyVal, unit); });
   }
 
   if (!mounted) return null;
@@ -117,7 +122,7 @@ export function PriceReportSheet({
           <div className="flex items-center justify-between px-5 py-3">
             <div>
               <h3 className="text-base font-semibold text-foreground"><Trans>Report a price</Trans></h3>
-              <p className="text-xs text-gray-400 truncate max-w-[220px]">{productName}</p>
+              <p className="text-xs text-gray-400 truncate max-w-55">{productName}</p>
             </div>
             <button
               type="button"
@@ -134,22 +139,28 @@ export function PriceReportSheet({
         <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 pb-8 pt-1">
           <div className="flex flex-col gap-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-400"><Trans>Store</Trans></p>
-            <div className="flex flex-wrap gap-2">
-              {STORE_BRANDS.map((brand) => (
-                <button
-                  key={brand}
-                  type="button"
-                  onClick={() => setSelectedStore(brand)}
-                  className={`rounded-xl px-3.5 py-2 text-sm font-medium transition ${
-                    selectedStore === brand
-                      ? "bg-primary text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
-                >
-                  {brand}
-                </button>
-              ))}
-            </div>
+            {stores.length === 0 ? (
+              <p className="text-sm text-gray-400">
+                <Trans>No stores added yet. Add stores in your profile.</Trans>
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {stores.map((store) => (
+                  <button
+                    key={store.id}
+                    type="button"
+                    onClick={() => setSelectedStore(store)}
+                    className={`rounded-xl px-3.5 py-2 text-sm font-medium transition ${
+                      selectedStore?.id === store.id
+                        ? "bg-primary text-white"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                  >
+                    {store.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col gap-2">
