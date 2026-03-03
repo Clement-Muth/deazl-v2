@@ -19,103 +19,123 @@ export default async function RecipePage({ params }: RecipePageProps) {
   const totalTime = (recipe.prepTimeMinutes ?? 0) + (recipe.cookTimeMinutes ?? 0);
 
   return (
-    <div className="flex flex-col gap-6 p-4">
-      <div className="flex items-center gap-3">
-        <Link
-          href="/recipes"
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-border text-gray-500 transition hover:bg-muted"
-          aria-label="Back"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </Link>
-        <h1 className="flex-1 text-xl font-bold text-foreground leading-snug">{recipe.name}</h1>
-        <Link
-          href={`/recipes/${recipe.id}/edit`}
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-border text-gray-500 transition hover:bg-muted"
-          aria-label="Edit"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-          </svg>
-        </Link>
-      </div>
-
-      <div className="flex flex-wrap gap-3">
-        <div className="flex items-center gap-1.5 rounded-xl bg-muted px-3 py-1.5 text-sm text-gray-600">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-            <circle cx="9" cy="7" r="4" />
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-          </svg>
-          <Trans>{recipe.servings} servings</Trans>
-        </div>
-        {totalTime > 0 && (
-          <div className="flex items-center gap-1.5 rounded-xl bg-muted px-3 py-1.5 text-sm text-gray-600">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
+    <div className="relative min-h-screen bg-linear-to-b from-primary-light via-background to-background">
+      <header className="sticky top-0 z-10 border-b border-black/5 bg-white/70 px-5 pb-3 pt-5 backdrop-blur-xl">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/recipes"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-black/5 text-gray-600 transition hover:bg-black/10 active:scale-[0.94]"
+            aria-label="Back"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
             </svg>
-            {totalTime} min
-          </div>
-        )}
-        {recipe.prepTimeMinutes && (
-          <div className="rounded-xl bg-muted px-3 py-1.5 text-sm text-gray-600">
-            <Trans>Prep: {recipe.prepTimeMinutes} min</Trans>
-          </div>
-        )}
-        {recipe.cookTimeMinutes && (
-          <div className="rounded-xl bg-muted px-3 py-1.5 text-sm text-gray-600">
-            <Trans>Cook: {recipe.cookTimeMinutes} min</Trans>
-          </div>
-        )}
-      </div>
-
-      {recipe.description && (
-        <p className="text-sm text-gray-600 leading-relaxed">{recipe.description}</p>
-      )}
-
-      {recipe.ingredients.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <h2 className="text-base font-semibold text-foreground">
-            <Trans>Ingredients</Trans>
-          </h2>
-          <ul className="flex flex-col gap-2">
-            {recipe.ingredients.map((ing) => (
-              <li key={ing.id} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-white px-4 py-2.5">
-                <span className="text-sm text-foreground">{ing.customName}</span>
-                <span className="text-sm font-medium text-gray-500 shrink-0">
-                  {ing.quantity} {ing.unit}
-                </span>
-              </li>
-            ))}
-          </ul>
+          </Link>
+          <h1 className="flex-1 truncate text-base font-black tracking-tight text-foreground">
+            {recipe.name}
+          </h1>
+          <Link
+            href={`/recipes/${recipe.id}/edit`}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-black/5 text-gray-600 transition hover:bg-black/10 active:scale-[0.94]"
+            aria-label="Edit"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+          </Link>
         </div>
-      )}
+      </header>
 
-      {recipe.steps.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <h2 className="text-base font-semibold text-foreground">
-            <Trans>Steps</Trans>
-          </h2>
-          <ol className="flex flex-col gap-3">
-            {recipe.steps.map((step) => (
-              <li key={step.id} className="flex gap-3">
-                <span className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary mt-0.5">
-                  {step.stepNumber}
-                </span>
-                <p className="text-sm text-gray-700 leading-relaxed">{step.description}</p>
-              </li>
-            ))}
-          </ol>
+      <div className="flex flex-col gap-4 px-4 py-5">
+        <div className="flex flex-wrap gap-2">
+          <span className="flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1.5 text-xs font-medium text-gray-600 shadow-sm ring-1 ring-black/5">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+            <Trans>{recipe.servings} servings</Trans>
+          </span>
+          {totalTime > 0 && (
+            <span className="flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1.5 text-xs font-medium text-gray-600 shadow-sm ring-1 ring-black/5">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              {totalTime} min
+            </span>
+          )}
+          {recipe.prepTimeMinutes ? (
+            <span className="rounded-full bg-white/80 px-3 py-1.5 text-xs font-medium text-gray-600 shadow-sm ring-1 ring-black/5">
+              <Trans>Prep: {recipe.prepTimeMinutes} min</Trans>
+            </span>
+          ) : null}
+          {recipe.cookTimeMinutes ? (
+            <span className="rounded-full bg-white/80 px-3 py-1.5 text-xs font-medium text-gray-600 shadow-sm ring-1 ring-black/5">
+              <Trans>Cook: {recipe.cookTimeMinutes} min</Trans>
+            </span>
+          ) : null}
         </div>
-      )}
 
-      <div className="flex justify-end pt-2">
-        <RecipeDeleteButton id={recipe.id} />
+        {recipe.description && (
+          <p className="text-sm leading-relaxed text-gray-600">{recipe.description}</p>
+        )}
+
+        {recipe.ingredients.length > 0 && (
+          <div className="overflow-hidden rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm">
+            <div className="border-b border-black/5 px-5 py-3.5">
+              <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400">
+                <Trans>Ingredients</Trans>
+              </h2>
+            </div>
+            <ul>
+              {recipe.ingredients.map((ing, i) => (
+                <li
+                  key={ing.id}
+                  className={`flex items-center justify-between gap-3 px-5 py-3.5 ${
+                    i < recipe.ingredients.length - 1 ? "border-b border-black/4" : ""
+                  }`}
+                >
+                  <span className="text-sm text-foreground">{ing.customName}</span>
+                  <span className="shrink-0 text-sm font-medium text-gray-400">
+                    {ing.quantity} {ing.unit}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {recipe.steps.length > 0 && (
+          <div className="overflow-hidden rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm">
+            <div className="border-b border-black/5 px-5 py-3.5">
+              <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400">
+                <Trans>Steps</Trans>
+              </h2>
+            </div>
+            <ol>
+              {recipe.steps.map((step, i) => (
+                <li
+                  key={step.id}
+                  className={`flex gap-4 px-5 py-4 ${
+                    i < recipe.steps.length - 1 ? "border-b border-black/4" : ""
+                  }`}
+                >
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                    {step.stepNumber}
+                  </span>
+                  <p className="text-sm leading-relaxed text-gray-700">{step.description}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+
+        <div className="flex justify-center pt-2 pb-4">
+          <RecipeDeleteButton id={recipe.id} />
+        </div>
       </div>
     </div>
   );
