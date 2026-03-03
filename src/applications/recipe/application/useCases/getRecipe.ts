@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Recipe } from "@/applications/recipe/domain/entities/recipe";
+import type { Recipe, IngredientPrice } from "@/applications/recipe/domain/entities/recipe";
 
 export async function getRecipe(id: string): Promise<Recipe | null> {
   const supabase = await createClient();
@@ -15,6 +15,29 @@ export async function getRecipe(id: string): Promise<Recipe | null> {
     .single();
 
   if (error || !data) return null;
+
+  const productIds = (data.recipe_ingredients ?? [])
+    .map((i: { products: { id: string } | null }) => i.products?.id)
+    .filter(Boolean) as string[];
+
+  const pricesByProductId = new Map<string, IngredientPrice>();
+  if (productIds.length > 0) {
+    const { data: prices } = await supabase
+      .from("latest_prices")
+      .select("product_id, price, quantity, unit, store_name, store_brand")
+      .in("product_id", productIds);
+    for (const p of prices ?? []) {
+      if (!pricesByProductId.has(p.product_id)) {
+        pricesByProductId.set(p.product_id, {
+          price: p.price,
+          quantity: p.quantity,
+          unit: p.unit,
+          storeName: p.store_name,
+          storeBrand: p.store_brand,
+        });
+      }
+    }
+  }
 
   return {
     id: data.id,
@@ -50,6 +73,7 @@ export async function getRecipe(id: string): Promise<Recipe | null> {
         sortOrder: ing.sort_order,
         productId: ing.product_id,
         nutriscoreGrade: ing.products?.nutriscore_grade ?? null,
+        latestPrice: ing.products ? (pricesByProductId.get(ing.products.id) ?? null) : null,
       })),
     steps: (data.recipe_steps ?? [])
       .sort((a: { step_number: number }, b: { step_number: number }) => a.step_number - b.step_number)

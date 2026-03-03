@@ -1,7 +1,8 @@
-import type { OFFProduct } from "@/applications/catalog/domain/entities/catalog";
+import type { OFFProduct, OFFProductFull } from "@/applications/catalog/domain/entities/catalog";
 
 const OFF_BASE = "https://world.openfoodfacts.org";
 const FIELDS = "code,product_name,brands,nutriscore_grade,ecoscore_grade,nova_group,image_thumb_url,categories_tags";
+const FULL_FIELDS = "code,product_name,brands,nutriscore_grade,ecoscore_grade,nova_group,image_front_url,additives_tags,ingredients_text,allergens_tags,nutriments,labels_tags";
 
 interface OFFRawProduct {
   code: string;
@@ -41,6 +42,47 @@ export async function searchOFF(query: string): Promise<OFFProduct[]> {
   return (data.products ?? [])
     .filter((p: OFFRawProduct) => p.code && p.product_name)
     .map(mapProduct);
+}
+
+export async function getOFFProductFull(offId: string): Promise<OFFProductFull | null> {
+  const url = `${OFF_BASE}/api/v0/product/${offId}.json?fields=${FULL_FIELDS}`;
+
+  const res = await fetch(url, {
+    next: { revalidate: 86400 },
+    headers: { "User-Agent": "Deazl/1.0 (contact@deazl.app)" },
+  });
+
+  if (!res.ok) return null;
+
+  const data = await res.json();
+  if (data.status !== 1 || !data.product) return null;
+
+  const p = data.product;
+  const n = p.nutriments ?? {};
+
+  return {
+    offId,
+    name: p.product_name ?? "",
+    brand: p.brands?.split(",")?.[0]?.trim() || null,
+    imageUrl: p.image_front_url || null,
+    nutriscoreGrade: p.nutriscore_grade?.toLowerCase() || null,
+    ecoscoreGrade: p.ecoscore_grade?.toLowerCase() || null,
+    novaGroup: p.nova_group ?? null,
+    ingredientsText: p.ingredients_text || null,
+    allergenTags: p.allergens_tags ?? [],
+    additiveTags: p.additives_tags ?? [],
+    labelTags: p.labels_tags ?? [],
+    nutriments: {
+      energyKcal: n["energy-kcal_100g"] ?? n["energy_100g"] ? Math.round((n["energy_100g"] ?? 0) / 4.184) : null,
+      fat: n["fat_100g"] ?? null,
+      saturatedFat: n["saturated-fat_100g"] ?? null,
+      carbohydrates: n["carbohydrates_100g"] ?? null,
+      sugars: n["sugars_100g"] ?? null,
+      fiber: n["fiber_100g"] ?? null,
+      proteins: n["proteins_100g"] ?? null,
+      salt: n["salt_100g"] ?? null,
+    },
+  };
 }
 
 export async function getOFFProduct(offId: string): Promise<OFFProduct | null> {

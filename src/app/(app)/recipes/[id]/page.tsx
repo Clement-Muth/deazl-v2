@@ -86,10 +86,20 @@ export default async function RecipePage({ params }: RecipePageProps) {
 
         {recipe.ingredients.length > 0 && (
           <div className="overflow-hidden rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm">
-            <div className="border-b border-black/5 px-5 py-3.5">
+            <div className="flex items-center justify-between border-b border-black/5 px-5 py-3.5">
               <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400">
                 <Trans>Ingredients</Trans>
               </h2>
+              {(() => {
+                const total = recipe.ingredients.reduce((sum, ing) => {
+                  return ing.latestPrice ? sum + ing.latestPrice.price : sum;
+                }, 0);
+                return total > 0 ? (
+                  <span className="text-xs font-semibold text-gray-500">
+                    ~{total.toFixed(2)} €
+                  </span>
+                ) : null;
+              })()}
             </div>
             <IngredientList ingredients={recipe.ingredients} recipeId={recipe.id} />
           </div>

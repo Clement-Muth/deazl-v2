@@ -14,6 +14,14 @@ export interface Recipe {
   steps: RecipeStep[];
 }
 
+export interface IngredientPrice {
+  price: number;
+  quantity: number;
+  unit: string;
+  storeName: string;
+  storeBrand: string | null;
+}
+
 export interface RecipeIngredient {
   id: string;
   recipeId: string;
@@ -24,6 +32,7 @@ export interface RecipeIngredient {
   sortOrder: number;
   productId: string | null;
   nutriscoreGrade: string | null;
+  latestPrice: IngredientPrice | null;
 }
 
 export interface RecipeStep {
