@@ -27,6 +27,13 @@ msgstr "{0, plural, one {# magasin sélectionné} other {# magasins sélectionn�
 msgid "{0} ingredients"
 msgstr "{0} ingrédients"
 
+#. placeholder {0}: items.length
+#. placeholder {0}: list.items.length
+#: src/app/(app)/shopping/page.tsx:18
+#: src/applications/shopping/ui/components/shoppingListView.tsx:37
+msgid "{0} items"
+msgstr "{0} articles"
+
 #. placeholder {0}: recipes.length
 #: src/app/(app)/recipes/page.tsx:19
 msgid "{0} recipes"
@@ -38,9 +45,18 @@ msgstr "{0} recettes"
 msgid "{0} servings"
 msgstr "{0} portions"
 
+#. placeholder {0}: items.length
+#: src/applications/shopping/ui/components/shoppingListView.tsx:38
+msgid "{checkedCount}/{0} checked"
+msgstr "{checkedCount}/{0} cochés"
+
 #: src/applications/recipe/ui/components/recipeForm/recipeForm.tsx:99
 msgid "A short description of this recipe..."
 msgstr "Une courte description de cette recette..."
+
+#: src/applications/shopping/ui/components/addItemForm.tsx:30
+msgid "Add an item..."
+msgstr "Ajouter un article..."
 
 #: src/applications/recipe/ui/components/recipeForm/recipeForm.tsx:173
 msgid "Add ingredient"
@@ -49,6 +65,10 @@ msgstr "Ajouter un ingrédient"
 #: src/applications/recipe/ui/components/recipeForm/recipeForm.tsx:199
 msgid "Add step"
 msgstr "Ajouter une étape"
+
+#: src/applications/shopping/ui/components/shoppingListView.tsx:58
+msgid "All done!"
+msgstr "Tout est fait !"
 
 #: src/applications/user/ui/components/auth/authForm.tsx:105
 msgid "Already have an account?"
@@ -73,6 +93,10 @@ msgstr "Carotte"
 #: src/applications/planning/ui/components/planningGrid/recipePicker.tsx:29
 msgid "Choose a recipe"
 msgstr "Choisir une recette"
+
+#: src/applications/shopping/ui/components/shoppingListView.tsx:47
+msgid "Clear checked"
+msgstr "Effacer les cochés"
 
 #: src/applications/user/ui/components/auth/authForm.tsx:92
 msgid "Continue with Google"
@@ -171,13 +195,25 @@ msgstr "Frigo"
 msgid "Fridge & Stock"
 msgstr "Frigo & Stock"
 
+#: src/applications/shopping/ui/components/generateButton.tsx:32
+msgid "Generate from planning"
+msgstr "Générer depuis le planning"
+
+#: src/app/(app)/shopping/page.tsx:39
+msgid "Generate one from your weekly planning"
+msgstr "Générez-en une depuis votre planning hebdomadaire"
+
+#: src/applications/shopping/ui/components/generateButton.tsx:27
+msgid "Generating..."
+msgstr "Génération..."
+
 #: src/app/(onboarding)/onboarding/welcome/page.tsx:106
 msgid "Get started"
 msgstr "Commencer"
 
 #: src/app/(app)/shopping/page.tsx:8
-msgid "Grocery list"
-msgstr "Liste de courses"
+#~ msgid "Grocery list"
+#~ msgstr "Liste de courses"
 
 #: src/app/(onboarding)/onboarding/household/page.tsx:20
 msgid "How many are you<0/>cooking for?"
@@ -236,6 +272,10 @@ msgstr "Nouveau"
 msgid "New recipe"
 msgstr "Nouvelle recette"
 
+#: src/app/(app)/shopping/page.tsx:19
+msgid "No list yet"
+msgstr "Aucune liste"
+
 #: src/app/(app)/recipes/page.tsx:18
 #: src/app/(app)/recipes/page.tsx:43
 msgid "No recipes yet"
@@ -244,6 +284,10 @@ msgstr "Aucune recette"
 #: src/applications/planning/ui/components/planningGrid/recipePicker.tsx:46
 msgid "No recipes yet. Create one first."
 msgstr "Aucune recette. Créez-en une d'abord."
+
+#: src/app/(app)/shopping/page.tsx:37
+msgid "No shopping list yet"
+msgstr "Aucune liste de courses"
 
 #: src/applications/user/ui/components/auth/authForm.tsx:76
 msgid "or"
@@ -287,6 +331,10 @@ msgstr "Nom de la recette"
 msgid "Recipes"
 msgstr "Recettes"
 
+#: src/applications/shopping/ui/components/generateButton.tsx:30
+msgid "Regenerate from planning"
+msgstr "Régénérer depuis le planning"
+
 #: src/applications/planning/ui/components/planningGrid/recipePicker.tsx:69
 msgid "Remove from this meal"
 msgstr "Retirer de ce repas"
@@ -317,6 +365,7 @@ msgstr "Portions"
 msgid "Shop smarter."
 msgstr "Faites vos courses malin."
 
+#: src/app/(app)/shopping/page.tsx:15
 #: src/applications/user/ui/components/navigation/navBar.tsx:21
 msgid "Shopping"
 msgstr "Courses"
@@ -378,6 +427,7 @@ msgid "Tomato"
 msgstr "Tomate"
 
 #: src/applications/recipe/ui/components/recipeForm/ingredientRow.tsx:48
+#: src/applications/shopping/ui/components/addItemForm.tsx:44
 msgid "Unit"
 msgstr "Unité"
 
@@ -390,8 +440,8 @@ msgid "Your food stock"
 msgstr "Vos aliments en stock"
 
 #: src/app/(app)/shopping/page.tsx:9
-msgid "Your groceries"
-msgstr "Vos courses"
+#~ msgid "Your groceries"
+#~ msgstr "Vos courses"
 
 #: src/app/(app)/planning/page.tsx:9
 #~ msgid "Your meals for the week"
