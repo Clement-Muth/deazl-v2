@@ -12,10 +12,15 @@
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "i18n:extract": "lingui extract",
+    "i18n:compile": "lingui compile",
+    "i18n:update": "lingui extract && lingui compile"
   },
   "dependencies": {
     "@capacitor/core": "^8.1.0",
+    "@lingui/core": "^5.9.2",
+    "@lingui/react": "^5.9.2",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.98.0",
     "@tailwindcss/postcss": "^4.2.1",
@@ -32,6 +37,8 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.1.0",
+    "@lingui/cli": "^5.9.2",
+    "@lingui/swc-plugin": "^5.11.0",
     "@playwright/test": "^1.58.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

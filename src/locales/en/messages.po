@@ -1,0 +1,66 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-03-03 14:48+0100\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: en\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Plural-Forms: \n"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:66
+msgid "Avocat"
+msgstr "Avocado"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:64
+msgid "Brocoli"
+msgstr "Broccoli"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:65
+msgid "Carotte"
+msgstr "Carrot"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:67
+msgid "Citron"
+msgstr "Lemon"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:105
+msgid "Commencer"
+msgstr "Get started"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:49
+msgid "Comparaison des prix entre enseignes"
+msgstr "Price comparison across stores"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:81
+msgid "Faites vos courses malin."
+msgstr "Shop smarter."
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:69
+msgid "Feuille"
+msgstr "Leaf"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:110
+msgid "Gratuit · Configuration en 2 minutes"
+msgstr "Free · Set up in 2 minutes"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:40
+msgid "Liste de courses générée automatiquement"
+msgstr "Shopping list generated automatically"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:31
+msgid "Planifiez vos repas de la semaine"
+msgstr "Plan your meals for the week"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:80
+msgid "Planifiez vos repas."
+msgstr "Plan your meals."
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:68
+msgid "Tomate"
+msgstr "Tomato"
