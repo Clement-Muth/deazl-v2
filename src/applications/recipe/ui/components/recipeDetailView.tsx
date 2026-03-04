@@ -36,68 +36,68 @@ export function RecipeDetailView({ recipeId, recipeName, baseServings, ingredien
         />
       )}
 
-      <div className="flex flex-col gap-4 px-4 py-5">
+      <div className="flex flex-col gap-3 px-4 pt-4">
         {ingredients.length > 0 && (
-          <div className="overflow-hidden rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm">
-            <div className="border-b border-black/5">
+          <>
+            <div className="overflow-hidden rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm">
               <ServingsScaler
                 baseServings={baseServings}
                 servings={servings}
                 onChange={setServings}
               />
             </div>
-            <div className="flex items-center justify-between border-b border-black/5 px-5 py-3">
-              <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400">
-                Ingrédients
-              </h2>
-              {totalCost > 0 && (
-                <span className="text-xs font-semibold text-gray-500">
-                  ~{totalCost.toFixed(2)} €
-                </span>
-              )}
+
+            <div className="overflow-hidden rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm">
+              <div className="flex items-center justify-between border-b border-black/5 px-5 py-3">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">
+                  Ingrédients
+                </h2>
+                {totalCost > 0 && (
+                  <span className="text-xs font-semibold text-muted-foreground">
+                    ~{totalCost.toFixed(2)} €
+                  </span>
+                )}
+              </div>
+              <IngredientList
+                ingredients={ingredients}
+                recipeId={recipeId}
+                multiplier={multiplier}
+              />
             </div>
-            <IngredientList
-              ingredients={ingredients}
-              recipeId={recipeId}
-              multiplier={multiplier}
-            />
-          </div>
+          </>
         )}
 
         <RecipePriceCard stores={storePrices} />
 
         {steps.length > 0 && (
           <div className="overflow-hidden rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm">
-            <div className="flex items-center justify-between border-b border-black/5 px-5 py-3.5">
-              <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400">
-                Étapes
+            <div className="border-b border-black/5 px-5 py-3">
+              <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">
+                Préparation
               </h2>
-              <button
-                type="button"
-                onClick={() => setCookMode(true)}
-                className="flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-xs font-bold text-white shadow-sm shadow-primary/30 transition active:scale-[0.95]"
-              >
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="5 3 19 12 5 21 5 3" />
-                </svg>
-                Mode cuisine
-              </button>
             </div>
-            <ol>
-              {steps.map((step, i) => (
-                <li
-                  key={step.id}
-                  className={`flex gap-4 px-5 py-4 ${
-                    i < steps.length - 1 ? "border-b border-black/4" : ""
-                  }`}
-                >
-                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+            <ol className="divide-y divide-black/4">
+              {steps.map((step) => (
+                <li key={step.id} className="flex gap-4 px-5 py-5">
+                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-black text-primary">
                     {step.stepNumber}
                   </span>
                   <p className="text-sm leading-relaxed text-gray-700">{step.description}</p>
                 </li>
               ))}
             </ol>
+            <div className="border-t border-black/5 p-4">
+              <button
+                type="button"
+                onClick={() => setCookMode(true)}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-sm font-bold text-white shadow-md shadow-primary/20 transition active:scale-[0.97]"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+                Mode cuisine
+              </button>
+            </div>
           </div>
         )}
       </div>

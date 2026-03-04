@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { uploadRecipeImage } from "@/applications/recipe/application/uploadRecipeImage";
 
 type RecipeState = { error: string } | undefined;
 
@@ -33,6 +34,14 @@ export async function createRecipe(_prevState: RecipeState, formData: FormData):
     .single();
 
   if (recipeError || !recipe) return { error: recipeError?.message ?? "Failed to create recipe" };
+
+  const imageFile = formData.get("image") as File | null;
+  if (imageFile && imageFile.size > 0) {
+    const imageUrl = await uploadRecipeImage(recipe.id, imageFile);
+    if (imageUrl) {
+      await supabase.from("recipes").update({ image_url: imageUrl }).eq("id", recipe.id);
+    }
+  }
 
   const ingredientNames = formData.getAll("ingredient_name") as string[];
   const ingredientQuantities = formData.getAll("ingredient_quantity") as string[];

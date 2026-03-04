@@ -13,7 +13,7 @@ export function RecipePriceCard({ stores }: RecipePriceCardProps) {
   return (
     <div className="overflow-hidden rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm">
       <div className="border-b border-black/5 px-5 py-3.5">
-        <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400">
+        <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">
           <Trans>Price by store</Trans>
         </h2>
       </div>

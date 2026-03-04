@@ -10,20 +10,21 @@ interface RecipePageProps {
   params: Promise<{ id: string }>;
 }
 
-const GRADIENTS = [
-  { from: "#FEF3C7", to: "#FDE68A", text: "#92400E" },
-  { from: "#DCFCE7", to: "#BBF7D0", text: "#166534" },
-  { from: "#EDE9FE", to: "#DDD6FE", text: "#5B21B6" },
-  { from: "#E0F2FE", to: "#BAE6FD", text: "#075985" },
-  { from: "#FFE4E6", to: "#FECDD3", text: "#9F1239" },
+const PALETTES = [
+  { from: "#FFF7ED", to: "#FED7AA", text: "#7C2D12", accent: "#EA580C" },
+  { from: "#F0FDF4", to: "#BBF7D0", text: "#14532D", accent: "#16A34A" },
+  { from: "#EDE9FE", to: "#C4B5FD", text: "#4C1D95", accent: "#7C3AED" },
+  { from: "#E0F2FE", to: "#7DD3FC", text: "#0C4A6E", accent: "#0284C7" },
+  { from: "#FFF1F2", to: "#FECDD3", text: "#881337", accent: "#E11D48" },
+  { from: "#F0FDFA", to: "#99F6E4", text: "#134E4A", accent: "#0D9488" },
 ];
 
-function gradientForName(name: string) {
+function paletteForName(name: string) {
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = (hash * 31 + name.charCodeAt(i)) & 0xffffffff;
   }
-  return GRADIENTS[Math.abs(hash) % GRADIENTS.length];
+  return PALETTES[Math.abs(hash) % PALETTES.length];
 }
 
 function fmtTime(min: number): string {
@@ -43,29 +44,47 @@ export default async function RecipePage({ params }: RecipePageProps) {
 
   if (!recipe) notFound();
 
-  const grad = gradientForName(recipe.name);
+  const pal = paletteForName(recipe.name);
   const initial = recipe.name.trim().charAt(0).toUpperCase();
+  const hasImage = !!recipe.imageUrl;
+  const heroText = hasImage ? "#ffffff" : pal.text;
+  const heroPillBg = hasImage ? "rgba(255,255,255,0.18)" : `${pal.accent}18`;
+  const heroBtnBg = hasImage ? "rgba(0,0,0,0.25)" : `${pal.accent}20`;
   const totalTime = (recipe.prepTimeMinutes ?? 0) + (recipe.cookTimeMinutes ?? 0);
+  const totalPrice = recipe.ingredients.reduce(
+    (sum, ing) => (ing.latestPrice ? sum + ing.latestPrice.price : sum),
+    0,
+  );
 
   return (
     <div className="relative min-h-screen bg-background">
       <div
-        className="relative flex h-52 items-end"
-        style={{ background: `linear-gradient(160deg, ${grad.from} 0%, ${grad.to} 100%)` }}
+        className="relative flex min-h-70 flex-col justify-end"
+        style={recipe.imageUrl ? undefined : { background: `linear-gradient(150deg, ${pal.from} 0%, ${pal.to} 100%)` }}
       >
-        <div className="absolute inset-0 flex items-center justify-center">
+        {recipe.imageUrl ? (
+          <>
+            <img
+              src={recipe.imageUrl}
+              alt={recipe.name}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-transparent" />
+          </>
+        ) : (
           <span
-            className="select-none text-[96px] font-black leading-none tracking-tight opacity-20"
-            style={{ color: grad.text }}
+            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 select-none text-[130px] font-black leading-none tracking-tight"
+            style={{ color: pal.accent, opacity: 0.13 }}
           >
             {initial}
           </span>
-        </div>
+        )}
 
         <div className="absolute left-4 right-4 top-12 flex items-center justify-between">
           <Link
             href="/recipes"
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-black/10 text-gray-700 backdrop-blur-sm transition active:scale-[0.94]"
+            className="flex h-9 w-9 items-center justify-center rounded-xl backdrop-blur-sm transition active:scale-[0.94]"
+            style={{ background: heroBtnBg, color: heroText }}
             aria-label="Retour"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -74,7 +93,8 @@ export default async function RecipePage({ params }: RecipePageProps) {
           </Link>
           <Link
             href={`/recipes/${recipe.id}/edit`}
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-black/10 text-gray-700 backdrop-blur-sm transition active:scale-[0.94]"
+            className="flex h-9 w-9 items-center justify-center rounded-xl backdrop-blur-sm transition active:scale-[0.94]"
+            style={{ background: heroBtnBg, color: heroText }}
             aria-label="Modifier"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -84,52 +104,74 @@ export default async function RecipePage({ params }: RecipePageProps) {
           </Link>
         </div>
 
-        <div className="relative w-full px-5 pb-5">
-          <h1 className="text-xl font-black tracking-tight" style={{ color: grad.text }}>
+        <div className="relative px-5 pb-7 pt-16">
+          <h1
+            className="text-2xl font-black leading-tight tracking-tight"
+            style={{ color: heroText }}
+          >
             {recipe.name}
           </h1>
-          <div className="mt-1.5 flex flex-wrap items-center gap-3">
-            <span className="flex items-center gap-1 text-xs font-medium" style={{ color: grad.text, opacity: 0.7 }}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span
+              className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+              style={{ background: heroPillBg, color: heroText }}
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
                 <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
               {recipe.servings} pers.
             </span>
             {totalTime > 0 && (
-              <span className="flex items-center gap-1 text-xs font-medium" style={{ color: grad.text, opacity: 0.7 }}>
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <span
+                className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                style={{ background: heroPillBg, color: heroText }}
+              >
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
                 </svg>
                 {fmtTime(totalTime)}
               </span>
             )}
             {recipe.ingredients.length > 0 && (
-              <span className="text-xs font-medium" style={{ color: grad.text, opacity: 0.7 }}>
-                {recipe.ingredients.length} ingrédients
+              <span
+                className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                style={{ background: heroPillBg, color: heroText }}
+              >
+                {recipe.ingredients.length} ingr.
+              </span>
+            )}
+            {totalPrice > 0 && (
+              <span
+                className="rounded-full px-2.5 py-1 text-[11px] font-bold text-white"
+                style={{ background: hasImage ? "rgba(0,0,0,0.35)" : pal.accent }}
+              >
+                ~{totalPrice.toFixed(0)} €
               </span>
             )}
           </div>
         </div>
       </div>
 
-      {recipe.description && (
-        <div className="px-5 pt-4">
-          <p className="text-sm leading-relaxed text-gray-600">{recipe.description}</p>
+      <div className="relative -mt-5 rounded-t-[28px] bg-background shadow-[0_-4px_24px_rgba(0,0,0,0.06)]">
+        {recipe.description && (
+          <div className="border-b border-black/5 px-5 pb-4 pt-5">
+            <p className="text-sm leading-relaxed text-muted-foreground">{recipe.description}</p>
+          </div>
+        )}
+
+        <RecipeDetailView
+          recipeId={recipe.id}
+          recipeName={recipe.name}
+          baseServings={recipe.servings}
+          ingredients={recipe.ingredients}
+          steps={recipe.steps}
+          storePrices={storePrices}
+        />
+
+        <div className="flex justify-center pb-10 pt-2">
+          <RecipeDeleteButton id={recipe.id} />
         </div>
-      )}
-
-      <RecipeDetailView
-        recipeId={recipe.id}
-        recipeName={recipe.name}
-        baseServings={recipe.servings}
-        ingredients={recipe.ingredients}
-        steps={recipe.steps}
-        storePrices={storePrices}
-      />
-
-      <div className="flex justify-center pb-8">
-        <RecipeDeleteButton id={recipe.id} />
       </div>
     </div>
   );

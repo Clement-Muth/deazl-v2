@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { uploadRecipeImage } from "@/applications/recipe/application/uploadRecipeImage";
 
 type RecipeState = { error: string } | undefined;
 
@@ -16,6 +17,12 @@ export async function updateRecipe(id: string, _prevState: RecipeState, formData
 
   if (!name?.trim()) return { error: "Recipe name is required" };
 
+  const imageFile = formData.get("image") as File | null;
+  let imageUrl: string | null = (formData.get("existing_image_url") as string | null) || null;
+  if (imageFile && imageFile.size > 0) {
+    imageUrl = await uploadRecipeImage(id, imageFile) ?? imageUrl;
+  }
+
   const { error: recipeError } = await supabase
     .from("recipes")
     .update({
@@ -24,6 +31,7 @@ export async function updateRecipe(id: string, _prevState: RecipeState, formData
       servings,
       prep_time_minutes: prepTime,
       cook_time_minutes: cookTime,
+      image_url: imageUrl,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id);

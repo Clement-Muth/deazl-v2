@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { useLingui, Trans } from "@lingui/react/macro";
 import { IngredientRow } from "./ingredientRow";
 import { StepRow } from "./stepRow";
+import { RecipeImagePicker } from "./recipeImagePicker";
 import type { Recipe } from "@/applications/recipe/domain/entities/recipe";
 
 type RecipeState = { error: string } | undefined;
@@ -70,6 +71,12 @@ export function RecipeForm({ mode, action, defaultValues }: RecipeFormProps) {
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
+
+      {defaultValues?.imageUrl && (
+        <input type="hidden" name="existing_image_url" value={defaultValues.imageUrl} />
+      )}
+
+      <RecipeImagePicker defaultImageUrl={defaultValues?.imageUrl} />
 
       <div className="overflow-hidden rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm">
         <div className="border-b border-black/5 px-5 py-3.5">

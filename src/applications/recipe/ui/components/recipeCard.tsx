@@ -45,19 +45,28 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
     >
       <div
         className="relative flex h-32 flex-col justify-end overflow-hidden p-3.5"
-        style={{ backgroundColor: pal.bg }}
+        style={recipe.imageUrl ? undefined : { backgroundColor: pal.bg }}
       >
-        <span
-          className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 select-none text-[72px] font-black leading-none"
-          style={{ color: pal.accent, opacity: 0.12 }}
-        >
-          {initial}
-        </span>
+        {recipe.imageUrl ? (
+          <>
+            <img src={recipe.imageUrl} alt={recipe.name} className="absolute inset-0 h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-linear-to-t from-black/60 via-black/10 to-transparent" />
+          </>
+        ) : (
+          <span
+            className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 select-none text-[72px] font-black leading-none"
+            style={{ color: pal.accent, opacity: 0.12 }}
+          >
+            {initial}
+          </span>
+        )}
 
         {totalPrice > 0 && (
           <span
             className="absolute right-3 top-3 rounded-full px-2 py-0.5 text-[10px] font-bold"
-            style={{ background: `${pal.accent}18`, color: pal.accent }}
+            style={recipe.imageUrl
+              ? { background: "rgba(0,0,0,0.35)", color: "#fff" }
+              : { background: `${pal.accent}18`, color: pal.accent }}
           >
             ~{totalPrice.toFixed(0)} €
           </span>
@@ -66,12 +75,14 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
         <div
           className="absolute bottom-0 left-0 right-0 px-3.5 pb-3 pt-8"
           style={{
-            background: `linear-gradient(to top, ${pal.bg}f0 50%, transparent)`,
+            background: recipe.imageUrl
+              ? undefined
+              : `linear-gradient(to top, ${pal.bg}f0 50%, transparent)`,
           }}
         >
           <span
             className="line-clamp-2 text-sm font-black leading-snug"
-            style={{ color: pal.text }}
+            style={{ color: recipe.imageUrl ? "#fff" : pal.text }}
           >
             {recipe.name}
           </span>
