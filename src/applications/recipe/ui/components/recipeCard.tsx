@@ -5,20 +5,21 @@ interface RecipeCardProps {
   recipe: Recipe;
 }
 
-const GRADIENTS = [
-  { from: "#FEF3C7", to: "#FDE68A", text: "#92400E" },
-  { from: "#DCFCE7", to: "#BBF7D0", text: "#166534" },
-  { from: "#EDE9FE", to: "#DDD6FE", text: "#5B21B6" },
-  { from: "#E0F2FE", to: "#BAE6FD", text: "#075985" },
-  { from: "#FFE4E6", to: "#FECDD3", text: "#9F1239" },
+const PALETTES = [
+  { bg: "#FFF7ED", accent: "#EA580C", text: "#9A3412" },
+  { bg: "#F0FDF4", accent: "#16A34A", text: "#14532D" },
+  { bg: "#EFF6FF", accent: "#2563EB", text: "#1E3A8A" },
+  { bg: "#FDF4FF", accent: "#9333EA", text: "#581C87" },
+  { bg: "#FFF1F2", accent: "#E11D48", text: "#881337" },
+  { bg: "#F0FDFA", accent: "#0D9488", text: "#134E4A" },
 ];
 
-function gradientForName(name: string) {
+function paletteForName(name: string) {
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = (hash * 31 + name.charCodeAt(i)) & 0xffffffff;
   }
-  return GRADIENTS[Math.abs(hash) % GRADIENTS.length];
+  return PALETTES[Math.abs(hash) % PALETTES.length];
 }
 
 function fmtTime(min: number): string {
@@ -30,8 +31,12 @@ function fmtTime(min: number): string {
 
 export function RecipeCard({ recipe }: RecipeCardProps) {
   const totalTime = (recipe.prepTimeMinutes ?? 0) + (recipe.cookTimeMinutes ?? 0);
-  const grad = gradientForName(recipe.name);
+  const pal = paletteForName(recipe.name);
   const initial = recipe.name.trim().charAt(0).toUpperCase();
+  const totalPrice = recipe.ingredients.reduce(
+    (sum, ing) => (ing.latestPrice ? sum + ing.latestPrice.price : sum),
+    0,
+  );
 
   return (
     <Link
@@ -39,48 +44,66 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
       className="group flex flex-col overflow-hidden rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm transition active:scale-[0.97]"
     >
       <div
-        className="flex h-28 items-center justify-center"
-        style={{ background: `linear-gradient(135deg, ${grad.from}, ${grad.to})` }}
+        className="relative flex h-32 flex-col justify-end overflow-hidden p-3.5"
+        style={{ backgroundColor: pal.bg }}
       >
         <span
-          className="select-none text-5xl font-black leading-none tracking-tight"
-          style={{ color: grad.text, opacity: 0.9 }}
+          className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 select-none text-[72px] font-black leading-none"
+          style={{ color: pal.accent, opacity: 0.12 }}
         >
           {initial}
         </span>
+
+        {totalPrice > 0 && (
+          <span
+            className="absolute right-3 top-3 rounded-full px-2 py-0.5 text-[10px] font-bold"
+            style={{ background: `${pal.accent}18`, color: pal.accent }}
+          >
+            ~{totalPrice.toFixed(0)} €
+          </span>
+        )}
+
+        <div
+          className="absolute bottom-0 left-0 right-0 px-3.5 pb-3 pt-8"
+          style={{
+            background: `linear-gradient(to top, ${pal.bg}f0 50%, transparent)`,
+          }}
+        >
+          <span
+            className="line-clamp-2 text-sm font-black leading-snug"
+            style={{ color: pal.text }}
+          >
+            {recipe.name}
+          </span>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-1.5 px-3.5 py-3">
-        <span className="line-clamp-2 text-sm font-bold leading-snug text-foreground">
-          {recipe.name}
+      <div className="flex items-center gap-2.5 px-3.5 py-2.5">
+        <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+          </svg>
+          {recipe.servings}
         </span>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-            {recipe.servings}
-          </span>
-          {totalTime > 0 && (
-            <>
-              <span className="text-muted-foreground/30">·</span>
-              <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-                </svg>
-                {fmtTime(totalTime)}
-              </span>
-            </>
-          )}
-          {recipe.ingredients.length > 0 && (
-            <>
-              <span className="text-muted-foreground/30">·</span>
-              <span className="text-[11px] text-muted-foreground">{recipe.ingredients.length} ingr.</span>
-            </>
-          )}
-        </div>
+        {totalTime > 0 && (
+          <>
+            <span className="text-muted-foreground/25">·</span>
+            <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+              </svg>
+              {fmtTime(totalTime)}
+            </span>
+          </>
+        )}
+        {recipe.ingredients.length > 0 && (
+          <>
+            <span className="text-muted-foreground/25">·</span>
+            <span className="text-[11px] font-medium text-muted-foreground">
+              {recipe.ingredients.length} ingr.
+            </span>
+          </>
+        )}
       </div>
     </Link>
   );
