@@ -174,7 +174,7 @@ export function ProductDetailSheet({ productId, recipeId, onClose, onReportPrice
             </div>
 
             {/* ── Health score ── */}
-            <div className="mx-4 mb-4 overflow-hidden rounded-2xl bg-muted/60 ring-1 ring-black/5">
+            <div className="mx-4 mb-4 rounded-2xl bg-muted/60 ring-1 ring-black/5">
               <div className="flex items-center gap-5 px-5 py-5">
                 <div className="relative shrink-0" style={{ filter: `drop-shadow(0 0 12px ${grade.color}44)` }}>
                   <svg width="120" height="120" viewBox="0 0 120 120">
