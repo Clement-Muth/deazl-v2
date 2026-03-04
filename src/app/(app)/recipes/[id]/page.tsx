@@ -119,7 +119,14 @@ export default async function RecipePage({ params }: RecipePageProps) {
         </div>
       )}
 
-      <RecipeDetailView recipe={recipe} storePrices={storePrices} />
+      <RecipeDetailView
+        recipeId={recipe.id}
+        recipeName={recipe.name}
+        baseServings={recipe.servings}
+        ingredients={recipe.ingredients}
+        steps={recipe.steps}
+        storePrices={storePrices}
+      />
 
       <div className="flex justify-center pb-8">
         <RecipeDeleteButton id={recipe.id} />

@@ -5,39 +5,43 @@ import { ServingsScaler } from "@/applications/recipe/ui/components/servingsScal
 import { IngredientList } from "@/applications/recipe/ui/components/ingredientList";
 import { CookMode } from "@/applications/recipe/ui/components/cookMode";
 import { RecipePriceCard } from "@/applications/recipe/ui/components/recipePriceCard";
-import type { Recipe } from "@/applications/recipe/domain/entities/recipe";
+import type { RecipeIngredient, RecipeStep } from "@/applications/recipe/domain/entities/recipe";
 import type { StorePriceSummary } from "@/applications/recipe/application/useCases/getRecipePricesByStore";
 
 interface Props {
-  recipe: Recipe;
+  recipeId: string;
+  recipeName: string;
+  baseServings: number;
+  ingredients: RecipeIngredient[];
+  steps: RecipeStep[];
   storePrices: StorePriceSummary[];
 }
 
-export function RecipeDetailView({ recipe, storePrices }: Props) {
-  const [servings, setServings] = useState(recipe.servings);
+export function RecipeDetailView({ recipeId, recipeName, baseServings, ingredients, steps, storePrices }: Props) {
+  const [servings, setServings] = useState(baseServings);
   const [cookMode, setCookMode] = useState(false);
-  const multiplier = servings / recipe.servings;
+  const multiplier = servings / baseServings;
 
-  const totalCost = recipe.ingredients.reduce((sum, ing) => {
+  const totalCost = ingredients.reduce((sum, ing) => {
     return ing.latestPrice ? sum + ing.latestPrice.price * multiplier : sum;
   }, 0);
 
   return (
     <>
-      {cookMode && recipe.steps.length > 0 && (
+      {cookMode && steps.length > 0 && (
         <CookMode
-          steps={recipe.steps}
-          recipeName={recipe.name}
+          steps={steps}
+          recipeName={recipeName}
           onClose={() => setCookMode(false)}
         />
       )}
 
       <div className="flex flex-col gap-4 px-4 py-5">
-        {recipe.ingredients.length > 0 && (
+        {ingredients.length > 0 && (
           <div className="overflow-hidden rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm">
             <div className="border-b border-black/5">
               <ServingsScaler
-                baseServings={recipe.servings}
+                baseServings={baseServings}
                 servings={servings}
                 onChange={setServings}
               />
@@ -53,8 +57,8 @@ export function RecipeDetailView({ recipe, storePrices }: Props) {
               )}
             </div>
             <IngredientList
-              ingredients={recipe.ingredients}
-              recipeId={recipe.id}
+              ingredients={ingredients}
+              recipeId={recipeId}
               multiplier={multiplier}
             />
           </div>
@@ -62,7 +66,7 @@ export function RecipeDetailView({ recipe, storePrices }: Props) {
 
         <RecipePriceCard stores={storePrices} />
 
-        {recipe.steps.length > 0 && (
+        {steps.length > 0 && (
           <div className="overflow-hidden rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm">
             <div className="flex items-center justify-between border-b border-black/5 px-5 py-3.5">
               <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400">
@@ -80,11 +84,11 @@ export function RecipeDetailView({ recipe, storePrices }: Props) {
               </button>
             </div>
             <ol>
-              {recipe.steps.map((step, i) => (
+              {steps.map((step, i) => (
                 <li
                   key={step.id}
                   className={`flex gap-4 px-5 py-4 ${
-                    i < recipe.steps.length - 1 ? "border-b border-black/4" : ""
+                    i < steps.length - 1 ? "border-b border-black/4" : ""
                   }`}
                 >
                   <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
