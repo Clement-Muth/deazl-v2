@@ -10,6 +10,7 @@ export default async function ShoppingPage() {
 
   const checkedCount = list?.items.filter((i) => i.isChecked).length ?? 0;
   const totalCount = list?.items.length ?? 0;
+  const estimatedTotal = list?.storeSummaries[0]?.totalCost ?? 0;
 
   return (
     <div className="relative min-h-screen bg-linear-to-b from-primary-light via-background to-background">
@@ -22,7 +23,9 @@ export default async function ShoppingPage() {
             <p className="mt-0.5 text-xs font-medium text-gray-400">
               {list
                 ? checkedCount === 0
-                  ? <Trans>{totalCount} items</Trans>
+                  ? estimatedTotal > 0
+                    ? <Trans>{totalCount} items · ~{estimatedTotal.toFixed(2)} €</Trans>
+                    : <Trans>{totalCount} items</Trans>
                   : <Trans>{checkedCount}/{totalCount} checked</Trans>
                 : <Trans>No list yet</Trans>}
             </p>

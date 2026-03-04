@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { categorizeItem } from "@/applications/shopping/domain/categorizeItem";
 
 type AddItemState = { error: string } | undefined;
 
@@ -35,6 +36,7 @@ export async function addShoppingItem(
     unit,
     is_checked: false,
     sort_order: sortOrder,
+    category: categorizeItem(name),
   });
 
   if (error) return { error: error.message };

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getMondayOf, formatWeekParam } from "@/applications/planning/lib/weekUtils";
+import { categorizeItem } from "@/applications/shopping/domain/categorizeItem";
 
 export async function generateShoppingList(): Promise<void> {
   const supabase = await createClient();
@@ -86,6 +87,7 @@ export async function generateShoppingList(): Promise<void> {
     unit: item.unit,
     is_checked: false,
     sort_order: i,
+    category: categorizeItem(item.customName),
   }));
 
   await supabase.from("shopping_items").insert(items);
