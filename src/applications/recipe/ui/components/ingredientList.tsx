@@ -12,9 +12,10 @@ import type { RecipeIngredient } from "@/applications/recipe/domain/entities/rec
 interface IngredientListProps {
   ingredients: RecipeIngredient[];
   recipeId: string;
+  multiplier?: number;
 }
 
-export function IngredientList({ ingredients, recipeId }: IngredientListProps) {
+export function IngredientList({ ingredients, recipeId, multiplier = 1 }: IngredientListProps) {
   const [openIngredientId, setOpenIngredientId] = useState<string | null>(null);
   const [priceIngredientId, setPriceIngredientId] = useState<string | null>(null);
   const [detailIngredientId, setDetailIngredientId] = useState<string | null>(null);
@@ -63,7 +64,10 @@ export function IngredientList({ ingredients, recipeId }: IngredientListProps) {
               )}
 
               <span className="text-sm font-medium text-gray-400">
-                {ing.quantity} {ing.unit}
+                {(() => {
+                  const q = ing.quantity * multiplier;
+                  return `${q % 1 === 0 ? q : parseFloat(q.toFixed(2))} ${ing.unit}`;
+                })()}
               </span>
 
               {ing.productId ? (
