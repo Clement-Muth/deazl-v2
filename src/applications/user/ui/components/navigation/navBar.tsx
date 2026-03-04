@@ -68,7 +68,7 @@ export function NavBar() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-5 pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-safe">
       <div className="flex items-center justify-around rounded-2xl border border-black/5 bg-white/90 px-2 py-2 shadow-xl shadow-black/10 backdrop-blur-xl">
         {navItems.map(({ href, label, icon }) => {
           const isActive = pathname.startsWith(href);

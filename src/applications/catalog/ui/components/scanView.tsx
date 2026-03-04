@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Trans, useLingui } from "@lingui/react/macro";
+import { Capacitor } from "@capacitor/core";
 import { getScannedProductInfo, type ScannedProductInfo } from "@/applications/catalog/application/useCases/getScannedProductInfo";
 import { reportProductPrice } from "@/applications/catalog/application/useCases/reportProductPrice";
 import { addPantryItemFromScan } from "@/applications/pantry/application/useCases/addPantryItemFromScan";
@@ -17,6 +18,7 @@ const NUTRISCORE_BG: Record<string, string> = {
 
 export function ScanView() {
   const { t } = useLingui();
+  const isNative = Capacitor.isNativePlatform();
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<{ stop(): void } | null>(null);
   const stoppedRef = useRef(false);
@@ -42,11 +44,34 @@ export function ScanView() {
       setStores(s);
       if (s.length === 1) setSelectedStore(s[0]);
     });
-    startScanner();
-    return stopScanner;
+    if (isNative) {
+      startNativeScanner();
+    } else {
+      startWebScanner();
+    }
+    return () => {
+      stoppedRef.current = true;
+      controlsRef.current?.stop();
+      controlsRef.current = null;
+    };
   }, []);
 
-  async function startScanner() {
+  async function startNativeScanner() {
+    stoppedRef.current = false;
+    try {
+      const { BarcodeScanner } = await import("@capacitor-mlkit/barcode-scanning");
+      const { camera } = await BarcodeScanner.requestPermissions();
+      if (camera !== "granted" && camera !== "limited") return;
+      const { barcodes } = await BarcodeScanner.scan();
+      if (stoppedRef.current || barcodes.length === 0) return;
+      stoppedRef.current = true;
+      handleEan(barcodes[0].rawValue ?? "");
+    } catch {
+      // scanner cancelled or unavailable
+    }
+  }
+
+  async function startWebScanner() {
     stoppedRef.current = false;
     try {
       const { BrowserMultiFormatReader } = await import("@zxing/browser");
@@ -66,12 +91,6 @@ export function ScanView() {
     } catch {
       // camera unavailable
     }
-  }
-
-  function stopScanner() {
-    stoppedRef.current = true;
-    controlsRef.current?.stop();
-    controlsRef.current = null;
   }
 
   async function handleEan(ean: string) {
@@ -96,7 +115,11 @@ export function ScanView() {
     setPantrySubmitted(false);
     setSubmitError(null);
     setPantryQty("1");
-    startScanner();
+    if (isNative) {
+      startNativeScanner();
+    } else {
+      startWebScanner();
+    }
   }
 
   function handlePriceSubmit(e: React.FormEvent) {
@@ -136,25 +159,47 @@ export function ScanView() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className={`relative shrink-0 overflow-hidden bg-black transition-all duration-500 ${isFullscreen ? "h-[calc(100vh-96px)]" : "h-48"}`}>
-        <video ref={videoRef} className="h-full w-full object-cover" playsInline muted />
+      <div className={`relative shrink-0 overflow-hidden bg-black transition-all duration-500 ${isFullscreen ? "h-[calc(100dvh-6rem-var(--sat))]" : "h-48"}`}>
+        {!isNative && <video ref={videoRef} className="h-full w-full object-cover" playsInline muted />}
 
         {phase === "scanning" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-6">
-            <div className="relative h-40 w-72">
-              <div className="absolute inset-0" style={{ boxShadow: "0 0 0 9999px rgba(0,0,0,0.55)" }} />
-              <div className="absolute left-0 top-0 h-6 w-6 rounded-tl-xl border-l-2 border-t-2 border-white" />
-              <div className="absolute right-0 top-0 h-6 w-6 rounded-tr-xl border-r-2 border-t-2 border-white" />
-              <div className="absolute bottom-0 left-0 h-6 w-6 rounded-bl-xl border-b-2 border-l-2 border-white" />
-              <div className="absolute bottom-0 right-0 h-6 w-6 rounded-br-xl border-b-2 border-r-2 border-white" />
-              <div
-                className="absolute inset-x-3 h-0.5 rounded-full bg-primary"
-                style={{ animation: "scanline 2s ease-in-out infinite", top: "50%", boxShadow: "0 0 8px rgba(22,163,74,0.8)" }}
-              />
-            </div>
-            <p className="text-xs font-semibold tracking-wide text-white/50">
-              <Trans>Point at a product barcode</Trans>
-            </p>
+            {isNative ? (
+              <button
+                type="button"
+                onClick={startNativeScanner}
+                className="flex flex-col items-center gap-4"
+              >
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/10">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+                    <path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+                    <line x1="7" y1="8" x2="7" y2="16"/><line x1="10.5" y1="8" x2="10.5" y2="16"/>
+                    <line x1="14" y1="8" x2="14" y2="16"/><line x1="17" y1="8" x2="17" y2="16"/>
+                  </svg>
+                </div>
+                <p className="text-sm font-semibold tracking-wide text-white/70">
+                  <Trans>Tap to scan</Trans>
+                </p>
+              </button>
+            ) : (
+              <div className="relative h-40 w-72">
+                <div className="absolute inset-0" style={{ boxShadow: "0 0 0 9999px rgba(0,0,0,0.55)" }} />
+                <div className="absolute left-0 top-0 h-6 w-6 rounded-tl-xl border-l-2 border-t-2 border-white" />
+                <div className="absolute right-0 top-0 h-6 w-6 rounded-tr-xl border-r-2 border-t-2 border-white" />
+                <div className="absolute bottom-0 left-0 h-6 w-6 rounded-bl-xl border-b-2 border-l-2 border-white" />
+                <div className="absolute bottom-0 right-0 h-6 w-6 rounded-br-xl border-b-2 border-r-2 border-white" />
+                <div
+                  className="absolute inset-x-3 h-0.5 rounded-full bg-primary"
+                  style={{ animation: "scanline 2s ease-in-out infinite", top: "50%", boxShadow: "0 0 8px rgba(22,163,74,0.8)" }}
+                />
+              </div>
+            )}
+            {!isNative && (
+              <p className="text-xs font-semibold tracking-wide text-white/50">
+                <Trans>Point at a product barcode</Trans>
+              </p>
+            )}
           </div>
         )}
 

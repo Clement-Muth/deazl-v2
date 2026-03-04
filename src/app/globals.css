@@ -129,6 +129,20 @@
   animation: 300ms ease-out 60ms both vt-slide-in;
 }
 
+/* ── Safe area utilities ── */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+}
+
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+@utility pb-safe {
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
+}
+
 /* ── Base ── */
 @layer base {
   * { box-sizing: border-box; }
