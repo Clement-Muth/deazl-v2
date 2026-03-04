@@ -1,0 +1,456 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-03-03 14:48+0100\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: fr\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Plural-Forms: \n"
+
+#: src/applications/recipe/ui/components/recipeForm/recipeForm.tsx:92
+msgid "(optional)"
+msgstr "(optionnel)"
+
+#. placeholder {0}: selected.length
+#: src/app/(onboarding)/onboarding/stores/page.tsx:78
+msgid "{0, plural, one {# store selected} other {# stores selected}}"
+msgstr "{0, plural, one {# magasin sélectionné} other {# magasins sélectionnés}}"
+
+#. placeholder {0}: recipe.ingredients.length
+#: src/applications/recipe/ui/components/recipeCard.tsx:34
+msgid "{0} ingredients"
+msgstr "{0} ingrédients"
+
+#. placeholder {0}: items.length
+#. placeholder {0}: list.items.length
+#: src/app/(app)/shopping/page.tsx:18
+#: src/applications/shopping/ui/components/shoppingListView.tsx:37
+msgid "{0} items"
+msgstr "{0} articles"
+
+#. placeholder {0}: recipes.length
+#: src/app/(app)/recipes/page.tsx:19
+msgid "{0} recipes"
+msgstr "{0} recettes"
+
+#. placeholder {0}: recipe.servings
+#: src/app/(app)/recipes/[id]/page.tsx:54
+#: src/applications/recipe/ui/components/recipeCard.tsx:30
+msgid "{0} servings"
+msgstr "{0} portions"
+
+#. placeholder {0}: items.length
+#: src/applications/shopping/ui/components/shoppingListView.tsx:38
+msgid "{checkedCount}/{0} checked"
+msgstr "{checkedCount}/{0} cochés"
+
+#: src/applications/recipe/ui/components/recipeForm/recipeForm.tsx:99
+msgid "A short description of this recipe..."
+msgstr "Une courte description de cette recette..."
+
+#: src/applications/shopping/ui/components/addItemForm.tsx:30
+msgid "Add an item..."
+msgstr "Ajouter un article..."
+
+#: src/applications/recipe/ui/components/recipeForm/recipeForm.tsx:173
+msgid "Add ingredient"
+msgstr "Ajouter un ingrédient"
+
+#: src/applications/recipe/ui/components/recipeForm/recipeForm.tsx:199
+msgid "Add step"
+msgstr "Ajouter une étape"
+
+#: src/applications/shopping/ui/components/shoppingListView.tsx:58
+msgid "All done!"
+msgstr "Tout est fait !"
+
+#: src/applications/user/ui/components/auth/authForm.tsx:105
+msgid "Already have an account?"
+msgstr "Déjà un compte ?"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:67
+msgid "Avocado"
+msgstr "Avocat"
+
+#: src/applications/planning/ui/components/planningGrid/mealSlotCell.tsx:9
+msgid "Breakfast"
+msgstr "Petit-déjeuner"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:65
+msgid "Broccoli"
+msgstr "Brocoli"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:66
+msgid "Carrot"
+msgstr "Carotte"
+
+#: src/applications/planning/ui/components/planningGrid/recipePicker.tsx:29
+msgid "Choose a recipe"
+msgstr "Choisir une recette"
+
+#: src/applications/shopping/ui/components/shoppingListView.tsx:47
+msgid "Clear checked"
+msgstr "Effacer les cochés"
+
+#: src/applications/user/ui/components/auth/authForm.tsx:92
+msgid "Continue with Google"
+msgstr "Continuer avec Google"
+
+#: src/applications/recipe/ui/components/recipeForm/recipeForm.tsx:134
+msgid "Cook (min)"
+msgstr "Cuisson (min)"
+
+#. placeholder {0}: recipe.cookTimeMinutes
+#: src/app/(app)/recipes/[id]/page.tsx:72
+msgid "Cook: {0} min"
+msgstr "Cuisson : {0} min"
+
+#: src/app/(onboarding)/onboarding/household/page.tsx:8
+msgid "Couple"
+msgstr "En couple"
+
+#: src/app/(app)/recipes/page.tsx:50
+msgid "Create a recipe"
+msgstr "Créer une recette"
+
+#: src/applications/user/ui/components/auth/authForm.tsx:71
+msgid "Create account"
+msgstr "Créer mon compte"
+
+#: src/app/(auth)/register/page.tsx:11
+msgid "Create an account"
+msgstr "Créer un compte"
+
+#: src/applications/recipe/ui/components/recipeForm/recipeForm.tsx:215
+msgid "Create recipe"
+msgstr "Créer la recette"
+
+#: src/app/(app)/recipes/page.tsx:44
+msgid "Create your first recipe to get started"
+msgstr "Créez votre première recette pour commencer"
+
+#: src/applications/recipe/ui/components/recipeDeleteButton.tsx:26
+msgid "Delete"
+msgstr "Supprimer"
+
+#: src/applications/recipe/ui/components/recipeDeleteButton.tsx:16
+msgid "Delete this recipe? This action cannot be undone."
+msgstr "Supprimer cette recette ? Cette action est irréversible."
+
+#: src/applications/recipe/ui/components/recipeDeleteButton.tsx:26
+msgid "Deleting..."
+msgstr "Suppression..."
+
+#: src/applications/recipe/ui/components/recipeForm/stepRow.tsx:23
+msgid "Describe this step..."
+msgstr "Décrivez cette étape..."
+
+#: src/applications/recipe/ui/components/recipeForm/recipeForm.tsx:91
+msgid "Description"
+msgstr "Description"
+
+#: src/applications/planning/ui/components/planningGrid/mealSlotCell.tsx:11
+msgid "Dinner"
+msgstr "Dîner"
+
+#: src/applications/user/ui/components/auth/authForm.tsx:98
+msgid "Don't have an account?"
+msgstr "Pas encore de compte ?"
+
+#: src/applications/recipe/ui/components/recipeForm/recipeForm.tsx:84
+msgid "e.g. Chicken stir-fry"
+msgstr "ex. Poulet sauté aux légumes"
+
+#: src/app/(app)/recipes/[id]/edit/page.tsx:34
+msgid "Edit recipe"
+msgstr "Modifier la recette"
+
+#: src/applications/user/ui/components/auth/authForm.tsx:38
+msgid "Email"
+msgstr "Email"
+
+#: src/app/(onboarding)/onboarding/household/page.tsx:9
+msgid "Family"
+msgstr "Famille"
+
+#: src/applications/user/ui/components/auth/authForm.tsx:27
+msgid "First name"
+msgstr "Prénom"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:111
+msgid "Free · Set up in 2 minutes"
+msgstr "Gratuit · Configuration en 2 minutes"
+
+#: src/applications/user/ui/components/navigation/navBar.tsx:26
+msgid "Fridge"
+msgstr "Frigo"
+
+#: src/app/(app)/pantry/page.tsx:8
+msgid "Fridge & Stock"
+msgstr "Frigo & Stock"
+
+#: src/applications/shopping/ui/components/generateButton.tsx:32
+msgid "Generate from planning"
+msgstr "Générer depuis le planning"
+
+#: src/app/(app)/shopping/page.tsx:39
+msgid "Generate one from your weekly planning"
+msgstr "Générez-en une depuis votre planning hebdomadaire"
+
+#: src/applications/shopping/ui/components/generateButton.tsx:27
+msgid "Generating..."
+msgstr "Génération..."
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:106
+msgid "Get started"
+msgstr "Commencer"
+
+#: src/app/(app)/shopping/page.tsx:8
+#~ msgid "Grocery list"
+#~ msgstr "Liste de courses"
+
+#: src/app/(onboarding)/onboarding/household/page.tsx:20
+msgid "How many are you<0/>cooking for?"
+msgstr "Pour combien<0/>cuisinez-vous ?"
+
+#: src/applications/recipe/ui/components/recipeForm/ingredientRow.tsx:30
+msgid "Ingredient"
+msgstr "Ingrédient"
+
+#. placeholder {0}: index + 1
+#: src/applications/recipe/ui/components/recipeForm/ingredientRow.tsx:32
+msgid "Ingredient {0} name"
+msgstr "Nom de l'ingrédient {0}"
+
+#. placeholder {0}: index + 1
+#: src/applications/recipe/ui/components/recipeForm/ingredientRow.tsx:42
+msgid "Ingredient {0} quantity"
+msgstr "Quantité de l'ingrédient {0}"
+
+#. placeholder {0}: index + 1
+#: src/applications/recipe/ui/components/recipeForm/ingredientRow.tsx:50
+msgid "Ingredient {0} unit"
+msgstr "Unité de l'ingrédient {0}"
+
+#: src/app/(app)/recipes/[id]/page.tsx:84
+#: src/applications/recipe/ui/components/recipeForm/recipeForm.tsx:150
+msgid "Ingredients"
+msgstr "Ingrédients"
+
+#: src/app/(onboarding)/onboarding/household/page.tsx:10
+msgid "Large family"
+msgstr "Grande famille"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:70
+msgid "Leaf"
+msgstr "Feuille"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:68
+msgid "Lemon"
+msgstr "Citron"
+
+#: src/applications/user/ui/components/auth/authForm.tsx:68
+#: src/applications/user/ui/components/auth/authForm.tsx:92
+msgid "Loading..."
+msgstr "Chargement..."
+
+#: src/applications/planning/ui/components/planningGrid/mealSlotCell.tsx:10
+msgid "Lunch"
+msgstr "Déjeuner"
+
+#: src/app/(app)/recipes/page.tsx:30
+msgid "New"
+msgstr "Nouveau"
+
+#: src/app/(app)/recipes/new/page.tsx:22
+msgid "New recipe"
+msgstr "Nouvelle recette"
+
+#: src/app/(app)/shopping/page.tsx:19
+msgid "No list yet"
+msgstr "Aucune liste"
+
+#: src/app/(app)/recipes/page.tsx:18
+#: src/app/(app)/recipes/page.tsx:43
+msgid "No recipes yet"
+msgstr "Aucune recette"
+
+#: src/applications/planning/ui/components/planningGrid/recipePicker.tsx:46
+msgid "No recipes yet. Create one first."
+msgstr "Aucune recette. Créez-en une d'abord."
+
+#: src/app/(app)/shopping/page.tsx:37
+msgid "No shopping list yet"
+msgstr "Aucune liste de courses"
+
+#: src/applications/user/ui/components/auth/authForm.tsx:76
+msgid "or"
+msgstr "ou"
+
+#: src/applications/user/ui/components/auth/authForm.tsx:48
+msgid "Password"
+msgstr "Mot de passe"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:32
+msgid "Plan your meals for the week"
+msgstr "Planifiez vos repas de la semaine"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:81
+msgid "Plan your meals."
+msgstr "Planifiez vos repas."
+
+#: src/applications/user/ui/components/navigation/navBar.tsx:11
+msgid "Planning"
+msgstr "Planning"
+
+#: src/applications/recipe/ui/components/recipeForm/recipeForm.tsx:120
+msgid "Prep (min)"
+msgstr "Prép. (min)"
+
+#. placeholder {0}: recipe.prepTimeMinutes
+#: src/app/(app)/recipes/[id]/page.tsx:67
+msgid "Prep: {0} min"
+msgstr "Prép. : {0} min"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:50
+msgid "Price comparison across stores"
+msgstr "Comparaison des prix entre enseignes"
+
+#: src/applications/recipe/ui/components/recipeForm/recipeForm.tsx:76
+msgid "Recipe name"
+msgstr "Nom de la recette"
+
+#: src/app/(app)/recipes/page.tsx:15
+#: src/applications/user/ui/components/navigation/navBar.tsx:16
+msgid "Recipes"
+msgstr "Recettes"
+
+#: src/applications/shopping/ui/components/generateButton.tsx:30
+msgid "Regenerate from planning"
+msgstr "Régénérer depuis le planning"
+
+#: src/applications/planning/ui/components/planningGrid/recipePicker.tsx:69
+msgid "Remove from this meal"
+msgstr "Retirer de ce repas"
+
+#. placeholder {0}: index + 1
+#: src/applications/recipe/ui/components/recipeForm/ingredientRow.tsx:57
+msgid "Remove ingredient {0}"
+msgstr "Supprimer l'ingrédient {0}"
+
+#. placeholder {0}: index + 1
+#: src/applications/recipe/ui/components/recipeForm/stepRow.tsx:33
+msgid "Remove step {0}"
+msgstr "Supprimer l'étape {0}"
+
+#: src/applications/recipe/ui/components/recipeForm/recipeForm.tsx:216
+msgid "Save changes"
+msgstr "Enregistrer"
+
+#: src/applications/recipe/ui/components/recipeForm/recipeForm.tsx:213
+msgid "Saving..."
+msgstr "Enregistrement..."
+
+#: src/applications/recipe/ui/components/recipeForm/recipeForm.tsx:107
+msgid "Servings"
+msgstr "Portions"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:82
+msgid "Shop smarter."
+msgstr "Faites vos courses malin."
+
+#: src/app/(app)/shopping/page.tsx:15
+#: src/applications/user/ui/components/navigation/navBar.tsx:21
+msgid "Shopping"
+msgstr "Courses"
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:41
+msgid "Shopping list generated automatically"
+msgstr "Liste de courses générée automatiquement"
+
+#: src/app/(auth)/login/page.tsx:11
+#: src/applications/user/ui/components/auth/authForm.tsx:70
+#: src/applications/user/ui/components/auth/authForm.tsx:107
+msgid "Sign in"
+msgstr "Se connecter"
+
+#: src/applications/user/ui/components/auth/authForm.tsx:100
+msgid "Sign up"
+msgstr "S'inscrire"
+
+#: src/app/(onboarding)/onboarding/stores/page.tsx:93
+msgid "Skip this step"
+msgstr "Passer cette étape"
+
+#: src/app/(auth)/layout.tsx:21
+msgid "Smart meal planning & grocery management"
+msgstr "Planifiez vos repas, maîtrisez vos courses"
+
+#: src/app/(onboarding)/onboarding/household/page.tsx:7
+msgid "Solo"
+msgstr "Solo"
+
+#: src/app/(onboarding)/onboarding/stores/page.tsx:93
+msgid "Start"
+msgstr "Démarrer"
+
+#. placeholder {0}: index + 1
+#: src/applications/recipe/ui/components/recipeForm/stepRow.tsx:26
+msgid "Step {0}"
+msgstr "Étape {0}"
+
+#: src/app/(onboarding)/_components/onboardingLayoutClient.tsx:12
+msgid "Step 1 of 2"
+msgstr "Étape 1 sur 2"
+
+#: src/app/(onboarding)/_components/onboardingLayoutClient.tsx:13
+msgid "Step 2 of 2"
+msgstr "Étape 2 sur 2"
+
+#: src/app/(app)/recipes/[id]/page.tsx:102
+#: src/applications/recipe/ui/components/recipeForm/recipeForm.tsx:178
+msgid "Steps"
+msgstr "Étapes"
+
+#: src/app/(onboarding)/onboarding/stores/page.tsx:35
+msgid "To compare prices as accurately as possible."
+msgstr "Pour comparer les prix au plus juste."
+
+#: src/app/(onboarding)/onboarding/welcome/page.tsx:69
+msgid "Tomato"
+msgstr "Tomate"
+
+#: src/applications/recipe/ui/components/recipeForm/ingredientRow.tsx:48
+#: src/applications/shopping/ui/components/addItemForm.tsx:44
+msgid "Unit"
+msgstr "Unité"
+
+#: src/app/(onboarding)/onboarding/household/page.tsx:23
+msgid "We'll adapt your recipe portions accordingly."
+msgstr "On adaptera les portions de vos recettes."
+
+#: src/app/(app)/pantry/page.tsx:9
+msgid "Your food stock"
+msgstr "Vos aliments en stock"
+
+#: src/app/(app)/shopping/page.tsx:9
+#~ msgid "Your groceries"
+#~ msgstr "Vos courses"
+
+#: src/app/(app)/planning/page.tsx:9
+#~ msgid "Your meals for the week"
+#~ msgstr "Vos repas de la semaine"
+
+#: src/app/(app)/recipes/page.tsx:9
+#~ msgid "Your recipes"
+#~ msgstr "Vos recettes"
+
+#: src/app/(onboarding)/onboarding/stores/page.tsx:32
+msgid "Your usual<0/>stores"
+msgstr "Vos magasins<0/>habituels"

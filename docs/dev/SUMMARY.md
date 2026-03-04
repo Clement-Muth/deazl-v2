@@ -22,5 +22,6 @@
 
 - [Vue d'ensemble](development/README.md)
 - [Conventions de code](development/conventions.md)
-- [Workflow Git](development/git-workflow.md)
+- [Workflow Git & CI/CD](development/git-workflow.md)
 - [Variables d'environnement](development/env.md)
+- [Tests E2E](development/testing.md)

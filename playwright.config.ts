@@ -7,6 +7,8 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   workers: 1,
   reporter: "html",
+  globalSetup: "./e2e/global-setup.ts",
+  globalTeardown: "./e2e/global-teardown.ts",
   use: {
     baseURL: "http://localhost:3002",
     trace: "on-first-retry",
@@ -18,7 +20,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "/Users/clementmuth/.bun/bin/bun run dev",
+    command: "NODE_ENV=test /Users/clementmuth/.bun/bin/bun run dev",
     url: "http://localhost:3002",
     reuseExistingServer: !process.env.CI,
     timeout: 30000,

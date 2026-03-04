@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { LinguiClientProvider } from "@/lib/i18n/linguiProvider";
+import { getLocale, initLingui, getMessages } from "@/lib/i18n/server";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,15 +19,21 @@ export const metadata: Metadata = {
   description: "Smart meal planning & grocery management",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const locale = await getLocale();
+  await initLingui(locale);
+  const messages = await getMessages(locale);
+
   return (
-    <html lang="fr">
+    <html lang={locale}>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        {children}
+        <LinguiClientProvider locale={locale} messages={messages}>
+          {children}
+        </LinguiClientProvider>
       </body>
     </html>
   );

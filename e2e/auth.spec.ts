@@ -7,24 +7,23 @@ const user = {
 };
 
 test.describe("Auth", () => {
-  test("sign up redirects to planning", async ({ page }) => {
+  test("sign up redirects out of register", async ({ page }) => {
     await signUp(page, user);
-    await expect(page).toHaveURL(/\/planning/);
+    await expect(page).toHaveURL(/\/(onboarding|planning)/);
   });
 
-  test("sign in with valid credentials redirects to planning", async ({ page }) => {
+  test("sign in with valid credentials redirects out of login", async ({ page }) => {
     await signUp(page, user);
-    await page.goto("/login");
     await signIn(page, user);
-    await expect(page).toHaveURL(/\/planning/);
+    await expect(page).toHaveURL(/\/(onboarding|planning)/);
   });
 
   test("sign in with wrong password shows error", async ({ page }) => {
     await page.goto("/login");
-    await page.getByLabel(/email/i).fill(user.email);
-    await page.getByLabel(/mot de passe/i).fill("wrongpassword");
-    await page.getByRole("button", { name: /connexion/i }).click();
-    await expect(page.getByRole("alert")).toBeVisible();
+    await page.getByLabel("Email").fill(user.email);
+    await page.getByLabel("Mot de passe").fill("wrongpassword");
+    await page.getByRole("button", { name: "Se connecter" }).click();
+    await expect(page.locator("p.text-destructive")).toBeVisible({ timeout: 5000 });
     await expect(page).toHaveURL(/\/login/);
   });
 
