@@ -6,12 +6,10 @@ const config: CapacitorConfig = {
   appId: "app.deazl.v2",
   appName: "Deazl",
   webDir: "out",
-  server: isDev
-    ? {
-        url: "http://192.168.1.39:3002",
-        cleartext: true,
-      }
-    : {},
+  server: {
+    url: isDev ? "http://192.168.1.39:3002" : "https://deazl-v2.vercel.app",
+    cleartext: isDev,
+  },
   plugins: {},
 };
 

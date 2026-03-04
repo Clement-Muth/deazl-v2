@@ -6,7 +6,7 @@
     "dev": "next dev --port=3002",
     "prebuild": "lingui compile",
     "build": "next build",
-    "build:mobile": "next build && cap sync",
+    "build:mobile": "cap sync",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
