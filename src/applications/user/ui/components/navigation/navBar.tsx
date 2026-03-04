@@ -41,6 +41,26 @@ const navItems = [
     ),
   },
   {
+    href: "/scan",
+    label: msg`Scan`,
+    icon: (active: boolean) => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? "white" : "#9CA3AF"} strokeWidth={active ? "2.2" : "1.8"} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+        <path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+        <line x1="7" y1="8" x2="7" y2="16"/><line x1="10.5" y1="8" x2="10.5" y2="16"/><line x1="14" y1="8" x2="14" y2="16"/><line x1="17" y1="8" x2="17" y2="16"/>
+      </svg>
+    ),
+  },
+  {
+    href: "/analytics",
+    label: msg`Analytics`,
+    icon: (active: boolean) => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? "white" : "#9CA3AF"} strokeWidth={active ? "2.2" : "1.8"} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>
+      </svg>
+    ),
+  },
+  {
     href: "/profile",
     label: msg`Profile`,
     icon: (active: boolean) => (
@@ -65,7 +85,7 @@ export function NavBar() {
             <Link
               key={href}
               href={href}
-              className={`flex flex-col items-center gap-1 rounded-xl px-4 py-2 transition-all active:scale-[0.93] ${
+              className={`flex flex-col items-center gap-1 rounded-xl px-3 py-2 transition-all active:scale-[0.93] ${
                 isActive ? "bg-primary" : ""
               }`}
             >
