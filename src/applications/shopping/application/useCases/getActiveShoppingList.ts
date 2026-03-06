@@ -57,13 +57,26 @@ export async function getActiveShoppingList(): Promise<ShoppingList | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: list } = await supabase
+  const { data: membership } = await supabase
+    .from("household_members")
+    .select("household_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const listQuery = supabase
     .from("shopping_lists")
     .select("id, status, shopping_items(id, custom_name, quantity, unit, is_checked, sort_order, product_id, category)")
     .eq("status", "active")
     .order("created_at", { ascending: false })
-    .limit(1)
-    .single();
+    .limit(1);
+
+  if (membership?.household_id) {
+    listQuery.eq("household_id", membership.household_id);
+  } else {
+    listQuery.eq("user_id", user.id);
+  }
+
+  const { data: list } = await listQuery.maybeSingle();
 
   if (!list) return null;
 

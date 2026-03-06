@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useTransition, useRef, useCallback } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { Trans } from "@lingui/react/macro";
 import { toggleShoppingItem } from "@/applications/shopping/application/useCases/toggleShoppingItem";
 import { clearCheckedItems } from "@/applications/shopping/application/useCases/clearCheckedItems";
@@ -277,6 +278,42 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
   useEffect(() => {
     setItems(list.items);
   }, [list.items]);
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`list:${list.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "shopping_items", filter: `shopping_list_id=eq.${list.id}` },
+        (payload) => {
+          const r = payload.new as { id: string; custom_name: string; quantity: number; unit: string; is_checked: boolean; sort_order: number; product_id: string | null; category: string | null };
+          setItems((prev) => {
+            if (prev.some((i) => i.id === r.id)) return prev;
+            return [...prev, { id: r.id, customName: r.custom_name, quantity: r.quantity, unit: r.unit, isChecked: r.is_checked, sortOrder: r.sort_order, productId: r.product_id, category: r.category }];
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "shopping_items", filter: `shopping_list_id=eq.${list.id}` },
+        (payload) => {
+          const r = payload.new as { id: string; is_checked: boolean };
+          setItems((prev) => prev.map((i) => i.id === r.id ? { ...i, isChecked: r.is_checked } : i));
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "shopping_items", filter: `shopping_list_id=eq.${list.id}` },
+        (payload) => {
+          const id = (payload.old as { id: string }).id;
+          setItems((prev) => prev.filter((i) => i.id !== id));
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [list.id]);
 
   const unchecked = items.filter((i) => !i.isChecked).sort((a, b) => a.sortOrder - b.sortOrder);
   const checked = items.filter((i) => i.isChecked).sort((a, b) => a.sortOrder - b.sortOrder);

@@ -3,10 +3,12 @@ import { Trans } from "@lingui/react/macro";
 import { initLinguiFromCookie } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserStores } from "@/applications/user/application/useCases/getUserStores";
+import { getHousehold } from "@/applications/user/application/useCases/getHousehold";
 import { signOut } from "@/applications/user/application/useCases/signOut";
 import { StoreManager } from "@/applications/user/ui/components/storeManager";
 import { AvatarPicker } from "@/applications/user/ui/components/avatarPicker";
 import { HouseholdSizeEditor } from "@/applications/user/ui/components/householdSizeEditor";
+import { HouseholdManager } from "@/applications/user/ui/components/householdManager";
 import { DietaryPreferencesEditor } from "@/applications/user/ui/components/dietaryPreferencesEditor";
 import { DisplayNameEditor } from "@/applications/user/ui/components/displayNameEditor";
 
@@ -14,7 +16,7 @@ export default async function ProfilePage() {
   await initLinguiFromCookie();
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const stores = await getUserStores();
+  const [stores, household] = await Promise.all([getUserStores(), getHousehold()]);
 
   const fullName: string = user?.user_metadata?.full_name ?? "";
   const initials = fullName.trim()
@@ -64,6 +66,8 @@ export default async function ProfilePage() {
             <polyline points="9 18 15 12 9 6" />
           </svg>
         </Link>
+
+        <HouseholdManager initialHousehold={household} currentUserId={user?.id ?? ""} />
 
         <StoreManager initialStores={stores} />
 

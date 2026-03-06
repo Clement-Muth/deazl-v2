@@ -13,11 +13,27 @@ export async function generateShoppingList(): Promise<void> {
 
   const weekParam = formatWeekParam(getMondayOf(new Date()));
 
-  await supabase
-    .from("shopping_lists")
-    .update({ status: "archived" })
+  const { data: membership } = await supabase
+    .from("household_members")
+    .select("household_id")
     .eq("user_id", user.id)
-    .eq("status", "active");
+    .maybeSingle();
+
+  const householdId: string | null = membership?.household_id ?? null;
+
+  if (householdId) {
+    await supabase
+      .from("shopping_lists")
+      .update({ status: "archived" })
+      .eq("household_id", householdId)
+      .eq("status", "active");
+  } else {
+    await supabase
+      .from("shopping_lists")
+      .update({ status: "archived" })
+      .eq("user_id", user.id)
+      .eq("status", "active");
+  }
 
   const { data: plan } = await supabase
     .from("meal_plans")
@@ -30,6 +46,7 @@ export async function generateShoppingList(): Promise<void> {
     .from("shopping_lists")
     .insert({
       user_id: user.id,
+      household_id: householdId,
       meal_plan_id: plan?.id ?? null,
       status: "active",
     })
