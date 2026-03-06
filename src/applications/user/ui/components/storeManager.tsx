@@ -108,9 +108,9 @@ export function StoreManager({ initialStores }: Props) {
   }
 
   return (
-    <div className="rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm">
-      <div className="flex items-center justify-between border-b border-black/5 px-5 py-3.5">
-        <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400">
+    <div className="rounded-2xl bg-card shadow-[0_1px_4px_rgba(28,25,23,0.08)]">
+      <div className="flex items-center justify-between border-b border-border/60 px-5 py-3.5">
+        <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground/70">
           <Trans>My stores</Trans>
         </h2>
         {!showSearch && (
@@ -129,7 +129,7 @@ export function StoreManager({ initialStores }: Props) {
 
       {stores.length === 0 && !showSearch && (
         <div className="px-5 py-6 text-center">
-          <p className="text-sm text-gray-400"><Trans>No stores added yet.</Trans></p>
+          <p className="text-sm text-muted-foreground/70"><Trans>No stores added yet.</Trans></p>
           <button
             type="button"
             onClick={() => setShowSearch(true)}
@@ -143,16 +143,16 @@ export function StoreManager({ initialStores }: Props) {
       {stores.map((store, i) => (
         <div
           key={store.id}
-          className={`flex items-center justify-between px-5 py-3.5 ${i < stores.length - 1 || showSearch ? "border-b border-black/5" : ""}`}
+          className={`flex items-center justify-between px-5 py-3.5 ${i < stores.length - 1 || showSearch ? "border-b border-border/60" : ""}`}
         >
           <div>
             <p className="text-sm font-semibold text-foreground">{store.name}</p>
-            <p className="text-xs text-gray-400">{store.city}</p>
+            <p className="text-xs text-muted-foreground/70">{store.city}</p>
           </div>
           <button
             type="button"
             onClick={() => handleRemove(store.id)}
-            className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 text-gray-400 transition hover:bg-red-50 hover:text-red-400"
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-muted-foreground/70 transition hover:bg-red-50 hover:text-red-400"
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -164,7 +164,7 @@ export function StoreManager({ initialStores }: Props) {
       {showSearch && (
         <div className="p-4">
           <div className="relative">
-            <div className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 transition ${showDropdown && query.length >= 2 ? "border-primary bg-white ring-2 ring-primary/20" : "border-gray-200 bg-gray-50"}`}>
+            <div className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 transition ${showDropdown && query.length >= 2 ? "border-primary bg-white ring-2 ring-primary/20" : "border-border bg-muted/60"}`}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
               </svg>
@@ -176,10 +176,10 @@ export function StoreManager({ initialStores }: Props) {
                 onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
                 placeholder={t`Ex: Carrefour Nantes…`}
                 autoFocus
-                className="flex-1 bg-transparent text-sm text-gray-800 outline-none placeholder:text-gray-400"
+                className="flex-1 bg-transparent text-sm text-gray-800 outline-none placeholder:text-muted-foreground/70"
               />
               {isSearching ? (
-                <svg className="animate-spin text-gray-400" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg className="animate-spin text-muted-foreground/70" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                 </svg>
               ) : null}
@@ -194,7 +194,7 @@ export function StoreManager({ initialStores }: Props) {
                         key={`${result.type}-${result.id ?? result.osm?.osmKey ?? i}`}
                         type="button"
                         onMouseDown={() => handleSelect(result)}
-                        className="flex w-full items-center justify-between gap-3 border-b border-gray-50 px-3.5 py-2.5 text-left last:border-0 hover:bg-gray-50"
+                        className="flex w-full items-center justify-between gap-3 border-b border-gray-50 px-3.5 py-2.5 text-left last:border-0 hover:bg-muted/60"
                       >
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
@@ -203,9 +203,9 @@ export function StoreManager({ initialStores }: Props) {
                               <span className="shrink-0 rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold text-primary"><Trans>Known</Trans></span>
                             )}
                           </div>
-                          {result.detail && <p className="truncate text-xs text-gray-400">{result.detail}</p>}
+                          {result.detail && <p className="truncate text-xs text-muted-foreground/70">{result.detail}</p>}
                         </div>
-                        <svg className="shrink-0 text-gray-300" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <svg className="shrink-0 text-muted-foreground/40" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
                         </svg>
                       </button>
@@ -213,14 +213,14 @@ export function StoreManager({ initialStores }: Props) {
                     <button
                       type="button"
                       onMouseDown={handleCreateOpen}
-                      className="flex w-full items-center gap-1.5 border-t border-gray-100 px-3.5 py-2.5 text-xs font-medium text-gray-400 hover:bg-gray-50 hover:text-gray-600"
+                      className="flex w-full items-center gap-1.5 border-t border-gray-100 px-3.5 py-2.5 text-xs font-medium text-muted-foreground/70 hover:bg-muted/60 hover:text-gray-600"
                     >
                       <Trans>Not found? Add manually</Trans>
                     </button>
                   </>
                 ) : (
                   <div className="px-3.5 py-3">
-                    <p className="mb-2 text-xs text-gray-400"><Trans>No result for "{query}"</Trans></p>
+                    <p className="mb-2 text-xs text-muted-foreground/70"><Trans>No result for "{query}"</Trans></p>
                     <button
                       type="button"
                       onMouseDown={handleCreateOpen}
@@ -240,23 +240,23 @@ export function StoreManager({ initialStores }: Props) {
                 <input
                   type="text" value={createBrand} onChange={(e) => setCreateBrand(e.target.value)}
                   placeholder={t`Brand`} required
-                  className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="flex-1 rounded-xl border border-border bg-white px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
                 <input
                   type="text" value={createCity} onChange={(e) => setCreateCity(e.target.value)}
                   placeholder={t`City`} required
-                  className="w-28 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="w-28 rounded-xl border border-border bg-white px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </div>
               <input
                 type="text" value={createAddress} onChange={(e) => setCreateAddress(e.target.value)}
                 placeholder={t`Address (optional)`}
-                className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="rounded-xl border border-border bg-white px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
               <div className="flex gap-2">
                 <button
                   type="button" onClick={() => setShowCreate(false)}
-                  className="flex-1 rounded-xl border border-gray-200 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50"
+                  className="flex-1 rounded-xl border border-border py-2 text-sm font-medium text-muted-foreground hover:bg-muted/60"
                 >
                   <Trans>Cancel</Trans>
                 </button>
@@ -275,7 +275,7 @@ export function StoreManager({ initialStores }: Props) {
               <button
                 type="button"
                 onClick={() => { setShowSearch(false); setQuery(""); setShowDropdown(false); }}
-                className="text-xs font-medium text-gray-400 hover:text-gray-600"
+                className="text-xs font-medium text-muted-foreground/70 hover:text-gray-600"
               >
                 <Trans>Done</Trans>
               </button>

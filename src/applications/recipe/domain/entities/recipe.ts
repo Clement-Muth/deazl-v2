@@ -7,6 +7,7 @@ export interface Recipe {
   prepTimeMinutes: number | null;
   cookTimeMinutes: number | null;
   imageUrl: string | null;
+  dietaryTags: string[];
   isPublic: boolean;
   createdAt: Date;
   updatedAt: Date;

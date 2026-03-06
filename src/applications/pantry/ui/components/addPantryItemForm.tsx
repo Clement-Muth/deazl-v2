@@ -55,7 +55,7 @@ export function AddPantryItemForm({ onClose }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
 
   return (
-    <div className="rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm">
+    <div className="rounded-2xl bg-card shadow-[0_1px_4px_rgba(28,25,23,0.08)]">
       <form
         ref={formRef}
         action={async (fd) => {
@@ -126,7 +126,7 @@ export function AddPantryItemForm({ onClose }: Props) {
                 }`}
               >
                 {loc.icon}
-                <span className="hidden sm:inline">{loc.label}</span>
+                <span className="inline">{loc.label}</span>
               </button>
             ))}
           </div>

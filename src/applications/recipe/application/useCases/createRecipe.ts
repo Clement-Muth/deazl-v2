@@ -17,6 +17,7 @@ export async function createRecipe(_prevState: RecipeState, formData: FormData):
   const servings = parseInt(formData.get("servings") as string, 10) || 4;
   const prepTime = formData.get("prep_time") ? parseInt(formData.get("prep_time") as string, 10) : null;
   const cookTime = formData.get("cook_time") ? parseInt(formData.get("cook_time") as string, 10) : null;
+  const dietaryTags = formData.getAll("dietary_tag") as string[];
 
   if (!name?.trim()) return { error: "Recipe name is required" };
 
@@ -29,6 +30,7 @@ export async function createRecipe(_prevState: RecipeState, formData: FormData):
       servings,
       prep_time_minutes: prepTime,
       cook_time_minutes: cookTime,
+      dietary_tags: dietaryTags,
     })
     .select("id")
     .single();

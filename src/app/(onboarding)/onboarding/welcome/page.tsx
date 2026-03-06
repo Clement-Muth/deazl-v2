@@ -77,7 +77,7 @@ export default async function WelcomePage() {
           <h1 className="text-[78px] font-black leading-none tracking-[-5px] text-gray-900">
             Deazl<span className="text-primary">.</span>
           </h1>
-          <p className="mt-3 text-lg font-medium leading-relaxed text-gray-400">
+          <p className="mt-3 text-lg font-medium leading-relaxed text-muted-foreground/70">
             <Trans>Plan your meals.</Trans><br />
             <Trans>Shop smarter.</Trans>
           </p>
@@ -108,7 +108,7 @@ export default async function WelcomePage() {
               <path d="M5 12h14M12 5l7 7-7 7"/>
             </svg>
           </Link>
-          <p className="text-center text-xs text-gray-400"><Trans>Free · Set up in 2 minutes</Trans></p>
+          <p className="text-center text-xs text-muted-foreground/70"><Trans>Free · Set up in 2 minutes</Trans></p>
         </div>
 
       </div>

@@ -164,13 +164,13 @@ export function ShoppingItemRow({ item, onToggle, onDelete, hasDivider }: Shoppi
           </span>
         </button>
 
-        <span className={`flex-1 text-sm ${item.isChecked ? "text-gray-400 line-through decoration-gray-300" : "font-medium text-foreground"}`}
+        <span className={`flex-1 text-sm ${item.isChecked ? "text-muted-foreground/70 line-through decoration-gray-300" : "font-medium text-foreground"}`}
           style={{ transition: "color 0.18s ease" }}>
           {item.customName}
         </span>
 
         <div className="flex shrink-0 flex-col items-end gap-0.5" aria-hidden={item.isChecked ? "true" : undefined}>
-          <span className="text-xs font-medium text-gray-400">
+          <span className="text-xs font-medium text-muted-foreground/70">
             {qty} {item.unit}
           </span>
           {item.price && !item.isChecked && (

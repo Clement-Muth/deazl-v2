@@ -137,7 +137,7 @@ export default function StoresPage() {
           <h1 className="text-[28px] font-black leading-tight tracking-tight text-gray-900 animate-fade-up [animation-delay:80ms]">
             <Trans>Your usual<br />stores</Trans>
           </h1>
-          <p className="mt-2 text-sm text-gray-400 animate-fade-up [animation-delay:160ms]">
+          <p className="mt-2 text-sm text-muted-foreground/70 animate-fade-up [animation-delay:160ms]">
             <Trans>To compare prices as accurately as possible.</Trans>
           </p>
         </div>
@@ -151,12 +151,12 @@ export default function StoresPage() {
               >
                 <div>
                   <p className="text-sm font-semibold text-gray-800">{store.name}</p>
-                  <p className="text-xs text-gray-400">{store.city}</p>
+                  <p className="text-xs text-muted-foreground/70">{store.city}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setSelected((prev) => prev.filter((s) => s.id !== store.id))}
-                  className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 text-gray-400 transition hover:bg-gray-200 hover:text-gray-600"
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-muted-foreground/70 transition hover:bg-gray-200 hover:text-gray-600"
                 >
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -172,7 +172,7 @@ export default function StoresPage() {
             className={`flex items-center gap-2 rounded-2xl border px-4 py-3 transition ${
               showDropdown && query.length >= 2
                 ? "border-primary bg-white ring-2 ring-primary/20"
-                : "border-gray-200 bg-gray-50"
+                : "border-border bg-muted/60"
             }`}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -186,17 +186,17 @@ export default function StoresPage() {
               onFocus={() => { if (query.length >= 2) setShowDropdown(true); }}
               onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
               placeholder={t`Ex: Carrefour Nantes, Leclerc Bordeaux…`}
-              className="flex-1 bg-transparent text-sm text-gray-800 outline-none placeholder:text-gray-400"
+              className="flex-1 bg-transparent text-sm text-gray-800 outline-none placeholder:text-muted-foreground/70"
             />
             {isSearching ? (
-              <svg className="animate-spin text-gray-400" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="animate-spin text-muted-foreground/70" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 12a9 9 0 1 1-6.219-8.56" />
               </svg>
             ) : query.length > 0 ? (
               <button
                 type="button"
                 onClick={() => { setQuery(""); setShowDropdown(false); }}
-                className="text-gray-300 hover:text-gray-500"
+                className="text-muted-foreground/40 hover:text-muted-foreground"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -214,7 +214,7 @@ export default function StoresPage() {
                       key={`${result.type}-${result.id ?? result.osm?.osmKey ?? i}`}
                       type="button"
                       onMouseDown={() => handleSelect(result)}
-                      className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-gray-50 border-b border-gray-50 last:border-0"
+                      className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-muted/60 border-b border-gray-50 last:border-0"
                     >
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
@@ -226,7 +226,7 @@ export default function StoresPage() {
                           )}
                         </div>
                         {result.detail && (
-                          <p className="truncate text-xs text-gray-400">{result.detail}</p>
+                          <p className="truncate text-xs text-muted-foreground/70">{result.detail}</p>
                         )}
                       </div>
                       {isPending ? (
@@ -234,7 +234,7 @@ export default function StoresPage() {
                           <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                         </svg>
                       ) : (
-                        <svg className="shrink-0 text-gray-300" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <svg className="shrink-0 text-muted-foreground/40" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
                         </svg>
                       )}
@@ -243,14 +243,14 @@ export default function StoresPage() {
                   <button
                     type="button"
                     onMouseDown={handleCreateOpen}
-                    className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium text-gray-400 transition hover:bg-gray-50 hover:text-gray-600 border-t border-gray-100"
+                    className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium text-muted-foreground/70 transition hover:bg-muted/60 hover:text-gray-600 border-t border-gray-100"
                   >
                     <Trans>Not in the list? Add manually</Trans>
                   </button>
                 </>
               ) : (
                 <div className="px-4 py-4">
-                  <p className="text-sm text-gray-400 mb-3">
+                  <p className="text-sm text-muted-foreground/70 mb-3">
                     <Trans>No store found for "{query}"</Trans>
                   </p>
                   <button
@@ -267,13 +267,13 @@ export default function StoresPage() {
         </div>
 
         {showCreate && (
-          <div className="mt-3 overflow-hidden rounded-2xl border border-gray-200 bg-gray-50">
-            <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-              <p className="text-xs font-bold uppercase tracking-wide text-gray-400"><Trans>New store</Trans></p>
+          <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-muted/60">
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground/70"><Trans>New store</Trans></p>
               <button
                 type="button"
                 onClick={() => setShowCreate(false)}
-                className="text-gray-300 hover:text-gray-500"
+                className="text-muted-foreground/40 hover:text-muted-foreground"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -288,7 +288,7 @@ export default function StoresPage() {
                   onChange={(e) => setCreateBrand(e.target.value)}
                   placeholder={t`Brand (Carrefour, Leclerc…)`}
                   required
-                  className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="flex-1 rounded-xl border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
                 <input
                   type="text"
@@ -296,7 +296,7 @@ export default function StoresPage() {
                   onChange={(e) => setCreateCity(e.target.value)}
                   placeholder={t`City`}
                   required
-                  className="w-32 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="w-32 rounded-xl border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </div>
               <input
@@ -304,7 +304,7 @@ export default function StoresPage() {
                 value={createAddress}
                 onChange={(e) => setCreateAddress(e.target.value)}
                 placeholder={t`Address (optional)`}
-                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="rounded-xl border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
               <button
                 type="submit"
@@ -324,7 +324,7 @@ export default function StoresPage() {
         <div className="h-8 bg-linear-to-t from-white to-transparent" />
         <div className="bg-white px-6 pb-10 pt-1">
           {selected.length > 0 && (
-            <p className="mb-2.5 text-center text-xs font-medium text-gray-400">
+            <p className="mb-2.5 text-center text-xs font-medium text-muted-foreground/70">
               {selected.length === 1
                 ? <Trans>1 store selected</Trans>
                 : <Trans>{selected.length} stores selected</Trans>}

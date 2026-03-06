@@ -36,7 +36,7 @@ export function OnboardingLayoutClient({ locale, children }: { locale: Locale; c
           {current.back && (
             <Link
               href={current.back}
-              className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-gray-500 active:text-gray-900 active:scale-90 transition-all"
+              className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-muted-foreground active:text-gray-900 active:scale-90 transition-all"
             >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M15 18l-6-6 6-6" />
@@ -48,7 +48,7 @@ export function OnboardingLayoutClient({ locale, children }: { locale: Locale; c
               <div
                 key={i}
                 className={`h-0.75 flex-1 rounded-full transition-colors duration-500 ${
-                  i <= current.step + 1 ? "bg-primary" : "bg-gray-100"
+                  i <= current.step + 1 ? "bg-primary" : "bg-muted"
                 }`}
               />
             ))}

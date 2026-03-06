@@ -23,7 +23,7 @@ export function DayCard({ dayName, dayNum, isToday, slots, pendingSlot, onSlotTa
       }`}>
         <div className="flex items-baseline gap-2">
           <span className={`text-[11px] font-bold uppercase tracking-widest ${
-            isToday ? "text-white/60" : "text-gray-400"
+            isToday ? "text-white/60" : "text-muted-foreground/70"
           }`}>
             {dayName}
           </span>

@@ -1,54 +1,46 @@
 @import "tailwindcss";
 
-/*
- * @theme crée DEUX choses simultanément :
- * 1. Des variables CSS dans :root  → var(--color-primary) fonctionne
- * 2. Des utilitaires Tailwind      → bg-primary, text-primary, etc.
- *
- * Convention dans le code : utiliser les classes Tailwind directes
- * bg-primary, text-primary, bg-accent, border-border, etc.
- */
 @theme {
   /* ── Couleurs principales ── */
-  --color-primary:            #16A34A;
+  --color-primary:            #E8571C;
   --color-primary-foreground: #FFFFFF;
-  --color-primary-light:      #F0FDF4;
-  --color-primary-dark:       #15803D;
+  --color-primary-light:      #FFF4EF;
+  --color-primary-dark:       #C94811;
 
-  --color-accent:             #F59E0B;
+  --color-accent:             #E8571C;
   --color-accent-foreground:  #FFFFFF;
-  --color-accent-light:       #FFFBEB;
-  --color-accent-dark:        #D97706;
+  --color-accent-light:       #FFF4EF;
+  --color-accent-dark:        #C94811;
 
-  --color-destructive:            #EF4444;
+  --color-destructive:            #DC2626;
   --color-destructive-foreground: #FFFFFF;
   --color-destructive-light:      #FEF2F2;
 
   /* ── Surfaces & Neutrals ── */
-  --color-background:      #F9FAFB;
-  --color-foreground:      #111827;
+  --color-background:      #FAF9F6;
+  --color-foreground:      #1C1917;
   --color-card:            #FFFFFF;
-  --color-card-foreground: #111827;
+  --color-card-foreground: #1C1917;
   --color-surface:         #FFFFFF;
 
-  --color-muted:            #F3F4F6;
-  --color-muted-foreground: #6B7280;
+  --color-muted:            #F5F3EF;
+  --color-muted-foreground: #78716C;
 
-  --color-border: #E5E7EB;
-  --color-input:  #E5E7EB;
-  --color-ring:   #16A34A;
+  --color-border: #E8E5E0;
+  --color-input:  #E8E5E0;
+  --color-ring:   #E8571C;
 
   /* ── Texte ── */
-  --color-text-primary:   #111827;
-  --color-text-secondary: #6B7280;
-  --color-text-muted:     #9CA3AF;
+  --color-text-primary:   #1C1917;
+  --color-text-secondary: #78716C;
+  --color-text-muted:     #A8A29E;
   --color-text-inverted:  #FFFFFF;
 
   /* ── Secondary (pour shadcn) ── */
-  --color-secondary:            #F3F4F6;
-  --color-secondary-foreground: #374151;
+  --color-secondary:            #F5F3EF;
+  --color-secondary-foreground: #44403C;
   --color-popover:              #FFFFFF;
-  --color-popover-foreground:   #111827;
+  --color-popover-foreground:   #1C1917;
 
   /* ── Nutri-Score (couleurs officielles) ── */
   --color-nutriscore-a: #038141;

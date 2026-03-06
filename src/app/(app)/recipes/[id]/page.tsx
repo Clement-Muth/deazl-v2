@@ -10,6 +10,17 @@ interface RecipePageProps {
   params: Promise<{ id: string }>;
 }
 
+const DIETARY_LABELS: Record<string, string> = {
+  vegetarian: "Végétarien",
+  vegan: "Vegan",
+  gluten_free: "Sans gluten",
+  lactose_free: "Sans lactose",
+  halal: "Halal",
+  kosher: "Casher",
+  no_pork: "Sans porc",
+  no_seafood: "Sans fruits de mer",
+};
+
 const PALETTES = [
   { from: "#FFF7ED", to: "#FED7AA", text: "#7C2D12", accent: "#EA580C" },
   { from: "#F0FDF4", to: "#BBF7D0", text: "#14532D", accent: "#16A34A" },
@@ -149,13 +160,22 @@ export default async function RecipePage({ params }: RecipePageProps) {
                 ~{totalPrice.toFixed(0)} €
               </span>
             )}
+            {recipe.dietaryTags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                style={{ background: heroPillBg, color: heroText }}
+              >
+                {DIETARY_LABELS[tag] ?? tag}
+              </span>
+            ))}
           </div>
         </div>
       </div>
 
       <div className="relative -mt-5 rounded-t-[28px] bg-background shadow-[0_-4px_24px_rgba(0,0,0,0.06)]">
         {recipe.description && (
-          <div className="border-b border-black/5 px-5 pb-4 pt-5">
+          <div className="border-b border-border/60 px-5 pb-4 pt-5">
             <p className="text-sm leading-relaxed text-muted-foreground">{recipe.description}</p>
           </div>
         )}

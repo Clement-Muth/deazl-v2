@@ -24,6 +24,7 @@ export async function getRecipes(): Promise<Recipe[]> {
     prepTimeMinutes: row.prep_time_minutes,
     cookTimeMinutes: row.cook_time_minutes,
     imageUrl: row.image_url,
+    dietaryTags: row.dietary_tags ?? [],
     isPublic: row.is_public,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),

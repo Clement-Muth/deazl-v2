@@ -1,48 +1,61 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef } from "react";
+import { Trans } from "@lingui/react/macro";
 
 interface Props {
-  defaultImageUrl?: string | null;
+  previewUrl?: string | null;
+  onFileChange?: (file: File) => void;
+  fullHeight?: boolean;
 }
 
-export function RecipeImagePicker({ defaultImageUrl }: Props) {
-  const [preview, setPreview] = useState<string | null>(defaultImageUrl ?? null);
+export function RecipeImagePicker({ previewUrl, onFileChange, fullHeight = false }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) setPreview(URL.createObjectURL(file));
+    if (file) onFileChange?.(file);
   }
+
+  const emptyHeight = fullHeight ? "h-72" : "h-48";
+  const previewHeight = fullHeight ? "h-72" : "h-52";
 
   return (
     <div
-      className="relative cursor-pointer overflow-hidden rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm"
+      className="relative cursor-pointer overflow-hidden rounded-2xl bg-card shadow-[0_1px_4px_rgba(28,25,23,0.08)]"
       onClick={() => inputRef.current?.click()}
     >
-      {preview ? (
-        <div className="relative h-44">
-          <img src={preview} alt="" className="h-full w-full object-cover" />
-          <div className="absolute inset-0 flex items-end justify-end p-3">
-            <span className="rounded-full bg-black/40 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm">
-              Changer la photo
+      {previewUrl ? (
+        <div className={`relative ${previewHeight}`}>
+          <img src={previewUrl} alt="" className="h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+          <div className="absolute bottom-3 right-3">
+            <span className="flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                <circle cx="12" cy="13" r="4" />
+              </svg>
+              <Trans>Change photo</Trans>
             </span>
           </div>
         </div>
       ) : (
-        <div className="flex h-32 flex-col items-center justify-center gap-2">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-300">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-            <circle cx="8.5" cy="8.5" r="1.5" />
-            <polyline points="21 15 16 10 5 21" />
-          </svg>
-          <span className="text-xs font-medium text-gray-400">Ajouter une photo</span>
+        <div className={`flex flex-col items-center justify-center gap-3 bg-gradient-to-b from-gray-50 to-white ${emptyHeight}`}>
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground/70">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+          </div>
+          <div className="flex flex-col items-center gap-0.5">
+            <span className="text-sm font-semibold text-muted-foreground"><Trans>Add a photo</Trans></span>
+            <span className="text-xs text-muted-foreground/70"><Trans>Tap to browse your library</Trans></span>
+          </div>
         </div>
       )}
       <input
         ref={inputRef}
         type="file"
-        name="image"
         accept="image/*"
         className="hidden"
         onChange={handleChange}

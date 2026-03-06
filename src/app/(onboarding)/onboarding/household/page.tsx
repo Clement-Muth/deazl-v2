@@ -19,7 +19,7 @@ export default async function HouseholdPage() {
         <h1 className="text-[28px] font-black leading-tight tracking-tight text-gray-900 animate-fade-up [animation-delay:80ms]">
           <Trans>How many are you<br />cooking for?</Trans>
         </h1>
-        <p className="mt-2 text-sm text-gray-400 animate-fade-up [animation-delay:160ms]">
+        <p className="mt-2 text-sm text-muted-foreground/70 animate-fade-up [animation-delay:160ms]">
           <Trans>We'll adapt your recipe portions accordingly.</Trans>
         </p>
       </div>
@@ -40,7 +40,7 @@ export default async function HouseholdPage() {
               <span className="block text-[56px] font-black leading-none tracking-tighter text-gray-900 transition-colors group-hover:text-primary">
                 {number}
               </span>
-              <span className="mt-3 block text-[11px] font-bold uppercase tracking-widest text-gray-400 transition-colors group-hover:text-primary">
+              <span className="mt-3 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70 transition-colors group-hover:text-primary">
                 {i18n._(label)}
               </span>
             </button>

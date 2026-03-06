@@ -118,15 +118,15 @@ export function AddItemForm({ listId }: AddItemFormProps) {
   }
 
   return (
-    <div className="rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm">
+    <div className="rounded-2xl bg-card shadow-[0_1px_4px_rgba(28,25,23,0.08)]">
       {filteredSuggestions.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto border-b border-black/5 px-4 py-2.5 scrollbar-none">
+        <div className="flex gap-2 overflow-x-auto border-b border-border/60 px-4 py-2.5 scrollbar-none">
           {filteredSuggestions.map((s) => (
             <button
               key={s}
               type="button"
               onClick={() => handleSuggestionClick(s)}
-              className="shrink-0 rounded-full border border-black/8 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-600 transition hover:bg-gray-100 active:scale-95"
+              className="shrink-0 rounded-full border border-black/8 bg-muted/60 px-3 py-1 text-xs font-medium text-gray-600 transition hover:bg-muted active:scale-95"
             >
               {s}
             </button>
@@ -143,7 +143,7 @@ export function AddItemForm({ listId }: AddItemFormProps) {
             onChange={(e) => setRaw(e.target.value)}
             onPaste={handlePaste}
             placeholder={t`"2 pommes", "500g pâtes"…`}
-            className="flex-1 min-w-0 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm outline-none transition placeholder:text-gray-300 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20"
+            className="flex-1 min-w-0 rounded-xl border border-border bg-muted/60 px-3 py-2.5 text-sm outline-none transition placeholder:text-muted-foreground/40 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20"
           />
           <button
             type="submit"

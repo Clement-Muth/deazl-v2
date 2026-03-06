@@ -5,6 +5,7 @@ import { Trans } from "@lingui/react/macro";
 import { toggleShoppingItem } from "@/applications/shopping/application/useCases/toggleShoppingItem";
 import { clearCheckedItems } from "@/applications/shopping/application/useCases/clearCheckedItems";
 import { deleteShoppingItem } from "@/applications/shopping/application/useCases/deleteShoppingItem";
+import { transferCheckedToPantry } from "@/applications/shopping/application/useCases/transferCheckedToPantry";
 import { ShoppingItemRow } from "./shoppingItemRow";
 import { AddItemForm } from "./addItemForm";
 import type { ShoppingItem, ShoppingList, StoreCostSummary } from "@/applications/shopping/domain/entities/shopping";
@@ -60,7 +61,7 @@ function CategorySection({
 
   return (
     <div
-      className="overflow-hidden rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm"
+      className="overflow-hidden rounded-2xl bg-card shadow-[0_1px_4px_rgba(28,25,23,0.08)]"
       style={{ animation: `fadeSlideUp 0.35s ${animationDelay}ms cubic-bezier(0.22,1,0.36,1) both` }}
     >
       <button
@@ -69,10 +70,10 @@ function CategorySection({
         className="flex w-full items-center gap-2.5 px-4 py-3"
       >
         <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-        <span className="flex-1 text-left text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
+        <span className="flex-1 text-left text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
           {category}
         </span>
-        <span className="text-xs font-medium text-gray-300">{items.length}</span>
+        <span className="text-xs font-medium text-muted-foreground/40">{items.length}</span>
         <svg
           width="14" height="14" viewBox="0 0 24 24"
           fill="none" stroke="#D1D5DB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
@@ -89,7 +90,7 @@ function CategorySection({
         }}
       >
         <div className="overflow-hidden">
-          <div className="border-t border-black/5">
+          <div className="border-t border-border/60">
             {items.map((item, i) => (
               <ShoppingItemRow
                 key={item.id}
@@ -113,7 +114,7 @@ function StoreBanner({ summaries }: { summaries: StoreCostSummary[] }) {
   const second = summaries[1];
 
   return (
-    <div className="overflow-hidden rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm">
+    <div className="overflow-hidden rounded-2xl bg-card shadow-[0_1px_4px_rgba(28,25,23,0.08)]">
       <button
         type="button"
         onClick={() => setExpanded((e) => !e)}
@@ -127,7 +128,7 @@ function StoreBanner({ summaries }: { summaries: StoreCostSummary[] }) {
         <div className="flex-1 text-left">
           <p className="text-sm font-bold text-gray-800">{best.storeName}</p>
           {best.coveredCount < best.totalCount && (
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-muted-foreground/70">
               <Trans>{best.coveredCount}/{best.totalCount} items with known prices</Trans>
             </p>
           )}
@@ -150,7 +151,7 @@ function StoreBanner({ summaries }: { summaries: StoreCostSummary[] }) {
         }}
       >
         <div className="overflow-hidden">
-          <div className="border-t border-black/5 px-5 py-3">
+          <div className="border-t border-border/60 px-5 py-3">
             {second && (
               <p className="mb-2 text-[10px] font-semibold text-green-500">
                 <Trans>-{(second.totalCost - best.totalCost).toFixed(2)} € vs {second.storeName.split(" ")[0]}</Trans>
@@ -159,8 +160,8 @@ function StoreBanner({ summaries }: { summaries: StoreCostSummary[] }) {
             <div className="flex flex-wrap gap-x-4 gap-y-1">
               {summaries.slice(1).map((s) => (
                 <div key={s.storeId} className="flex items-baseline gap-1.5">
-                  <span className="text-xs font-medium text-gray-500">{s.storeName.split(" ")[0]}</span>
-                  <span className="text-xs text-gray-400">~{s.totalCost.toFixed(2)} €</span>
+                  <span className="text-xs font-medium text-muted-foreground">{s.storeName.split(" ")[0]}</span>
+                  <span className="text-xs text-muted-foreground/70">~{s.totalCost.toFixed(2)} €</span>
                 </div>
               ))}
             </div>
@@ -210,7 +211,7 @@ function CompletionState() {
       </div>
       <div>
         <p className="text-base font-bold text-foreground"><Trans>All done!</Trans></p>
-        <p className="text-sm text-gray-400"><Trans>Time to checkout.</Trans></p>
+        <p className="text-sm text-muted-foreground/70"><Trans>Time to checkout.</Trans></p>
       </div>
       <style>{`
         @keyframes confetti {
@@ -242,7 +243,7 @@ function UndoToast({ itemName, onUndo, onDismiss }: { itemName: string; onUndo: 
       style={{ animation: "slideUpToast 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards" }}
     >
       <p className="text-sm font-medium text-white truncate">
-        <span className="text-gray-400"><Trans>Deleted</Trans> </span>
+        <span className="text-muted-foreground/70"><Trans>Deleted</Trans> </span>
         {itemName}
       </p>
       <button
@@ -265,6 +266,8 @@ function UndoToast({ itemName, onUndo, onDismiss }: { itemName: string; onUndo: 
 export function ShoppingListView({ list }: ShoppingListViewProps) {
   const [items, setItems] = useState<ShoppingItem[]>(list.items);
   const [isClearPending, startClearTransition] = useTransition();
+  const [isTransferPending, startTransferTransition] = useTransition();
+  const [transferDone, setTransferDone] = useState(false);
   const [undoState, setUndoState] = useState<{ item: ShoppingItem } | null>(null);
   const pendingDeleteRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevUncheckedLenRef = useRef(list.items.filter((i) => !i.isChecked).length);
@@ -355,6 +358,19 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
     startClearTransition(() => clearCheckedItems(list.id));
   }
 
+  function handleTransferToPantry() {
+    const payload = checked.map((item) => ({
+      name: item.customName,
+      quantity: item.quantity,
+      unit: item.unit || null,
+    }));
+    startTransferTransition(async () => {
+      await transferCheckedToPantry(payload);
+      setTransferDone(true);
+      setTimeout(() => setTransferDone(false), 2500);
+    });
+  }
+
   function toggleCategory(cat: string) {
     setOpenCategory((prev) => prev === cat ? null : cat);
   }
@@ -374,7 +390,7 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
 
         {unchecked.length === 0 && checked.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-12 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-primary/8 shadow-sm ring-1 ring-black/5">
+            <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-primary/8 shadow-sm">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
                 <line x1="3" y1="6" x2="21" y2="6" />
@@ -383,7 +399,7 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
             </div>
             <div>
               <p className="text-sm font-semibold text-foreground"><Trans>Start your list</Trans></p>
-              <p className="mt-0.5 text-sm text-gray-400"><Trans>Type below to add your first item</Trans></p>
+              <p className="mt-0.5 text-sm text-muted-foreground/70"><Trans>Type below to add your first item</Trans></p>
             </div>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19" />
@@ -406,19 +422,42 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
             ))}
 
             {checked.length > 0 && (
-              <div className="overflow-hidden rounded-2xl bg-white/50 shadow-sm ring-1 ring-black/5 backdrop-blur-sm">
-                <div className="flex items-center justify-between border-b border-black/5 px-5 py-2.5">
-                  <span className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400">
+              <div className="overflow-hidden rounded-2xl bg-white/50 shadow-sm backdrop-blur-sm">
+                <div className="flex items-center justify-between border-b border-border/60 px-4 py-2.5">
+                  <span className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground/70">
                     <Trans>{checkedCount} checked</Trans>
                   </span>
-                  <button
-                    type="button"
-                    onClick={handleClear}
-                    disabled={isClearPending}
-                    className="text-xs font-semibold text-destructive transition hover:opacity-70 disabled:opacity-40"
-                  >
-                    <Trans>Clear</Trans>
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={handleTransferToPantry}
+                      disabled={isTransferPending || transferDone}
+                      className="flex items-center gap-1 text-xs font-semibold text-primary transition disabled:opacity-50"
+                    >
+                      {isTransferPending ? (
+                        <svg className="animate-spin" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                        </svg>
+                      ) : transferDone ? (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      ) : (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="2" width="18" height="20" rx="2" /><line x1="12" y1="2" x2="12" y2="22" />
+                        </svg>
+                      )}
+                      {transferDone ? "Ajouté !" : "Au stock"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleClear}
+                      disabled={isClearPending}
+                      className="text-xs font-semibold text-destructive transition hover:opacity-70 disabled:opacity-40"
+                    >
+                      <Trans>Clear</Trans>
+                    </button>
+                  </div>
                 </div>
                 {checked.map((item, i) => (
                   <ShoppingItemRow

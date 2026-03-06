@@ -24,6 +24,7 @@
     "@capacitor-mlkit/barcode-scanning": "^8.0.1",
     "@capacitor/android": "^8.1.0",
     "@capacitor/core": "^8.1.0",
+    "@capacitor/local-notifications": "^8.0.2",
     "@lingui/core": "^5.9.2",
     "@lingui/react": "^5.9.2",
     "@supabase/ssr": "^0.8.0",

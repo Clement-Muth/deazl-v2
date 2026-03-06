@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { useLingui } from "@lingui/react/macro";
 import { generateShoppingList } from "@/applications/shopping/application/useCases/generateShoppingList";
 
@@ -11,14 +12,22 @@ interface GenerateButtonProps {
 
 export function GenerateButton({ hasExisting = false, compact = false }: GenerateButtonProps) {
   const { t } = useLingui();
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
+
+  function handleGenerate() {
+    startTransition(async () => {
+      await generateShoppingList();
+      router.push("/shopping");
+    });
+  }
 
   if (compact) {
     return (
       <button
         type="button"
         disabled={isPending}
-        onClick={() => startTransition(() => generateShoppingList())}
+        onClick={handleGenerate}
         className="flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-xs font-bold text-white shadow-sm shadow-primary/30 transition active:scale-[0.95] disabled:opacity-60"
       >
         {isPending ? (
@@ -40,7 +49,7 @@ export function GenerateButton({ hasExisting = false, compact = false }: Generat
     <button
       type="button"
       disabled={isPending}
-      onClick={() => startTransition(() => generateShoppingList())}
+      onClick={handleGenerate}
       className="flex items-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-sm shadow-primary/30 transition active:scale-[0.98] disabled:opacity-60"
     >
       {isPending ? (

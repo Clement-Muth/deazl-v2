@@ -58,12 +58,12 @@ export function IngredientList({ ingredients, recipeId, multiplier = 1 }: Ingred
 
             <div className="flex shrink-0 items-center gap-2">
               {ing.latestPrice && (
-                <span className="text-xs font-medium text-gray-400">
+                <span className="text-xs font-medium text-muted-foreground/70">
                   ~{ing.latestPrice.price.toFixed(2)} €
                 </span>
               )}
 
-              <span className="text-sm font-medium text-gray-400">
+              <span className="text-sm font-medium text-muted-foreground/70">
                 {(() => {
                   const q = ing.quantity * multiplier;
                   return `${q % 1 === 0 ? q : parseFloat(q.toFixed(2))} ${ing.unit}`;
@@ -75,7 +75,7 @@ export function IngredientList({ ingredients, recipeId, multiplier = 1 }: Ingred
                   <button
                     type="button"
                     onClick={() => setPriceIngredientId(ing.id)}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-300 transition hover:bg-gray-100 hover:text-gray-500"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground/40 transition hover:bg-muted hover:text-muted-foreground"
                     title="Report a price"
                   >
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -100,7 +100,7 @@ export function IngredientList({ ingredients, recipeId, multiplier = 1 }: Ingred
                 <button
                   type="button"
                   onClick={() => setOpenIngredientId(ing.id)}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-300 transition hover:bg-gray-100 hover:text-gray-500"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground/40 transition hover:bg-muted hover:text-muted-foreground"
                   title="Link to a product"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

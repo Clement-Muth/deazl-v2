@@ -1,320 +1,341 @@
-export default function DesignPage() {
+"use client";
+
+import { useState } from "react";
+
+const PRIMARY = "#E8571C";
+const PRIMARY_LIGHT = "#FFF4EF";
+const FOREGROUND = "#1C1917";
+const MUTED_FG = "#78716C";
+const BORDER = "#E8E5E0";
+const BG = "#FAF9F6";
+const MUTED = "#F5F3EF";
+
+const NAV_ITEMS = [
+  {
+    href: "/planning",
+    label: "Planning",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+        <line x1="16" y1="2" x2="16" y2="6" />
+        <line x1="8" y1="2" x2="8" y2="6" />
+        <line x1="3" y1="10" x2="21" y2="10" />
+      </svg>
+    ),
+  },
+  {
+    href: "/recipes",
+    label: "Recettes",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2a7 7 0 0 1 7 7c0 4-3 6-3 9H8c0-3-3-5-3-9a7 7 0 0 1 7-7z" />
+        <path d="M8 18h8" /><path d="M9 21h6" />
+      </svg>
+    ),
+  },
+  {
+    href: "/shopping",
+    label: "Courses",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <path d="M16 10a4 4 0 0 1-8 0" />
+      </svg>
+    ),
+  },
+  {
+    href: "/scan",
+    label: "Scanner",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" />
+        <path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+        <line x1="7" y1="8" x2="7" y2="16" /><line x1="10.5" y1="8" x2="10.5" y2="16" />
+        <line x1="14" y1="8" x2="14" y2="16" /><line x1="17" y1="8" x2="17" y2="16" />
+      </svg>
+    ),
+  },
+  {
+    href: "/profile",
+    label: "Profil",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
+      </svg>
+    ),
+  },
+];
+
+function Row({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-[#F9FAFB] py-10 px-4">
-      <div className="mx-auto max-w-sm space-y-10">
+    <>
+      <div className="flex items-center gap-4 px-4 py-3">{children}</div>
+      <div style={{ marginLeft: 16, marginRight: 16, height: 1, background: BORDER }} />
+    </>
+  );
+}
+
+export default function DesignPage() {
+  const [activeNav, setActiveNav] = useState(0);
+
+  return (
+    <div style={{ minHeight: "100vh", background: BG, paddingTop: 40, paddingBottom: 40, paddingLeft: 16, paddingRight: 16 }}>
+      <div style={{ maxWidth: 390, margin: "0 auto", display: "flex", flexDirection: "column", gap: 40 }}>
 
         {/* Header */}
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#6B7280]">Design System</p>
-          <h1 className="mt-1 text-3xl font-bold text-[#111827]">Deazl</h1>
-          <p className="mt-1 text-sm text-[#6B7280]">Palette · Typographie · Composants</p>
+          <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.18em", color: PRIMARY, marginBottom: 6 }}>
+            Design System
+          </p>
+          <h1 style={{ fontSize: 44, fontWeight: 900, lineHeight: 0.9, letterSpacing: "-0.02em", color: FOREGROUND }}>
+            Deazl
+          </h1>
+          <p style={{ marginTop: 10, fontSize: 14, color: MUTED_FG }}>Palette · Typographie · Composants</p>
         </div>
 
         {/* ── Couleurs ── */}
-        <section className="space-y-3">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-[#6B7280]">Couleurs</h2>
-          <div className="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white">
-
-            {/* Primary */}
-            <div className="flex items-center gap-4 px-4 py-3">
-              <div className="h-10 w-10 flex-shrink-0 rounded-xl bg-[#16A34A]" />
+        <section>
+          <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: MUTED_FG, marginBottom: 10 }}>Couleurs</p>
+          <div style={{ overflow: "hidden", borderRadius: 20, background: "#fff", boxShadow: "0 1px 4px rgba(28,25,23,0.08)" }}>
+            <Row>
+              <div style={{ height: 40, width: 40, flexShrink: 0, borderRadius: 12, background: PRIMARY }} />
               <div>
-                <p className="text-sm font-semibold text-[#111827]">Primary</p>
-                <p className="text-xs text-[#6B7280]">#16A34A · green-600</p>
-                <p className="text-xs text-[#6B7280]">Actions, CTA, navigation</p>
+                <p style={{ fontSize: 14, fontWeight: 600, color: FOREGROUND }}>Primary — Terracotta</p>
+                <p style={{ fontSize: 12, color: MUTED_FG }}>#E8571C · Actions, CTA, navigation</p>
               </div>
-            </div>
-            <div className="mx-4 border-t border-[#E5E7EB]" />
-
-            {/* Primary light */}
-            <div className="flex items-center gap-4 px-4 py-3">
-              <div className="h-10 w-10 flex-shrink-0 rounded-xl border border-[#E5E7EB] bg-[#F0FDF4]" />
+            </Row>
+            <Row>
+              <div style={{ height: 40, width: 40, flexShrink: 0, borderRadius: 12, background: PRIMARY_LIGHT, border: `1px solid ${BORDER}` }} />
               <div>
-                <p className="text-sm font-semibold text-[#111827]">Primary Light</p>
-                <p className="text-xs text-[#6B7280]">#F0FDF4 · green-50</p>
-                <p className="text-xs text-[#6B7280]">Backgrounds légers, hover states</p>
+                <p style={{ fontSize: 14, fontWeight: 600, color: FOREGROUND }}>Primary Light</p>
+                <p style={{ fontSize: 12, color: MUTED_FG }}>#FFF4EF · Fonds, hover states</p>
               </div>
-            </div>
-            <div className="mx-4 border-t border-[#E5E7EB]" />
-
-            {/* Accent */}
-            <div className="flex items-center gap-4 px-4 py-3">
-              <div className="h-10 w-10 flex-shrink-0 rounded-xl bg-[#F59E0B]" />
+            </Row>
+            <Row>
+              <div style={{ height: 40, width: 40, flexShrink: 0, borderRadius: 12, background: "#DC2626" }} />
               <div>
-                <p className="text-sm font-semibold text-[#111827]">Accent</p>
-                <p className="text-xs text-[#6B7280]">#F59E0B · amber-500</p>
-                <p className="text-xs text-[#6B7280]">Prix, économies, badges</p>
+                <p style={{ fontSize: 14, fontWeight: 600, color: FOREGROUND }}>Destructive</p>
+                <p style={{ fontSize: 12, color: MUTED_FG }}>#DC2626 · Erreurs, suppressions</p>
               </div>
-            </div>
-            <div className="mx-4 border-t border-[#E5E7EB]" />
-
-            {/* Accent light */}
-            <div className="flex items-center gap-4 px-4 py-3">
-              <div className="h-10 w-10 flex-shrink-0 rounded-xl border border-[#E5E7EB] bg-[#FFFBEB]" />
-              <div>
-                <p className="text-sm font-semibold text-[#111827]">Accent Light</p>
-                <p className="text-xs text-[#6B7280]">#FFFBEB · amber-50</p>
-                <p className="text-xs text-[#6B7280]">Fond badges prix</p>
+            </Row>
+            <Row>
+              <div style={{ display: "flex", gap: 6 }}>
+                {[
+                  { bg: BG, border: BORDER },
+                  { bg: "#fff", border: BORDER },
+                  { bg: MUTED },
+                  { bg: MUTED_FG },
+                  { bg: FOREGROUND },
+                ].map((c, i) => (
+                  <div key={i} style={{ height: 40, width: 40, flexShrink: 0, borderRadius: 12, background: c.bg, border: c.border ? `1px solid ${c.border}` : undefined }} />
+                ))}
               </div>
-            </div>
-            <div className="mx-4 border-t border-[#E5E7EB]" />
-
-            {/* Danger */}
-            <div className="flex items-center gap-4 px-4 py-3">
-              <div className="h-10 w-10 flex-shrink-0 rounded-xl bg-[#EF4444]" />
-              <div>
-                <p className="text-sm font-semibold text-[#111827]">Danger</p>
-                <p className="text-xs text-[#6B7280]">#EF4444 · red-500</p>
-                <p className="text-xs text-[#6B7280]">Erreurs, péremptions proches</p>
-              </div>
-            </div>
-            <div className="mx-4 border-t border-[#E5E7EB]" />
-
-            {/* Neutrals */}
-            <div className="flex items-center gap-4 px-4 py-3">
-              <div className="flex gap-1.5">
-                <div className="h-10 w-10 flex-shrink-0 rounded-xl border border-[#E5E7EB] bg-[#F9FAFB]" />
-                <div className="h-10 w-10 flex-shrink-0 rounded-xl border border-[#E5E7EB] bg-white" />
-                <div className="h-10 w-10 flex-shrink-0 rounded-xl bg-[#6B7280]" />
-                <div className="h-10 w-10 flex-shrink-0 rounded-xl bg-[#111827]" />
-              </div>
-            </div>
-            <div className="px-4 pb-3 -mt-1">
-              <p className="text-xs text-[#6B7280]">gray-50 (fond) · white (surface) · gray-500 (texte sec.) · gray-900 (texte)</p>
+            </Row>
+            <div style={{ paddingLeft: 16, paddingRight: 16, paddingBottom: 12 }}>
+              <p style={{ fontSize: 12, color: MUTED_FG }}>background · card · muted · muted-fg · foreground</p>
             </div>
           </div>
         </section>
 
         {/* ── Typographie ── */}
-        <section className="space-y-3">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-[#6B7280]">Typographie — Geist Sans</h2>
-          <div className="rounded-2xl border border-[#E5E7EB] bg-white px-5 py-4 space-y-4">
+        <section>
+          <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: MUTED_FG, marginBottom: 10 }}>Typographie — Geist Sans</p>
+          <div style={{ borderRadius: 20, background: "#fff", boxShadow: "0 1px 4px rgba(28,25,23,0.08)", padding: "20px 20px", display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
-              <p className="text-2xl font-bold text-[#111827]">Titre principal</p>
-              <p className="text-xs text-[#6B7280]">24px · bold · gray-900</p>
+              <p style={{ fontSize: 44, fontWeight: 900, lineHeight: 0.9, letterSpacing: "-0.02em", color: FOREGROUND }}>Grand titre</p>
+              <p style={{ fontSize: 12, color: MUTED_FG, marginTop: 4 }}>44px · black · Page headers</p>
             </div>
             <div>
-              <p className="text-xl font-semibold text-[#111827]">Titre section</p>
-              <p className="text-xs text-[#6B7280]">20px · semibold · gray-900</p>
+              <p style={{ fontSize: 24, fontWeight: 900, color: FOREGROUND }}>Titre section</p>
+              <p style={{ fontSize: 12, color: MUTED_FG }}>24px · black</p>
             </div>
             <div>
-              <p className="text-base font-medium text-[#111827]">Sous-titre / Label fort</p>
-              <p className="text-xs text-[#6B7280]">16px · medium · gray-900</p>
+              <p style={{ fontSize: 16, fontWeight: 600, color: FOREGROUND }}>Sous-titre / Label fort</p>
+              <p style={{ fontSize: 12, color: MUTED_FG }}>16px · semibold</p>
             </div>
             <div>
-              <p className="text-sm text-[#374151]">Corps de texte — descriptions, instructions, contenus longs. Taille principale pour la majorité du contenu.</p>
-              <p className="text-xs text-[#6B7280]">14px · regular · gray-700</p>
+              <p style={{ fontSize: 14, color: "#44403C" }}>Corps de texte — descriptions, instructions, contenus longs.</p>
+              <p style={{ fontSize: 12, color: MUTED_FG }}>14px · regular</p>
             </div>
             <div>
-              <p className="text-xs text-[#6B7280]">Texte secondaire, métadonnées, labels de champs</p>
-              <p className="text-xs text-[#6B7280]">12px · regular · gray-500</p>
+              <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.18em", color: PRIMARY }}>Eyebrow label</p>
+              <p style={{ fontSize: 12, color: MUTED_FG }}>11px · bold · uppercase · tracking</p>
             </div>
           </div>
         </section>
 
         {/* ── Boutons ── */}
-        <section className="space-y-3">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-[#6B7280]">Boutons</h2>
-          <div className="rounded-2xl border border-[#E5E7EB] bg-white px-5 py-4 space-y-3">
-            <button className="w-full rounded-xl bg-[#16A34A] px-4 py-3 text-sm font-semibold text-white">
+        <section>
+          <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: MUTED_FG, marginBottom: 10 }}>Boutons</p>
+          <div style={{ borderRadius: 20, background: "#fff", boxShadow: "0 1px 4px rgba(28,25,23,0.08)", padding: "16px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+            <button style={{ width: "100%", borderRadius: 16, background: PRIMARY, padding: "12px 16px", fontSize: 14, fontWeight: 700, color: "#fff", border: "none", cursor: "pointer" }}>
               Ajouter une recette
             </button>
-            <button className="w-full rounded-xl bg-[#F59E0B] px-4 py-3 text-sm font-semibold text-white">
-              Voir les prix
-            </button>
-            <button className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-sm font-semibold text-[#374151]">
+            <button style={{ width: "100%", borderRadius: 16, background: "#fff", border: `1px solid ${BORDER}`, padding: "12px 16px", fontSize: 14, fontWeight: 600, color: "#44403C", cursor: "pointer" }}>
               Annuler
             </button>
-            <button className="w-full rounded-xl bg-[#FEF2F2] px-4 py-3 text-sm font-semibold text-[#EF4444]">
+            <button style={{ width: "100%", borderRadius: 16, background: "#FEF2F2", border: "1px solid rgba(220,38,38,0.12)", padding: "12px 16px", fontSize: 14, fontWeight: 600, color: "#DC2626", cursor: "pointer" }}>
               Supprimer
             </button>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button style={{ display: "flex", alignItems: "center", gap: 6, borderRadius: 999, background: PRIMARY, padding: "8px 16px", fontSize: 12, fontWeight: 700, color: "#fff", border: "none", cursor: "pointer", boxShadow: "0 4px 12px rgba(232,87,28,0.3)" }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Nouvelle recette
+              </button>
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <div style={{ height: 56, width: 56, borderRadius: 999, background: PRIMARY, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 24px rgba(232,87,28,0.35)", cursor: "pointer" }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              </div>
+            </div>
+            <p style={{ fontSize: 11, color: MUTED_FG, textAlign: "right" }}>FAB (floating action button)</p>
           </div>
         </section>
 
         {/* ── Card Recette ── */}
-        <section className="space-y-3">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-[#6B7280]">Card — Recette</h2>
-          <div className="rounded-2xl border border-[#E5E7EB] bg-white overflow-hidden">
-            {/* Image placeholder */}
-            <div className="h-36 bg-[#F0FDF4] flex items-center justify-center">
-              <span className="text-5xl">🥗</span>
+        <section>
+          <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: MUTED_FG, marginBottom: 10 }}>Card — Recette</p>
+          <div style={{ borderRadius: 20, overflow: "hidden", background: "#fff", boxShadow: "0 1px 4px rgba(28,25,23,0.08)" }}>
+            <div style={{ height: 140, background: "#FFF4EF", display: "flex", alignItems: "flex-end", padding: "0 14px 14px", position: "relative" }}>
+              <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", fontSize: 72, fontWeight: 900, color: PRIMARY, opacity: 0.12, lineHeight: 1 }}>S</span>
+              <p style={{ fontSize: 15, fontWeight: 900, lineHeight: 1.2, color: "#9A3412", position: "relative" }}>Salade niçoise</p>
             </div>
-            <div className="px-4 py-3 space-y-2">
-              <div className="flex items-start justify-between gap-2">
-                <p className="text-base font-semibold text-[#111827]">Salade niçoise</p>
-                {/* Nutriscore badge */}
-                <span className="flex-shrink-0 rounded-lg bg-[#16A34A] px-2 py-0.5 text-xs font-bold text-white">A</span>
-              </div>
-              <p className="text-xs text-[#6B7280]">4 personnes · 20 min prep · 0 min cuisson</p>
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-xs text-[#6B7280]">Prix estimé</span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-sm font-bold text-[#F59E0B]">8,40 €</span>
-                  <span className="text-xs text-[#6B7280]">/ pers.</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
+              <span style={{ fontSize: 11, color: MUTED_FG }}>4 pers.</span>
+              <span style={{ color: BORDER }}>·</span>
+              <span style={{ fontSize: 11, color: MUTED_FG }}>20 mn</span>
+              <span style={{ color: BORDER }}>·</span>
+              <span style={{ fontSize: 11, color: MUTED_FG }}>6 ingr.</span>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Planning slots ── */}
+        <section>
+          <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: MUTED_FG, marginBottom: 10 }}>Planning — Meal slots</p>
+          <div style={{ borderRadius: 24, overflow: "hidden", background: "#fff", boxShadow: "0 2px 16px rgba(28,25,23,0.10)" }}>
+            {[
+              { label: "Petit-déjeuner", icon: "☀️", color: "#F59E0B", bg: "#FFFBEB", filled: false },
+              { label: "Déjeuner", icon: "🍴", color: PRIMARY, bg: PRIMARY_LIGHT, filled: true, recipe: "Salade niçoise" },
+              { label: "Dîner", icon: "🌙", color: "#7C3AED", bg: "#F5F3FF", filled: false },
+            ].map((slot, i) => (
+              <div key={slot.label}>
+                {i > 0 && <div style={{ margin: "0 16px", height: 1, background: "rgba(232,229,224,0.5)" }} />}
+                <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 16px" }}>
+                  <div style={{ height: 40, width: 40, flexShrink: 0, borderRadius: 12, background: slot.filled ? slot.bg : MUTED, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
+                    {slot.icon}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: slot.filled ? slot.color : MUTED_FG + "88", marginBottom: 2 }}>{slot.label}</p>
+                    {slot.filled
+                      ? <p style={{ fontSize: 15, fontWeight: 600, color: FOREGROUND, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{slot.recipe}</p>
+                      : <p style={{ fontSize: 14, color: MUTED_FG + "60" }}>Ajouter un repas</p>
+                    }
+                  </div>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={slot.filled ? "#C8C4BE" : "#D6D3CE"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    {slot.filled ? <polyline points="9 18 15 12 9 6" /> : <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>}
+                  </svg>
                 </div>
               </div>
-              {/* Store comparison hint */}
-              <div className="flex items-center gap-1.5 rounded-lg bg-[#FFFBEB] px-3 py-2">
-                <span className="text-xs">💰</span>
-                <p className="text-xs text-[#92400E]">2,10 € moins cher au Lidl cette semaine</p>
-              </div>
-            </div>
+            ))}
           </div>
         </section>
 
         {/* ── Liste de courses ── */}
-        <section className="space-y-3">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-[#6B7280]">Liste de courses — Item</h2>
-          <div className="rounded-2xl border border-[#E5E7EB] bg-white divide-y divide-[#E5E7EB]">
-
-            {/* Item non coché */}
-            <div className="flex items-center gap-3 px-4 py-3">
-              <div className="h-5 w-5 flex-shrink-0 rounded-md border-2 border-[#E5E7EB]" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-[#111827]">Tomates cerises</p>
-                <p className="text-xs text-[#6B7280]">500 g · Carrefour · 2,49 €</p>
-              </div>
-              <span className="text-xs font-semibold text-[#F59E0B]">2,49 €</span>
-            </div>
-
-            {/* Item coché */}
-            <div className="flex items-center gap-3 px-4 py-3 bg-[#F9FAFB]">
-              <div className="h-5 w-5 flex-shrink-0 rounded-md border-2 border-[#16A34A] bg-[#16A34A] flex items-center justify-center">
-                <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-[#9CA3AF] line-through">Olives noires</p>
-                <p className="text-xs text-[#9CA3AF]">100 g · Leclerc · 1,20 €</p>
-              </div>
-              <span className="text-xs font-semibold text-[#9CA3AF]">1,20 €</span>
-            </div>
-
-            {/* Item avec alternative */}
-            <div className="flex items-center gap-3 px-4 py-3">
-              <div className="h-5 w-5 flex-shrink-0 rounded-md border-2 border-[#E5E7EB]" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-[#111827]">Thon en boîte</p>
-                <p className="text-xs text-[#6B7280]">200 g · Carrefour · 3,80 €</p>
-                <div className="mt-1 flex items-center gap-1">
-                  <span className="rounded-full bg-[#F0FDF4] px-2 py-0.5 text-xs font-medium text-[#16A34A]">
-                    Alt. moins chère →
-                  </span>
+        <section>
+          <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: MUTED_FG, marginBottom: 10 }}>Liste de courses — Item</p>
+          <div style={{ borderRadius: 20, overflow: "hidden", background: "#fff", boxShadow: "0 1px 4px rgba(28,25,23,0.08)" }}>
+            {[
+              { name: "Tomates cerises", sub: "500 g · Carrefour", price: "2,49 €", checked: false },
+              { name: "Olives noires", sub: "100 g · Leclerc", price: "1,20 €", checked: true },
+              { name: "Thon en boîte", sub: "200 g · Carrefour · alt. moins chère →", price: "3,80 €", checked: false },
+            ].map((item, i) => (
+              <div key={item.name}>
+                {i > 0 && <div style={{ margin: "0 16px", height: 1, background: BORDER }} />}
+                <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", opacity: item.checked ? 0.45 : 1 }}>
+                  <div style={{ height: 20, width: 20, flexShrink: 0, borderRadius: 6, border: `2px solid ${item.checked ? PRIMARY : BORDER}`, background: item.checked ? PRIMARY : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {item.checked && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 14, fontWeight: 500, color: FOREGROUND, textDecoration: item.checked ? "line-through" : undefined }}>{item.name}</p>
+                    <p style={{ fontSize: 12, color: MUTED_FG }}>{item.sub}</p>
+                  </div>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: item.checked ? MUTED_FG : PRIMARY }}>{item.price}</p>
                 </div>
               </div>
-              <span className="text-xs font-semibold text-[#F59E0B]">3,80 €</span>
-            </div>
-
+            ))}
           </div>
         </section>
 
-        {/* ── Badges Nutriscore ── */}
-        <section className="space-y-3">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-[#6B7280]">Badges — Nutri-Score</h2>
-          <div className="flex gap-2 flex-wrap rounded-2xl border border-[#E5E7EB] bg-white px-5 py-4">
+        {/* ── Nutri-Score ── */}
+        <section>
+          <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: MUTED_FG, marginBottom: 10 }}>Badges — Nutri-Score</p>
+          <div style={{ borderRadius: 20, background: "#fff", boxShadow: "0 1px 4px rgba(28,25,23,0.08)", padding: "16px 20px", display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             {[
-              { grade: "A", color: "bg-[#038141]" },
-              { grade: "B", color: "bg-[#85BB2F]" },
-              { grade: "C", color: "bg-[#FECB02]", text: "text-[#111827]" },
-              { grade: "D", color: "bg-[#EE8100]" },
-              { grade: "E", color: "bg-[#E63E11]" },
+              { grade: "A", color: "#038141", text: "#fff" },
+              { grade: "B", color: "#85BB2F", text: "#fff" },
+              { grade: "C", color: "#FECB02", text: FOREGROUND },
+              { grade: "D", color: "#EE8100", text: "#fff" },
+              { grade: "E", color: "#E63E11", text: "#fff" },
             ].map(({ grade, color, text }) => (
-              <span
-                key={grade}
-                className={`${color} ${text ?? "text-white"} flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold`}
-              >
+              <span key={grade} style={{ height: 32, width: 32, borderRadius: 8, background: color, color: text, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700 }}>
                 {grade}
               </span>
             ))}
-            <span className="text-xs text-[#6B7280] self-center ml-1">Nutri-Score officiel</span>
+            <span style={{ fontSize: 12, color: MUTED_FG, marginLeft: 4 }}>Nutri-Score officiel</span>
           </div>
         </section>
 
-        {/* ── Tab Bars ── */}
-        <section className="space-y-6">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-[#6B7280]">Tab Bar — Propositions</h2>
-
-          {/* Option A — Pill flottante */}
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-[#6B7280]">A · Pill flottante</p>
-            <div className="rounded-2xl bg-white p-3 shadow-lg shadow-black/8 border border-[#E5E7EB]">
-              <div className="flex items-center justify-around">
-                {/* Active */}
-                <div className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl bg-[#16A34A]">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01"/></svg>
-                  <span className="text-[10px] font-semibold text-white">Planning</span>
-                </div>
-                {/* Inactive */}
-                {[
-                  { label: "Recettes", d: "M12 2a7 7 0 0 1 7 7c0 4-3 6-3 9H8c0-3-3-5-3-9a7 7 0 0 1 7-7zM8 18h8M9 21h6" },
-                  { label: "Courses", d: "M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0" },
-                  { label: "Frigo", d: "M5 2h14a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM5 10h14M9 6v2M9 14v4" },
-                ].map(({ label, d }) => (
-                  <div key={label} className="flex flex-col items-center gap-1 px-4 py-2">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={d}/></svg>
-                    <span className="text-[10px] font-semibold text-[#9CA3AF]">{label}</span>
-                  </div>
-                ))}
-              </div>
+        {/* ── Tab Bar — Dynamic Label ── */}
+        <section>
+          <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: MUTED_FG, marginBottom: 4 }}>Tab Bar — Dynamic Label</p>
+          <p style={{ fontSize: 12, color: MUTED_FG, marginBottom: 12 }}>Icône active se dilate en pill avec label · cliquez pour tester</p>
+          <div style={{ borderRadius: 20, overflow: "hidden", background: "#fff", boxShadow: "0 1px 4px rgba(28,25,23,0.08)" }}>
+            <div style={{ height: 1, background: "rgba(232,229,224,0.7)" }} />
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-around", gap: 4, padding: "8px 8px 12px" }}>
+              {NAV_ITEMS.map((item, i) => {
+                const isActive = activeNav === i;
+                return (
+                  <button
+                    key={item.href}
+                    type="button"
+                    onClick={() => setActiveNav(i)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: isActive ? 8 : 0,
+                      borderRadius: 999,
+                      padding: isActive ? "8px 14px" : "8px 8px",
+                      background: isActive ? PRIMARY : "transparent",
+                      color: isActive ? "#fff" : MUTED_FG + "99",
+                      border: "none",
+                      cursor: "pointer",
+                      transition: "all 0.3s cubic-bezier(0.34,1.2,0.64,1)",
+                      boxShadow: isActive ? `0 4px 12px rgba(232,87,28,0.25)` : undefined,
+                      overflow: "hidden",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {item.icon}
+                    {isActive && (
+                      <span style={{ fontSize: 12, fontWeight: 700, lineHeight: 1 }}>
+                        {item.label}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
-
-          {/* Option B — Barre classique épurée */}
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-[#6B7280]">B · Indicateur haut + fond léger</p>
-            <div className="rounded-2xl overflow-hidden border border-[#E5E7EB] bg-white">
-              <div className="flex items-center justify-around">
-                {/* Active */}
-                <div className="flex flex-col items-center gap-1 px-4 pt-0 pb-3 border-t-2 border-[#16A34A]">
-                  <div className="mt-2 flex flex-col items-center gap-1">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01"/></svg>
-                    <span className="text-[10px] font-semibold text-[#16A34A]">Planning</span>
-                  </div>
-                </div>
-                {[
-                  { label: "Recettes", d: "M12 2a7 7 0 0 1 7 7c0 4-3 6-3 9H8c0-3-3-5-3-9a7 7 0 0 1 7-7zM8 18h8M9 21h6" },
-                  { label: "Courses", d: "M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0" },
-                  { label: "Frigo", d: "M5 2h14a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM5 10h14M9 6v2M9 14v4" },
-                ].map(({ label, d }) => (
-                  <div key={label} className="flex flex-col items-center gap-1 px-4 pt-0 pb-3 border-t-2 border-transparent">
-                    <div className="mt-2 flex flex-col items-center gap-1">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={d}/></svg>
-                      <span className="text-[10px] font-semibold text-[#9CA3AF]">{label}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Option C — Minimaliste icônes seules */}
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-[#6B7280]">C · Minimaliste — icônes + dot</p>
-            <div className="rounded-2xl border border-[#E5E7EB] bg-white">
-              <div className="flex items-center justify-around px-2 py-3">
-                {/* Active */}
-                <div className="flex flex-col items-center gap-1.5">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01"/></svg>
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A]" />
-                </div>
-                {[
-                  { d: "M12 2a7 7 0 0 1 7 7c0 4-3 6-3 9H8c0-3-3-5-3-9a7 7 0 0 1 7-7zM8 18h8M9 21h6" },
-                  { d: "M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0" },
-                  { d: "M5 2h14a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM5 10h14M9 6v2M9 14v4" },
-                ].map(({ d }, i) => (
-                  <div key={i} className="flex flex-col items-center gap-1.5">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={d}/></svg>
-                    <span className="w-1.5 h-1.5 rounded-full bg-transparent" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
         </section>
 
-        <p className="text-center text-xs text-[#9CA3AF] pb-6">— Dev preview only —</p>
+        <p style={{ textAlign: "center", fontSize: 12, color: MUTED_FG + "80", paddingBottom: 24 }}>— Dev preview only —</p>
       </div>
     </div>
   );

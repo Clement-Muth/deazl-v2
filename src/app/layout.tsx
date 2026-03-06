@@ -16,11 +16,18 @@ const geistMono = Geist_Mono({
 
 export const viewport: Viewport = {
   viewportFit: "cover",
+  themeColor: "#16a34a",
 };
 
 export const metadata: Metadata = {
   title: "Deazl",
   description: "Smart meal planning & grocery management",
+  manifest: "/manifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Deazl",
+  },
 };
 
 export default async function RootLayout({

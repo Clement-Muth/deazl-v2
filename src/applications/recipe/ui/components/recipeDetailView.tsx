@@ -39,7 +39,7 @@ export function RecipeDetailView({ recipeId, recipeName, baseServings, ingredien
       <div className="flex flex-col gap-3 px-4 pt-4">
         {ingredients.length > 0 && (
           <>
-            <div className="overflow-hidden rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm">
+            <div className="overflow-hidden rounded-2xl bg-card shadow-[0_1px_4px_rgba(28,25,23,0.08)]">
               <ServingsScaler
                 baseServings={baseServings}
                 servings={servings}
@@ -47,8 +47,8 @@ export function RecipeDetailView({ recipeId, recipeName, baseServings, ingredien
               />
             </div>
 
-            <div className="overflow-hidden rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm">
-              <div className="flex items-center justify-between border-b border-black/5 px-5 py-3">
+            <div className="overflow-hidden rounded-2xl bg-card shadow-[0_1px_4px_rgba(28,25,23,0.08)]">
+              <div className="flex items-center justify-between border-b border-border/60 px-5 py-3">
                 <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">
                   Ingrédients
                 </h2>
@@ -70,8 +70,8 @@ export function RecipeDetailView({ recipeId, recipeName, baseServings, ingredien
         <RecipePriceCard stores={storePrices} />
 
         {steps.length > 0 && (
-          <div className="overflow-hidden rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm">
-            <div className="border-b border-black/5 px-5 py-3">
+          <div className="overflow-hidden rounded-2xl bg-card shadow-[0_1px_4px_rgba(28,25,23,0.08)]">
+            <div className="border-b border-border/60 px-5 py-3">
               <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">
                 Préparation
               </h2>
@@ -86,7 +86,7 @@ export function RecipeDetailView({ recipeId, recipeName, baseServings, ingredien
                 </li>
               ))}
             </ol>
-            <div className="border-t border-black/5 p-4">
+            <div className="border-t border-border/60 p-4">
               <button
                 type="button"
                 onClick={() => setCookMode(true)}

@@ -48,6 +48,7 @@ export async function getRecipe(id: string): Promise<Recipe | null> {
     prepTimeMinutes: data.prep_time_minutes,
     cookTimeMinutes: data.cook_time_minutes,
     imageUrl: data.image_url,
+    dietaryTags: data.dietary_tags ?? [],
     isPublic: data.is_public,
     createdAt: new Date(data.created_at),
     updatedAt: new Date(data.updated_at),

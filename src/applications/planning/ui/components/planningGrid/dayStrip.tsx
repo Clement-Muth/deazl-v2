@@ -12,7 +12,7 @@ interface DayStripProps {
 
 export function DayStrip({ weekDays, locale, selectedIndex, filledCounts, onSelect }: DayStripProps) {
   return (
-    <div className="flex gap-1.5 overflow-x-auto px-4 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="flex gap-1.5 overflow-x-auto px-4 pb-3 pt-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {weekDays.map((date, i) => {
         const { name, num, isToday } = formatDayHeader(date, locale);
         const isSelected = i === selectedIndex;
@@ -24,13 +24,15 @@ export function DayStrip({ weekDays, locale, selectedIndex, filledCounts, onSele
             key={i}
             type="button"
             onClick={() => onSelect(i)}
-            className={`flex min-w-11 flex-1 flex-col items-center gap-1.5 rounded-2xl px-2 py-3 transition-all duration-200 active:scale-[0.93] ${
+            className={`flex min-w-11 flex-1 flex-col items-center gap-1.5 rounded-2xl px-2 py-2.5 transition-all duration-200 active:scale-[0.93] ${
               isSelected
-                ? "bg-white shadow-lg shadow-black/10"
-                : "bg-white/40 hover:bg-white/60"
+                ? "bg-card shadow-md shadow-black/8"
+                : "hover:bg-white/50"
             }`}
           >
-            <span className="text-[9px] font-bold uppercase tracking-widest leading-none text-gray-400">
+            <span className={`text-[9px] font-bold uppercase tracking-widest leading-none transition-colors ${
+              isSelected ? "text-primary/60" : "text-muted-foreground/50"
+            }`}>
               {abbr}
             </span>
 
@@ -52,10 +54,8 @@ export function DayStrip({ weekDays, locale, selectedIndex, filledCounts, onSele
                     j < filled
                       ? isSelected
                         ? "bg-primary"
-                        : "bg-primary/50"
-                      : isSelected
-                      ? "bg-black/10"
-                      : "bg-gray-300/60"
+                        : "bg-primary/40"
+                      : "bg-border"
                   }`}
                 />
               ))}

@@ -22,7 +22,7 @@ export function LanguageSwitcher({ current }: { current: Locale }) {
           className={`rounded px-2 py-0.5 text-xs font-semibold transition-colors ${
             current === value
               ? "bg-primary text-white"
-              : "text-gray-400 hover:text-gray-700"
+              : "text-muted-foreground/70 hover:text-gray-700"
           }`}
         >
           {label}

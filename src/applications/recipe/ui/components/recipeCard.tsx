@@ -5,13 +5,24 @@ interface RecipeCardProps {
   recipe: Recipe;
 }
 
+const DIETARY_LABELS: Record<string, string> = {
+  vegetarian: "Végé",
+  vegan: "Vegan",
+  gluten_free: "GF",
+  lactose_free: "SF lait",
+  halal: "Halal",
+  kosher: "Casher",
+  no_pork: "SF porc",
+  no_seafood: "SF mer",
+};
+
 const PALETTES = [
   { bg: "#FFF7ED", accent: "#EA580C", text: "#9A3412" },
-  { bg: "#F0FDF4", accent: "#16A34A", text: "#14532D" },
+  { bg: "#FEF3C7", accent: "#D97706", text: "#92400E" },
+  { bg: "#FDF2F8", accent: "#C026D3", text: "#701A75" },
   { bg: "#EFF6FF", accent: "#2563EB", text: "#1E3A8A" },
-  { bg: "#FDF4FF", accent: "#9333EA", text: "#581C87" },
+  { bg: "#F0FDF4", accent: "#16A34A", text: "#14532D" },
   { bg: "#FFF1F2", accent: "#E11D48", text: "#881337" },
-  { bg: "#F0FDFA", accent: "#0D9488", text: "#134E4A" },
 ];
 
 function paletteForName(name: string) {
@@ -41,7 +52,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
   return (
     <Link
       href={`/recipes/${recipe.id}`}
-      className="group flex flex-col overflow-hidden rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm transition active:scale-[0.97]"
+      className="group flex flex-col overflow-hidden rounded-2xl bg-card shadow-[0_1px_4px_rgba(28,25,23,0.08)] transition active:scale-[0.97]"
     >
       <div
         className="relative flex h-32 flex-col justify-end overflow-hidden p-3.5"
@@ -98,7 +109,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
         </span>
         {totalTime > 0 && (
           <>
-            <span className="text-muted-foreground/25">·</span>
+            <span className="text-muted-foreground/30">·</span>
             <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
@@ -109,13 +120,26 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
         )}
         {recipe.ingredients.length > 0 && (
           <>
-            <span className="text-muted-foreground/25">·</span>
+            <span className="text-muted-foreground/30">·</span>
             <span className="text-[11px] font-medium text-muted-foreground">
               {recipe.ingredients.length} ingr.
             </span>
           </>
         )}
       </div>
+      {recipe.dietaryTags.length > 0 && (
+        <div className="flex flex-wrap gap-1 px-3.5 pb-2.5 -mt-1">
+          {recipe.dietaryTags.slice(0, 3).map((tag) => (
+            <span
+              key={tag}
+              className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+              style={{ background: `${pal.accent}15`, color: pal.text }}
+            >
+              {DIETARY_LABELS[tag] ?? tag}
+            </span>
+          ))}
+        </div>
+      )}
     </Link>
   );
 }

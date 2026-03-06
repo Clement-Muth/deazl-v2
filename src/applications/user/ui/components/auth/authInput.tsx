@@ -20,7 +20,7 @@ export function AuthInput({ label, id, type, ...props }: AuthInputProps) {
         <input
           id={id}
           type={isPassword && showPassword ? "text" : type}
-          className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-sm outline-none transition placeholder:text-gray-300 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+          className="w-full rounded-2xl border border-border bg-muted/60 px-4 py-3.5 text-sm outline-none transition placeholder:text-muted-foreground/40 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
           style={{ paddingRight: isPassword ? "3rem" : undefined }}
           {...props}
         />
@@ -29,7 +29,7 @@ export function AuthInput({ label, id, type, ...props }: AuthInputProps) {
             type="button"
             tabIndex={-1}
             onClick={() => setShowPassword((v) => !v)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 transition hover:text-gray-600"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/70 transition hover:text-gray-600"
             aria-label={showPassword ? "Hide password" : "Show password"}
           >
             {showPassword ? (

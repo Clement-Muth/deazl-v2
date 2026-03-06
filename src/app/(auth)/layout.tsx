@@ -7,7 +7,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
   await initLingui(locale);
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-white sm:items-center sm:justify-center sm:bg-gray-50 sm:p-4">
+    <div className="relative flex min-h-screen flex-col bg-white sm:items-center sm:justify-center sm:bg-muted/60 sm:p-4">
       <div className="absolute right-5 top-5 z-10">
         <LanguageSwitcher current={locale} />
       </div>
@@ -17,7 +17,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
           <h1 className="text-[46px] font-black leading-none tracking-[-3px] text-gray-900 sm:text-[28px] sm:tracking-tight">
             Deazl<span className="text-primary">.</span>
           </h1>
-          <p className="mt-2 text-sm text-gray-400 sm:mt-1.5">
+          <p className="mt-2 text-sm text-muted-foreground/70 sm:mt-1.5">
             <Trans>Smart meal planning & grocery management</Trans>
           </p>
         </div>

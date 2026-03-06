@@ -73,7 +73,7 @@ export function AuthForm({ mode, action }: AuthFormProps) {
 
       <div className="relative my-1 flex items-center gap-3">
         <div className="h-px flex-1 bg-gray-200" />
-        <span className="text-xs text-gray-400"><Trans>or</Trans></span>
+        <span className="text-xs text-muted-foreground/70"><Trans>or</Trans></span>
         <div className="h-px flex-1 bg-gray-200" />
       </div>
 
@@ -81,7 +81,7 @@ export function AuthForm({ mode, action }: AuthFormProps) {
         type="button"
         disabled={isGooglePending}
         onClick={() => startTransition(() => signInWithGoogle())}
-        className="flex w-full items-center justify-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-4 text-sm font-medium text-gray-700 transition hover:bg-gray-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex w-full items-center justify-center gap-3 rounded-2xl border border-border bg-white px-4 py-4 text-sm font-medium text-gray-700 transition hover:bg-muted/60 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
       >
         <svg width="18" height="18" viewBox="0 0 24 24">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />

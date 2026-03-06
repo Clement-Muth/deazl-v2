@@ -97,14 +97,14 @@ export function PantryItemRow({ item }: Props) {
       </div>
 
       <div
-        className={`relative flex items-center gap-3 rounded-2xl px-4 py-3 shadow-sm ring-1 backdrop-blur-sm transition-opacity ${
+        className={`relative flex items-center gap-3 rounded-2xl px-4 py-3 shadow-sm ring-1 transition-opacity ${
           isPending ? "opacity-40" : ""
         } ${
           isExpired
             ? "bg-destructive-light ring-destructive/20"
             : isSoon
             ? "bg-accent-light ring-accent/30"
-            : "bg-white/80 ring-black/5"
+            : "bg-card ring-black/5"
         }`}
         style={{
           transform: `translateX(${offset}px)`,

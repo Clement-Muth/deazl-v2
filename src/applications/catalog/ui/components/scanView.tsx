@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { Capacitor } from "@capacitor/core";
 import { getScannedProductInfo, type ScannedProductInfo } from "@/applications/catalog/application/useCases/getScannedProductInfo";
@@ -159,7 +160,7 @@ export function ScanView() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className={`relative shrink-0 overflow-hidden bg-black transition-all duration-500 ${isFullscreen ? "h-[calc(100dvh-6rem-var(--sat))]" : "h-48"}`}>
+      <div className={`relative shrink-0 overflow-hidden bg-black transition-all duration-500 ${isFullscreen ? "h-[calc(100dvh-8rem-var(--sat))] rounded-b-3xl" : "mx-4 h-52 rounded-3xl"}`}>
         {!isNative && <video ref={videoRef} className="h-full w-full object-cover" playsInline muted />}
 
         {phase === "scanning" && (
@@ -213,7 +214,7 @@ export function ScanView() {
           <button
             type="button"
             onClick={handleRescan}
-            className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-black/50 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm transition active:scale-95"
+            className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-black/50 px-3 py-1.5 text-xs font-semibold text-white transition active:scale-95"
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 .49-4.27" />
@@ -234,7 +235,7 @@ export function ScanView() {
         <div className="flex-1 overflow-y-auto bg-linear-to-b from-primary-light via-background to-background">
           <div className="flex flex-col gap-4 px-4 py-4">
             <div
-              className="flex items-center gap-4 rounded-2xl bg-white/80 p-4 shadow-sm ring-1 ring-black/5 backdrop-blur-sm"
+              className="flex items-center gap-4 rounded-2xl bg-card p-4 shadow-sm"
               style={{ animation: "fadeSlideUp 0.3s cubic-bezier(0.22,1,0.36,1) both" }}
             >
               {product.imageUrl ? (
@@ -259,14 +260,14 @@ export function ScanView() {
 
             {product.prices.length > 0 && (
               <div
-                className="overflow-hidden rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm"
+                className="overflow-hidden rounded-2xl bg-card shadow-[0_1px_4px_rgba(28,25,23,0.08)]"
                 style={{ animation: "fadeSlideUp 0.3s 60ms cubic-bezier(0.22,1,0.36,1) both" }}
               >
-                <p className="border-b border-black/5 px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                <p className="border-b border-border/60 px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                   Prix connus dans vos magasins
                 </p>
                 {product.prices.map((p, i) => (
-                  <div key={p.storeId} className={`flex items-center justify-between px-4 py-3 ${i > 0 ? "border-t border-black/5" : ""}`}>
+                  <div key={p.storeId} className={`flex items-center justify-between px-4 py-3 ${i > 0 ? "border-t border-border/60" : ""}`}>
                     <p className="text-sm font-medium text-foreground">{p.storeName}</p>
                     <p className="text-sm font-bold text-foreground">
                       {p.price.toFixed(2)} €
@@ -278,10 +279,10 @@ export function ScanView() {
             )}
 
             <div
-              className="overflow-hidden rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm"
+              className="overflow-hidden rounded-2xl bg-card shadow-[0_1px_4px_rgba(28,25,23,0.08)]"
               style={{ animation: "fadeSlideUp 0.3s 120ms cubic-bezier(0.22,1,0.36,1) both" }}
             >
-              <div className="flex border-b border-black/5">
+              <div className="flex border-b border-border/60">
                 {(["price", "pantry"] as Tab[]).map((tb) => (
                   <button
                     key={tb}
@@ -313,7 +314,12 @@ export function ScanView() {
                   ) : (
                     <form onSubmit={handlePriceSubmit} className="flex flex-col gap-4">
                       {stores.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">Ajoutez des magasins dans votre profil d'abord.</p>
+                        <div className="flex items-center justify-between rounded-xl bg-muted px-3.5 py-3">
+                          <p className="text-sm text-muted-foreground">Aucun magasin configuré</p>
+                          <Link href="/profile" className="text-xs font-bold text-primary">
+                            Ajouter →
+                          </Link>
+                        </div>
                       ) : (
                         <div className="flex flex-wrap gap-2">
                           {stores.map((store) => (
@@ -424,7 +430,7 @@ export function ScanView() {
 
       {phase === "not_found" && (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-8 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-card shadow-[0_1px_4px_rgba(28,25,23,0.08)]">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>

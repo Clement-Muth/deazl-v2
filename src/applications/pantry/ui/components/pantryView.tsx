@@ -82,7 +82,7 @@ export function PantryView({ items }: Props) {
           className="flex flex-col items-center gap-4 pt-16 text-center"
           style={{ animation: "fadeSlideUp 0.4s cubic-bezier(0.22,1,0.36,1) both" }}
         >
-          <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-white/80 shadow-sm ring-1 ring-black/5">
+          <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-card shadow-[0_1px_4px_rgba(28,25,23,0.08)]">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="2" width="18" height="20" rx="2" /><line x1="12" y1="2" x2="12" y2="22" />
               <circle cx="7.5" cy="12" r="0.5" fill="#D1D5DB" /><circle cx="16.5" cy="12" r="0.5" fill="#D1D5DB" />
@@ -100,7 +100,7 @@ export function PantryView({ items }: Props) {
           return (
             <div
               key={loc}
-              className="overflow-hidden rounded-2xl bg-white/80 shadow-sm ring-1 ring-black/5 backdrop-blur-sm"
+              className="overflow-hidden rounded-2xl bg-card shadow-[0_1px_4px_rgba(28,25,23,0.08)]"
               style={{ animation: `fadeSlideUp 0.35s ${sectionIdx * 60}ms cubic-bezier(0.22,1,0.36,1) both` }}
             >
               <button
@@ -154,7 +154,7 @@ export function PantryView({ items }: Props) {
       {!showForm && (
         <button
           onClick={() => setShowForm(true)}
-          className="fixed bottom-24 left-4 right-4 z-20 flex items-center justify-center gap-2 rounded-2xl bg-white/90 py-4 text-sm font-semibold text-muted-foreground shadow-lg shadow-black/5 ring-1 ring-black/5 backdrop-blur-xl transition hover:text-primary active:scale-[0.98]"
+          className="fixed bottom-24 left-4 right-4 z-20 flex items-center justify-center gap-2 rounded-2xl bg-white/90 py-4 text-sm font-semibold text-muted-foreground shadow-lg shadow-black/5 backdrop-blur-xl transition hover:text-primary active:scale-[0.98]"
           style={{ animation: "slideUpBar 0.32s cubic-bezier(0.32,0.72,0,1) both" }}
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

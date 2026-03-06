@@ -13,7 +13,7 @@ export function WeekNav({ monday }: WeekNavProps) {
     <div className="flex items-center gap-2">
       <Link
         href={`/planning?week=${prevWeek}`}
-        className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted text-gray-500 transition hover:bg-gray-200 active:scale-[0.94]"
+        className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted text-muted-foreground transition hover:bg-gray-200 active:scale-[0.94]"
         aria-label="Previous week"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -22,7 +22,7 @@ export function WeekNav({ monday }: WeekNavProps) {
       </Link>
       <Link
         href={`/planning?week=${nextWeek}`}
-        className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted text-gray-500 transition hover:bg-gray-200 active:scale-[0.94]"
+        className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted text-muted-foreground transition hover:bg-gray-200 active:scale-[0.94]"
         aria-label="Next week"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

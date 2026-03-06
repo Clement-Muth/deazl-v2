@@ -14,11 +14,14 @@ import type { MealPlanData, MealSlotData, MealType } from "@/applications/planni
 interface Recipe {
   id: string;
   name: string;
+  dietaryTags: string[];
+  inPantry?: boolean;
 }
 
 interface PlanningGridProps {
   initialPlan: MealPlanData;
   recipes: Recipe[];
+  userDietaryPreferences: string[];
   locale: string;
 }
 
@@ -39,7 +42,7 @@ function findTodayIndex(weekDays: Date[]): number {
 
 const MEAL_TYPES: MealType[] = ["breakfast", "lunch", "dinner"];
 
-export function PlanningGrid({ initialPlan, recipes, locale }: PlanningGridProps) {
+export function PlanningGrid({ initialPlan, recipes, userDietaryPreferences, locale }: PlanningGridProps) {
   const [plan, setPlan] = useState<MealPlanData>(initialPlan);
   const [pickerState, setPickerState] = useState<PickerState | null>(null);
   const [pendingSlot, setPendingSlot] = useState<PickerState | null>(null);
@@ -183,48 +186,52 @@ export function PlanningGrid({ initialPlan, recipes, locale }: PlanningGridProps
       />
 
       {totalFilled > 0 && (
-        <div className="mx-4 mb-1 flex items-center gap-3 rounded-2xl bg-white/60 px-4 py-2.5 ring-1 ring-black/5 backdrop-blur-sm">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/5">
+        <div className="mx-5 mb-2 flex items-center gap-3">
+          <div className="h-1 flex-1 overflow-hidden rounded-full bg-black/8">
             <div
               className="h-full rounded-full bg-primary transition-all duration-500"
               style={{ width: `${Math.round((totalFilled / totalSlots) * 100)}%` }}
             />
           </div>
-          <span className="shrink-0 text-[11px] font-bold text-muted-foreground">
-            {totalFilled}/{totalSlots} repas
+          <span className="shrink-0 text-[10px] font-bold tabular-nums text-muted-foreground/60">
+            {totalFilled}/{totalSlots}
           </span>
         </div>
       )}
 
-      <div className="flex items-end justify-between px-5 pb-5">
+      <div className="flex items-center justify-between px-5 pb-4 pt-2">
         <div>
-          <h2 className="text-3xl font-black leading-none tracking-tight text-foreground">
+          <h2 className="text-2xl font-black leading-none tracking-tight text-foreground">
             {selectedDate.toLocaleDateString(locale, { weekday: "long" }).replace(/^\w/, (c) => c.toUpperCase())}
           </h2>
-          <p className={`mt-1.5 text-sm font-medium ${isToday ? "text-primary" : "text-gray-400"}`}>
+          <p className={`mt-1 text-sm font-medium ${isToday ? "text-primary" : "text-muted-foreground/60"}`}>
             {selectedDate.toLocaleDateString(locale, { day: "numeric", month: "long" })}
           </p>
         </div>
         {!isToday && TodayButton}
       </div>
 
-      <div key={selectedDayIndex} className="flex animate-fade-in flex-col gap-3 px-4 pb-4">
-        {MEAL_TYPES.map((mt) => (
-          <div key={mt} className="overflow-hidden rounded-2xl bg-white/80 shadow-sm backdrop-blur-sm ring-1 ring-black/5">
-            <MealSlotCell
-              slot={getSlot(selectedDayOfWeek, mt)}
-              onTap={() => handleSlotTap(selectedDayOfWeek, mt)}
-              isPending={
-                pendingSlot?.dayOfWeek === selectedDayOfWeek && pendingSlot?.mealType === mt
-              }
-            />
-          </div>
-        ))}
+      <div key={selectedDayIndex} className="animate-fade-in px-4 pb-4">
+        <div className="overflow-hidden rounded-3xl bg-card shadow-[0_2px_16px_rgba(28,25,23,0.10)]">
+          {MEAL_TYPES.map((mt, i) => (
+            <div key={mt}>
+              {i > 0 && <div className="mx-4 h-px bg-border/50" />}
+              <MealSlotCell
+                slot={getSlot(selectedDayOfWeek, mt)}
+                onTap={() => handleSlotTap(selectedDayOfWeek, mt)}
+                isPending={
+                  pendingSlot?.dayOfWeek === selectedDayOfWeek && pendingSlot?.mealType === mt
+                }
+              />
+            </div>
+          ))}
+        </div>
       </div>
 
       {pickerState && (
         <RecipePicker
           recipes={recipes}
+          userDietaryPreferences={userDietaryPreferences}
           hasExisting={!!activeSlot?.recipeId}
           onSelect={handleSelectRecipe}
           onClear={handleClearSlot}
