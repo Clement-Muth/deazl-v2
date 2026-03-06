@@ -74,7 +74,7 @@ export function AddPantryItemForm({ onClose }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted active:scale-90"
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted active:scale-90"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -119,7 +119,7 @@ export function AddPantryItemForm({ onClose }: Props) {
                 key={loc.value}
                 type="button"
                 onClick={() => setLocation(loc.value)}
-                className={`flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold transition ${
+                className={`flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-xs font-semibold transition ${
                   location === loc.value
                     ? "bg-primary text-white"
                     : "bg-muted text-muted-foreground hover:bg-secondary"

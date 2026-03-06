@@ -152,7 +152,7 @@ export function StoreManager({ initialStores }: Props) {
           <button
             type="button"
             onClick={() => handleRemove(store.id)}
-            className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-muted-foreground/70 transition hover:bg-red-50 hover:text-red-400"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground/70 transition hover:bg-red-50 hover:text-red-400"
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />

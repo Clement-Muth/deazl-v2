@@ -141,7 +141,7 @@ export function PantryItemRow({ item }: Props) {
             onPointerDown={(e) => e.stopPropagation()}
             onClick={handleDecrement}
             disabled={isPending}
-            className="flex h-7 w-7 items-center justify-center rounded-lg bg-muted text-muted-foreground transition active:scale-90 disabled:opacity-40"
+            className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground transition active:scale-90 disabled:opacity-40"
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <line x1="5" y1="12" x2="19" y2="12" />
@@ -151,7 +151,7 @@ export function PantryItemRow({ item }: Props) {
             onPointerDown={(e) => e.stopPropagation()}
             onClick={handleIncrement}
             disabled={isPending}
-            className="flex h-7 w-7 items-center justify-center rounded-lg bg-muted text-muted-foreground transition active:scale-90 disabled:opacity-40"
+            className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground transition active:scale-90 disabled:opacity-40"
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />

@@ -11,6 +11,9 @@ const config: CapacitorConfig = {
     cleartext: isDev,
   },
   plugins: {},
+  android: {
+    adjustMarginsForEdgeToEdge: "auto",
+  },
 };
 
 export default config;

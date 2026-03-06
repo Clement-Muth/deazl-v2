@@ -68,7 +68,7 @@ function Stepper({
           type="button"
           onClick={() => onChange(Math.max(min, value - step))}
           disabled={value <= min}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-base text-gray-600 transition hover:bg-muted/80 active:scale-90 disabled:opacity-25"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-base text-gray-600 transition hover:bg-muted/80 active:scale-90 disabled:opacity-25"
         >
           −
         </button>
@@ -83,7 +83,7 @@ function Stepper({
         <button
           type="button"
           onClick={() => onChange(value + step)}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-base text-gray-600 transition hover:bg-muted/80 active:scale-90"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-base text-gray-600 transition hover:bg-muted/80 active:scale-90"
         >
           +
         </button>

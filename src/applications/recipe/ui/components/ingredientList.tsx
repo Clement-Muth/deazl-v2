@@ -75,7 +75,7 @@ export function IngredientList({ ingredients, recipeId, multiplier = 1 }: Ingred
                   <button
                     type="button"
                     onClick={() => setPriceIngredientId(ing.id)}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground/40 transition hover:bg-muted hover:text-muted-foreground"
+                    className="-m-2 flex h-7 w-7 items-center justify-center rounded-lg p-2 text-muted-foreground/40 transition hover:bg-muted hover:text-muted-foreground"
                     title="Report a price"
                   >
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -86,7 +86,7 @@ export function IngredientList({ ingredients, recipeId, multiplier = 1 }: Ingred
                   <button
                     type="button"
                     onClick={() => handleUnlink(ing.id)}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg text-primary/50 transition hover:bg-primary/10 hover:text-primary"
+                    className="-m-2 flex h-7 w-7 items-center justify-center rounded-lg p-2 text-primary/50 transition hover:bg-primary/10 hover:text-primary"
                     title="Unlink product"
                   >
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -100,7 +100,7 @@ export function IngredientList({ ingredients, recipeId, multiplier = 1 }: Ingred
                 <button
                   type="button"
                   onClick={() => setOpenIngredientId(ing.id)}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground/40 transition hover:bg-muted hover:text-muted-foreground"
+                  className="-m-2 flex h-7 w-7 items-center justify-center rounded-lg p-2 text-muted-foreground/40 transition hover:bg-muted hover:text-muted-foreground"
                   title="Link to a product"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
