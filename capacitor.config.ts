@@ -13,7 +13,7 @@ const config: CapacitorConfig = {
   plugins: {},
   android: {
     adjustMarginsForEdgeToEdge: "auto",
-  },
+  } as Record<string, unknown>,
 };
 
 export default config;
