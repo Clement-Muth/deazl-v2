@@ -10,10 +10,23 @@ const config: CapacitorConfig = {
     url: isDev ? "http://192.168.1.39:3002" : "https://deazl-v2.vercel.app",
     cleartext: isDev,
   },
-  plugins: {},
+  plugins: {
+    StatusBar: {
+      style: "DEFAULT",
+      backgroundColor: "#16a34a",
+    },
+    SplashScreen: {
+      launchAutoHide: false,
+      backgroundColor: "#ffffff",
+    },
+  },
   android: {
     adjustMarginsForEdgeToEdge: "auto",
   } as Record<string, unknown>,
+  ios: {
+    contentInset: "always",
+    limitsNavigationsToAppBoundDomains: true,
+  },
 };
 
 export default config;

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { LinguiClientProvider } from "@/lib/i18n/linguiProvider";
 import { getLocale, initLingui, getMessages } from "@/lib/i18n/server";
+import { SwRegister } from "@/shared/components/swRegister";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,6 +45,7 @@ export default async function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <LinguiClientProvider locale={locale} messages={messages}>
           {children}
+          <SwRegister />
         </LinguiClientProvider>
       </body>
     </html>

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Trans } from "@lingui/react/macro";
+import { createClient } from "@/lib/supabase/client";
 import { getWeekDays, formatDayHeader } from "@/applications/planning/lib/weekUtils";
 import { setMealSlot } from "@/applications/planning/application/useCases/setMealSlot";
 import { clearMealSlot } from "@/applications/planning/application/useCases/clearMealSlot";
@@ -42,6 +43,22 @@ function findTodayIndex(weekDays: Date[]): number {
 
 const MEAL_TYPES: MealType[] = ["breakfast", "lunch", "dinner"];
 
+const INITIAL_COLORS = [
+  "bg-amber-100 text-amber-700",
+  "bg-primary-light text-primary",
+  "bg-violet-100 text-violet-700",
+  "bg-sky-100 text-sky-700",
+  "bg-rose-100 text-rose-700",
+];
+
+function colorForName(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = (hash * 31 + name.charCodeAt(i)) & 0xffffffff;
+  }
+  return INITIAL_COLORS[Math.abs(hash) % INITIAL_COLORS.length];
+}
+
 export function PlanningGrid({ initialPlan, recipes, userDietaryPreferences, locale }: PlanningGridProps) {
   const [plan, setPlan] = useState<MealPlanData>(initialPlan);
   const [pickerState, setPickerState] = useState<PickerState | null>(null);
@@ -57,6 +74,43 @@ export function PlanningGrid({ initialPlan, recipes, userDietaryPreferences, loc
   const selectedDayOfWeek = selectedDayIndex + 1;
   const selectedDate = weekDays[selectedDayIndex];
   const { isToday } = formatDayHeader(selectedDate, locale);
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`meal_slots:${plan.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "meal_slots", filter: `meal_plan_id=eq.${plan.id}` },
+        (payload) => {
+          if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {
+            const s = payload.new as { id: string; day_of_week: number; meal_type: string; recipe_id: string | null; servings: number };
+            const name = recipes.find((r) => r.id === s.recipe_id)?.name ?? null;
+            setPlan((prev) => ({
+              ...prev,
+              slots: prev.slots.map((slot) =>
+                slot.dayOfWeek === s.day_of_week && slot.mealType === (s.meal_type as MealType)
+                  ? { ...slot, slotId: s.id, recipeId: s.recipe_id, recipeName: name, servings: s.servings }
+                  : slot
+              ),
+            }));
+          } else if (payload.eventType === "DELETE") {
+            const s = payload.old as { day_of_week: number; meal_type: string };
+            setPlan((prev) => ({
+              ...prev,
+              slots: prev.slots.map((slot) =>
+                slot.dayOfWeek === s.day_of_week && slot.mealType === (s.meal_type as MealType)
+                  ? { ...slot, slotId: null, recipeId: null, recipeName: null }
+                  : slot
+              ),
+            }));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [plan.id, recipes]);
 
   function getSlot(dayOfWeek: number, mealType: MealType): MealSlotData {
     return (
@@ -75,17 +129,10 @@ export function PlanningGrid({ initialPlan, recipes, userDietaryPreferences, loc
     MEAL_TYPES.filter((mt) => !!getSlot(i + 1, mt).recipeName).length
   );
 
-  function handleSlotTap(dayOfWeek: number, mealType: MealType) {
-    setPickerState({ dayOfWeek, mealType });
-  }
-
-  function handleSelectRecipe(recipeId: string) {
-    if (!pickerState) return;
-    const { dayOfWeek, mealType } = pickerState;
+  function fillSlot(dayOfWeek: number, mealType: MealType, recipeId: string) {
     const recipe = recipes.find((r) => r.id === recipeId);
     if (!recipe) return;
 
-    setPickerState(null);
     setPendingSlot({ dayOfWeek, mealType });
 
     setPlan((prev) => ({
@@ -110,6 +157,17 @@ export function PlanningGrid({ initialPlan, recipes, userDietaryPreferences, loc
         setPendingSlot(null);
       }
     });
+  }
+
+  function handleSlotTap(dayOfWeek: number, mealType: MealType) {
+    setPickerState({ dayOfWeek, mealType });
+  }
+
+  function handleSelectRecipe(recipeId: string) {
+    if (!pickerState) return;
+    const { dayOfWeek, mealType } = pickerState;
+    setPickerState(null);
+    fillSlot(dayOfWeek, mealType, recipeId);
   }
 
   function handleClearSlot() {
@@ -140,6 +198,29 @@ export function PlanningGrid({ initialPlan, recipes, userDietaryPreferences, loc
       }
     });
   }
+
+  function handleQuickAdd(recipeId: string) {
+    const firstEmpty = MEAL_TYPES.find((mt) => !getSlot(selectedDayOfWeek, mt).recipeId);
+    if (!firstEmpty) return;
+    fillSlot(selectedDayOfWeek, firstEmpty, recipeId);
+  }
+
+  const quickRecipes = useMemo(() => {
+    const counts = new Map<string, { name: string; count: number }>();
+    for (const slot of plan.slots) {
+      if (!slot.recipeId || !slot.recipeName) continue;
+      const e = counts.get(slot.recipeId);
+      if (e) e.count++;
+      else counts.set(slot.recipeId, { name: slot.recipeName, count: 1 });
+    }
+    if (counts.size > 0) {
+      return [...counts.entries()]
+        .sort((a, b) => b[1].count - a[1].count)
+        .slice(0, 5)
+        .map(([id, { name }]) => ({ id, name }));
+    }
+    return recipes.slice(0, 5).map((r) => ({ id: r.id, name: r.name }));
+  }, [plan.slots, recipes]);
 
   const activeSlot = pickerState ? getSlot(pickerState.dayOfWeek, pickerState.mealType) : null;
 
@@ -175,6 +256,8 @@ export function PlanningGrid({ initialPlan, recipes, userDietaryPreferences, loc
   const totalFilled = filledCounts.reduce((a, b) => a + b, 0);
   const totalSlots = weekDays.length * MEAL_TYPES.length;
 
+  const dayHasEmptySlot = MEAL_TYPES.some((mt) => !getSlot(selectedDayOfWeek, mt).recipeId);
+
   return (
     <>
       <DayStrip
@@ -199,7 +282,7 @@ export function PlanningGrid({ initialPlan, recipes, userDietaryPreferences, loc
         </div>
       )}
 
-      <div className="flex items-center justify-between px-5 pb-4 pt-2">
+      <div className="flex items-center justify-between px-5 pb-3 pt-2">
         <div>
           <h2 className="text-2xl font-black leading-none tracking-tight text-foreground">
             {selectedDate.toLocaleDateString(locale, { weekday: "long" }).replace(/^\w/, (c) => c.toUpperCase())}
@@ -210,6 +293,25 @@ export function PlanningGrid({ initialPlan, recipes, userDietaryPreferences, loc
         </div>
         {!isToday && TodayButton}
       </div>
+
+      {quickRecipes.length > 0 && dayHasEmptySlot && (
+        <div className="flex gap-2 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          {quickRecipes.map((r) => {
+            const colorClass = colorForName(r.name);
+            return (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => handleQuickAdd(r.id)}
+                className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition active:scale-[0.95] ${colorClass}`}
+              >
+                <span className="text-[10px] font-black opacity-60">{r.name.charAt(0).toUpperCase()}</span>
+                <span className="max-w-[100px] truncate">{r.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div key={selectedDayIndex} className="animate-fade-in px-4 pb-4">
         <div className="overflow-hidden rounded-3xl bg-card shadow-[0_2px_16px_rgba(28,25,23,0.10)]">

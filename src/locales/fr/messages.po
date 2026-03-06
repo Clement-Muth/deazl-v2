@@ -54,6 +54,10 @@ msgstr "{checkedCount}/{0} cochés"
 msgid "A short description of this recipe..."
 msgstr "Une courte description de cette recette..."
 
+#: src/applications/planning/ui/components/planningGrid/mealSlotCell.tsx
+msgid "Add a meal"
+msgstr "Ajouter un repas"
+
 #: src/applications/shopping/ui/components/addItemForm.tsx:30
 msgid "Add an item..."
 msgstr "Ajouter un article..."

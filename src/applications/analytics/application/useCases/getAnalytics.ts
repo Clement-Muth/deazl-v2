@@ -32,6 +32,62 @@ export interface Analytics {
   topRecipes: TopRecipe[];
   nutriscoreDistribution: NutriscoreDistribution;
   weeklyBudget: number;
+  lastWeekBudget: number;
+  priceContributionCount: number;
+}
+
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
+
+async function computeBudgetForPlan(
+  supabase: SupabaseClient,
+  planId: string | null,
+): Promise<number> {
+  if (!planId) return 0;
+
+  const { data: slots } = await supabase
+    .from("meal_slots")
+    .select("recipe_id")
+    .eq("meal_plan_id", planId)
+    .not("recipe_id", "is", null);
+
+  const recipeIds = [...new Set((slots ?? []).map((s) => s.recipe_id as string).filter(Boolean))];
+  if (recipeIds.length === 0) return 0;
+
+  const { data: ingRows } = await supabase
+    .from("recipe_ingredients")
+    .select("product_id, quantity, unit")
+    .in("recipe_id", recipeIds)
+    .not("product_id", "is", null);
+
+  const productIds = [...new Set((ingRows ?? []).map((r) => r.product_id as string).filter(Boolean))];
+  if (productIds.length === 0) return 0;
+
+  const { data: priceRows } = await supabase
+    .from("latest_prices")
+    .select("product_id, price, quantity, unit")
+    .in("product_id", productIds);
+
+  const cheapest = new Map<string, { price: number; quantity: number; unit: string }>();
+  for (const p of (priceRows ?? [])) {
+    if (!cheapest.has(p.product_id)) {
+      cheapest.set(p.product_id, { price: p.price, quantity: p.quantity, unit: p.unit });
+    }
+  }
+
+  const norm = (u: string) => (u ?? "").toLowerCase().trim();
+  let budget = 0;
+  for (const ing of (ingRows ?? [])) {
+    const pid = ing.product_id as string | null;
+    if (!pid) continue;
+    const p = cheapest.get(pid);
+    if (!p) continue;
+    if (norm(ing.unit) === norm(p.unit) && p.quantity > 0) {
+      budget += (ing.quantity / p.quantity) * p.price;
+    } else {
+      budget += p.price;
+    }
+  }
+  return budget;
 }
 
 export async function getAnalytics(): Promise<Analytics> {
@@ -39,29 +95,48 @@ export async function getAnalytics(): Promise<Analytics> {
   const { data: { user } } = await supabase.auth.getUser();
 
   const emptyNutriscore: NutriscoreDistribution = { A: 0, B: 0, C: 0, D: 0, E: 0 };
-
   const empty: Analytics = {
     thisWeek: { filledSlots: 0, totalSlots: 21, breakfastCount: 0, lunchCount: 0, dinnerCount: 0 },
     allTime: { totalMealsPlanned: 0, totalRecipes: 0 },
     topRecipes: [],
     nutriscoreDistribution: emptyNutriscore,
     weeklyBudget: 0,
+    lastWeekBudget: 0,
+    priceContributionCount: 0,
   };
 
   if (!user) return empty;
 
-  const weekParam = formatWeekParam(getMondayOf(new Date()));
+  const now = new Date();
+  const weekParam = formatWeekParam(getMondayOf(now));
+  const lastWeekDate = new Date(now);
+  lastWeekDate.setDate(lastWeekDate.getDate() - 7);
+  const lastWeekParam = formatWeekParam(getMondayOf(lastWeekDate));
 
-  const [{ data: plans }, { count: totalRecipes }] = await Promise.all([
+  const [
+    { data: plans },
+    { count: totalRecipes },
+    { count: productPriceCount },
+    { count: ingredientPriceCount },
+  ] = await Promise.all([
     supabase.from("meal_plans").select("id, week_start").eq("user_id", user.id),
     supabase.from("recipes").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+    supabase.from("prices").select("id", { count: "exact", head: true }).eq("reported_by", user.id),
+    supabase.from("ingredient_prices").select("id", { count: "exact", head: true }).eq("reported_by", user.id),
   ]);
+
+  const priceContributionCount = (productPriceCount ?? 0) + (ingredientPriceCount ?? 0);
 
   const planIds = (plans ?? []).map((p) => p.id);
   const currentPlan = (plans ?? []).find((p) => p.week_start === weekParam);
+  const lastWeekPlan = (plans ?? []).find((p) => p.week_start === lastWeekParam);
 
   if (planIds.length === 0) {
-    return { ...empty, allTime: { totalMealsPlanned: 0, totalRecipes: totalRecipes ?? 0 }, nutriscoreDistribution: emptyNutriscore };
+    return {
+      ...empty,
+      allTime: { totalMealsPlanned: 0, totalRecipes: totalRecipes ?? 0 },
+      priceContributionCount,
+    };
   }
 
   const { data: allSlots } = await supabase
@@ -92,9 +167,7 @@ export async function getAnalytics(): Promise<Analytics> {
     .slice(0, 5)
     .map(([id, d]) => ({ recipeId: id, recipeName: d.name, imageUrl: d.imageUrl, count: d.count, dietaryTags: d.dietaryTags }));
 
-  const thisWeekRecipeIds = [...new Set(
-    thisWeekSlots.map((s) => s.recipe_id as string).filter(Boolean)
-  )];
+  const thisWeekRecipeIds = [...new Set(thisWeekSlots.map((s) => s.recipe_id as string).filter(Boolean))];
 
   const nutriscoreDistribution = { ...emptyNutriscore };
   let weeklyBudget = 0;
@@ -143,6 +216,8 @@ export async function getAnalytics(): Promise<Analytics> {
     }
   }
 
+  const lastWeekBudget = await computeBudgetForPlan(supabase, lastWeekPlan?.id ?? null);
+
   return {
     thisWeek: {
       filledSlots: thisWeekSlots.length,
@@ -158,5 +233,7 @@ export async function getAnalytics(): Promise<Analytics> {
     topRecipes,
     nutriscoreDistribution,
     weeklyBudget,
+    lastWeekBudget,
+    priceContributionCount,
   };
 }

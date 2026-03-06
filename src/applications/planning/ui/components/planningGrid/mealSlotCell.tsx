@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { msg } from "@lingui/core/macro";
-import { useLingui } from "@lingui/react/macro";
+import { useLingui, Trans } from "@lingui/react/macro";
 import type { MealSlotData, MealType } from "@/applications/planning/domain/entities/planning";
 import type { MessageDescriptor } from "@lingui/core";
 
@@ -99,7 +99,7 @@ export function MealSlotCell({ slot, onTap, isPending }: MealSlotCellProps) {
             {slot.recipeName}
           </span>
         ) : (
-          <span className="text-sm text-muted-foreground/30">Ajouter un repas</span>
+          <span className="text-sm text-muted-foreground/30"><Trans>Add a meal</Trans></span>
         )}
       </div>
 

@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-const STORAGE_KEY = "deazl_notif_v1";
+const STORAGE_KEY = "deazl_notif_v2";
 
 export function NotificationScheduler() {
   useEffect(() => {
@@ -20,9 +20,21 @@ export function NotificationScheduler() {
           notifications: [
             {
               id: 1001,
-              title: "Planifie ta semaine",
+              title: "Planifie ta semaine 🗓️",
               body: "C'est dimanche ! Prépare tes repas pour toute la semaine.",
               schedule: { on: { weekday: 1, hour: 19, minute: 0 }, repeats: true },
+            },
+            {
+              id: 1002,
+              title: "Liste de courses prête ?",
+              body: "N'oublie pas de générer ta liste avant de faire les courses.",
+              schedule: { on: { weekday: 6, hour: 10, minute: 0 }, repeats: true },
+            },
+            {
+              id: 1003,
+              title: "Début de semaine 🥗",
+              body: "Ton planning de repas t'attend. Bonne semaine !",
+              schedule: { on: { weekday: 2, hour: 8, minute: 0 }, repeats: true },
             },
           ],
         });

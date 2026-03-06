@@ -43,7 +43,10 @@ const NUTRISCORE_CONFIG: { key: keyof NutriscoreDistribution; color: string; lab
 export default async function AnalyticsPage() {
   await initLinguiFromCookie();
   const analytics = await getAnalytics();
-  const { thisWeek, allTime, topRecipes, nutriscoreDistribution, weeklyBudget } = analytics;
+  const { thisWeek, allTime, topRecipes, nutriscoreDistribution, weeklyBudget, lastWeekBudget, priceContributionCount } = analytics;
+  const budgetDelta = lastWeekBudget > 0 && weeklyBudget > 0
+    ? Math.round(((weeklyBudget - lastWeekBudget) / lastWeekBudget) * 100)
+    : null;
   const nutriTotal = Object.values(nutriscoreDistribution).reduce((a, b) => a + b, 0);
   const fillPct = thisWeek.totalSlots > 0 ? Math.round((thisWeek.filledSlots / thisWeek.totalSlots) * 100) : 0;
   const circumference = 2 * Math.PI * 36;
@@ -128,6 +131,38 @@ export default async function AnalyticsPage() {
                   ~{weeklyBudget.toFixed(0)}<span className="ml-1 text-base font-semibold text-muted-foreground">€</span>
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground/60">pour les repas de la semaine</p>
+              </div>
+              {budgetDelta !== null && (
+                <div className={`flex items-center gap-1 rounded-xl px-2.5 py-1.5 ${budgetDelta <= 0 ? "bg-emerald-50 text-emerald-700" : "bg-orange-50 text-orange-700"}`}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={budgetDelta <= 0 ? "rotate-0" : "rotate-180"}>
+                    <polyline points="18 15 12 9 6 15" />
+                  </svg>
+                  <span className="text-xs font-black tabular-nums">{Math.abs(budgetDelta)}%</span>
+                </div>
+              )}
+            </div>
+            {lastWeekBudget > 0 && (
+              <div className="border-t border-border/50 px-5 py-3">
+                <p className="text-[11px] text-muted-foreground/60">
+                  Semaine dernière : <span className="font-semibold text-muted-foreground">~{lastWeekBudget.toFixed(0)} €</span>
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {priceContributionCount > 0 && (
+          <div className="overflow-hidden rounded-2xl bg-card shadow-[0_1px_4px_rgba(28,25,23,0.08)]">
+            <div className="flex items-center gap-4 px-5 py-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-50">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground/70">Contribution prix</p>
+                <p className="mt-0.5 text-2xl font-black leading-none text-foreground">{priceContributionCount}</p>
+                <p className="mt-1 text-xs text-muted-foreground/60">{priceContributionCount > 1 ? "prix signalés" : "prix signalé"} à la communauté</p>
               </div>
             </div>
           </div>

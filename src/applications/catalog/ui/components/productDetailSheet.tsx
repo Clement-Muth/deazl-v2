@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import { Trans } from "@lingui/react/macro";
 import { getProductDetails, type ProductDetails } from "@/applications/catalog/application/useCases/getProductDetails";
 import { getProductAlternatives } from "@/applications/catalog/application/useCases/getProductAlternatives";
+import { getProductPriceHistory, type PriceHistoryPoint } from "@/applications/catalog/application/useCases/getProductPriceHistory";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { getAdditiveRisk, parseAdditiveTag } from "@/applications/catalog/domain/additiveRisks";
 import type { OFFProduct } from "@/applications/catalog/domain/entities/catalog";
 import { BottomSheet, SheetHandle, type BottomSheetHandle } from "@/shared/components/ui/bottomSheet";
@@ -61,12 +63,15 @@ export function ProductDetailSheet({ productId, recipeId, onClose, onReportPrice
   const [product, setProduct] = useState<ProductDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [alternatives, setAlternatives] = useState<OFFProduct[]>([]);
+  const [priceHistory, setPriceHistory] = useState<PriceHistoryPoint[]>([]);
   const bsRef = useRef<BottomSheetHandle>(null);
 
   useEffect(() => {
     setIsLoading(true);
     setAlternatives([]);
+    setPriceHistory([]);
     getProductDetails(productId).then((d) => { setProduct(d); setIsLoading(false); });
+    getProductPriceHistory(productId).then(setPriceHistory);
   }, [productId]);
 
   useEffect(() => {
@@ -397,6 +402,30 @@ export function ProductDetailSheet({ productId, recipeId, onClose, onReportPrice
                     </div>
                   </div>
                 ))
+              )}
+
+              {priceHistory.length > 1 && (
+                <div className="border-t border-black/4 px-4 pb-4 pt-3">
+                  <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Historique</p>
+                  <ResponsiveContainer width="100%" height={80}>
+                    <AreaChart data={priceHistory} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="priceGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#16a34a" stopOpacity={0.15} />
+                          <stop offset="95%" stopColor="#16a34a" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#9CA3AF" }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                      <YAxis hide domain={["auto", "auto"]} />
+                      <Tooltip
+                        contentStyle={{ fontSize: 11, padding: "4px 8px", borderRadius: 8, border: "none", boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}
+                        formatter={(v) => [typeof v === "number" ? `${v.toFixed(2)} €` : v, ""]}
+                        labelStyle={{ display: "none" }}
+                      />
+                      <Area type="monotone" dataKey="price" stroke="#16a34a" strokeWidth={2} fill="url(#priceGrad)" dot={false} activeDot={{ r: 4 }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
               )}
             </div>
           </div>
