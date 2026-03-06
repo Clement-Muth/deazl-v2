@@ -23,6 +23,8 @@ export function ScanView() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<{ stop(): void } | null>(null);
   const stoppedRef = useRef(false);
+  const scanningRef = useRef(false);
+  const [scanError, setScanError] = useState<string | null>(null);
 
   const [phase, setPhase] = useState<Phase>("scanning");
   const [product, setProduct] = useState<ScannedProductInfo | null>(null);
@@ -45,9 +47,7 @@ export function ScanView() {
       setStores(s);
       if (s.length === 1) setSelectedStore(s[0]);
     });
-    if (isNative) {
-      startNativeScanner();
-    } else {
+    if (!isNative) {
       startWebScanner();
     }
     return () => {
@@ -58,17 +58,25 @@ export function ScanView() {
   }, []);
 
   async function startNativeScanner() {
+    if (scanningRef.current) return;
+    scanningRef.current = true;
+    setScanError(null);
     stoppedRef.current = false;
     try {
       const { BarcodeScanner } = await import("@capacitor-mlkit/barcode-scanning");
       const { camera } = await BarcodeScanner.requestPermissions();
-      if (camera !== "granted" && camera !== "limited") return;
+      if (camera !== "granted" && camera !== "limited") {
+        setScanError("Accès caméra refusé. Autorise-le dans les réglages.");
+        return;
+      }
       const { barcodes } = await BarcodeScanner.scan();
       if (stoppedRef.current || barcodes.length === 0) return;
       stoppedRef.current = true;
       handleEan(barcodes[0].rawValue ?? "");
     } catch {
-      // scanner cancelled or unavailable
+      // scanner cancelled by user — no-op
+    } finally {
+      scanningRef.current = false;
     }
   }
 
@@ -115,10 +123,9 @@ export function ScanView() {
     setPriceSubmitted(false);
     setPantrySubmitted(false);
     setSubmitError(null);
+    setScanError(null);
     setPantryQty("1");
-    if (isNative) {
-      startNativeScanner();
-    } else {
+    if (!isNative) {
       startWebScanner();
     }
   }
@@ -166,23 +173,28 @@ export function ScanView() {
         {phase === "scanning" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-6">
             {isNative ? (
-              <button
-                type="button"
-                onClick={startNativeScanner}
-                className="flex flex-col items-center gap-4"
-              >
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/10">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <div className="flex flex-col items-center gap-4">
+                <button
+                  type="button"
+                  onClick={startNativeScanner}
+                  className="flex h-24 w-24 items-center justify-center rounded-full bg-white/10 transition active:scale-95 active:bg-white/20"
+                >
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/>
                     <path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
                     <line x1="7" y1="8" x2="7" y2="16"/><line x1="10.5" y1="8" x2="10.5" y2="16"/>
                     <line x1="14" y1="8" x2="14" y2="16"/><line x1="17" y1="8" x2="17" y2="16"/>
                   </svg>
-                </div>
+                </button>
                 <p className="text-sm font-semibold tracking-wide text-white/70">
                   <Trans>Tap to scan</Trans>
                 </p>
-              </button>
+                {scanError && (
+                  <p className="max-w-[240px] rounded-xl bg-red-500/20 px-4 py-2 text-center text-xs font-semibold text-red-300">
+                    {scanError}
+                  </p>
+                )}
+              </div>
             ) : (
               <div className="relative h-40 w-72">
                 <div className="absolute inset-0" style={{ boxShadow: "0 0 0 9999px rgba(0,0,0,0.55)" }} />
