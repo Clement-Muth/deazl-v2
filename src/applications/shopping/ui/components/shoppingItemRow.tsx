@@ -8,6 +8,7 @@ interface ShoppingItemRowProps {
   onToggle: (id: string, checked: boolean) => void;
   onDelete: (id: string) => void;
   onReportPrice?: (item: ShoppingItem) => void;
+  onDetail?: (item: ShoppingItem) => void;
   activeStoreId?: string | null;
   isStoreMode?: boolean;
   hasDivider?: boolean;
@@ -20,19 +21,21 @@ function vibrate(ms: number) {
   if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(ms);
 }
 
-export function ShoppingItemRow({ item, onToggle, onDelete, onReportPrice, activeStoreId, isStoreMode, hasDivider }: ShoppingItemRowProps) {
+export function ShoppingItemRow({ item, onToggle, onDelete, onReportPrice, onDetail, activeStoreId, isStoreMode, hasDivider }: ShoppingItemRowProps) {
   const activeStorePrice = activeStoreId
     ? item.allStorePrices.find((p) => p.storeId === activeStoreId)
     : null;
   const displayPrice = activeStoreId ? activeStorePrice : item.price;
   const showPriceGap = isStoreMode && !item.isChecked && activeStoreId && !activeStorePrice && item.allStorePrices.length === 0;
   const showEuroButton = !item.isChecked && onReportPrice && (isStoreMode || (!activeStoreId && !item.price));
+  const hasKnownPrices = item.allStorePrices.length > 0 || !!item.price;
   const [tx, setTx] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const txRef = useRef(0);
   const startX = useRef(0);
   const startY = useRef(0);
   const swipeDir = useRef<"h" | "v" | null>(null);
+  const didSwipeRef = useRef(false);
 
   const qty = item.quantity % 1 === 0
     ? item.quantity
@@ -43,6 +46,7 @@ export function ShoppingItemRow({ item, onToggle, onDelete, onReportPrice, activ
     startX.current = e.clientX;
     startY.current = e.clientY;
     swipeDir.current = null;
+    didSwipeRef.current = false;
   }
 
   function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
@@ -73,6 +77,7 @@ export function ShoppingItemRow({ item, onToggle, onDelete, onReportPrice, activ
 
     if (current >= THRESHOLD) {
       vibrate(10);
+      didSwipeRef.current = true;
       setIsAnimating(true);
       const target = window.innerWidth;
       txRef.current = target;
@@ -85,6 +90,7 @@ export function ShoppingItemRow({ item, onToggle, onDelete, onReportPrice, activ
       }, 280);
     } else if (current <= -THRESHOLD) {
       vibrate(30);
+      didSwipeRef.current = true;
       setIsAnimating(true);
       txRef.current = -window.innerWidth;
       setTx(-window.innerWidth);
@@ -173,13 +179,21 @@ export function ShoppingItemRow({ item, onToggle, onDelete, onReportPrice, activ
           </span>
         </button>
 
-        <span className={`flex-1 text-sm ${item.isChecked ? "text-muted-foreground/70 line-through decoration-gray-300" : "font-medium text-foreground"}`}
-          style={{ transition: "color 0.18s ease" }}>
+        <button
+          type="button"
+          onClick={() => { if (!didSwipeRef.current) onDetail?.(item); }}
+          className={`flex-1 text-left text-sm ${item.isChecked ? "text-muted-foreground/70 line-through decoration-gray-300" : "font-medium text-foreground"}`}
+          style={{ transition: "color 0.18s ease" }}
+        >
           {item.customName}
-        </span>
+        </button>
 
         <div className="flex shrink-0 items-center gap-2">
-          <div className="flex flex-col items-end gap-0.5" aria-hidden={item.isChecked ? "true" : undefined}>
+          <div
+            className="flex flex-col items-end gap-0.5"
+            aria-hidden={item.isChecked ? "true" : undefined}
+            onClick={() => { if (!didSwipeRef.current && !item.isChecked && hasKnownPrices) onDetail?.(item); }}
+          >
             <span className="text-xs font-medium text-muted-foreground/70">
               {qty} {item.unit}
             </span>
@@ -188,8 +202,16 @@ export function ShoppingItemRow({ item, onToggle, onDelete, onReportPrice, activ
                 ~{displayPrice.estimatedCost.toFixed(2)} €
               </span>
             )}
+            {!item.isChecked && !activeStoreId && item.price?.storeName && (
+              <span className="text-[9px] font-medium text-muted-foreground/40">
+                {item.price.storeName}
+              </span>
+            )}
             {showPriceGap && (
               <span className="text-[10px] font-medium text-muted-foreground/40">prix ?</span>
+            )}
+            {!item.isChecked && (hasKnownPrices || showPriceGap) && onDetail && (
+              <span className="text-[9px] font-medium text-primary/40 leading-none">comparer →</span>
             )}
           </div>
           {showEuroButton && (

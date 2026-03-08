@@ -12,8 +12,10 @@ import { ShoppingItemRow } from "./shoppingItemRow";
 import { AddItemForm } from "./addItemForm";
 import { ActiveStoreSelector } from "./activeStoreSelector";
 import { IngredientPriceSheet } from "./ingredientPriceSheet";
+import { ItemDetailSheet } from "./itemDetailSheet";
 import { useActiveStore } from "../hooks/useActiveStore";
 import type { ShoppingItem, ShoppingList, StoreCostSummary } from "@/applications/shopping/domain/entities/shopping";
+import type { UserStoreItem } from "@/applications/user/application/useCases/getUserStores";
 
 interface ShoppingListViewProps {
   list: ShoppingList;
@@ -53,6 +55,7 @@ function CategorySection({
   onToggleItem,
   onDelete,
   onReportPrice,
+  onDetail,
   activeStoreId,
   isStoreMode,
   animationDelay = 0,
@@ -64,6 +67,7 @@ function CategorySection({
   onToggleItem: (id: string, checked: boolean) => void;
   onDelete: (id: string) => void;
   onReportPrice?: (item: ShoppingItem) => void;
+  onDetail?: (item: ShoppingItem) => void;
   activeStoreId?: string | null;
   isStoreMode?: boolean;
   animationDelay?: number;
@@ -111,6 +115,7 @@ function CategorySection({
                 onToggle={onToggleItem}
                 onDelete={onDelete}
                 onReportPrice={onReportPrice}
+                onDetail={onDetail}
                 activeStoreId={activeStoreId}
                 isStoreMode={isStoreMode}
                 hasDivider={i < items.length - 1}
@@ -150,20 +155,15 @@ function StoreBanner({ summaries, activeStoreId }: { summaries: StoreCostSummary
           </svg>
         </div>
         <div className="flex-1 text-left">
+          <p className="text-xs font-medium text-muted-foreground/60"><Trans>Panier estimé</Trans></p>
           <p className="text-sm font-bold text-gray-800">
-            {activeSummary ? <Trans>Chez {featured.storeName}</Trans> : featured.storeName}
+            {featured.storeName}
+            {savings > 0 && <span className="ml-1.5 text-xs font-semibold text-amber-500">+{savings.toFixed(2)} €</span>}
+            {isActiveStoreCheapest && activeSummary && <span className="ml-1.5 text-xs font-semibold text-green-600">✓ moins cher</span>}
           </p>
-          {savings > 0 ? (
-            <p className="text-xs text-amber-600">
-              <Trans>+{savings.toFixed(2)} € vs {cheapest.storeName.split(" ")[0]}</Trans>
-            </p>
-          ) : featured.coveredCount < featured.totalCount ? (
-            <p className="text-xs text-muted-foreground/70">
-              <Trans>{featured.coveredCount}/{featured.totalCount} items with known prices</Trans>
-            </p>
-          ) : isActiveStoreCheapest && activeSummary ? (
-            <p className="text-xs text-green-600"><Trans>Best price</Trans> ✓</p>
-          ) : null}
+          <p className="text-[11px] text-muted-foreground/50">
+            <Trans>basé sur {featured.coveredCount}/{featured.totalCount} articles</Trans>
+          </p>
         </div>
         <p className={`text-base font-black ${isActiveStoreCheapest ? "text-green-600" : "text-amber-500"}`}>
           ~{featured.totalCost.toFixed(2)} €
@@ -319,6 +319,8 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const { stores, activeStore, setActiveStore } = useActiveStore();
   const [priceSheetItem, setPriceSheetItem] = useState<ShoppingItem | null>(null);
+  const [priceSheetStore, setPriceSheetStore] = useState<UserStoreItem | null | undefined>(undefined);
+  const [detailItem, setDetailItem] = useState<ShoppingItem | null>(null);
   const isStoreMode = !!activeStore;
 
   useEffect(() => {
@@ -535,6 +537,7 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
                 onToggleItem={handleToggle}
                 onDelete={handleDelete}
                 onReportPrice={setPriceSheetItem}
+                onDetail={setDetailItem}
                 activeStoreId={activeStore?.id}
                 isStoreMode={isStoreMode}
                 animationDelay={i * 55}
@@ -622,14 +625,28 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
         />
       )}
 
+      {detailItem && (
+        <ItemDetailSheet
+          item={detailItem}
+          userStores={stores}
+          activeStoreId={activeStore?.id}
+          onClose={() => setDetailItem(null)}
+          onAddPrice={(store) => {
+            setDetailItem(null);
+            setPriceSheetStore(store);
+            setPriceSheetItem(detailItem);
+          }}
+        />
+      )}
+
       {priceSheetItem && (
         <IngredientPriceSheet
           shoppingItemId={priceSheetItem.id}
           ingredientName={priceSheetItem.customName}
           defaultUnit={priceSheetItem.unit}
-          preselectedStore={activeStore}
-          onClose={() => setPriceSheetItem(null)}
-          onSuccess={() => { setPriceSheetItem(null); router.refresh(); }}
+          preselectedStore={priceSheetStore !== undefined ? priceSheetStore : activeStore}
+          onClose={() => { setPriceSheetItem(null); setPriceSheetStore(undefined); }}
+          onSuccess={() => { setPriceSheetItem(null); setPriceSheetStore(undefined); router.refresh(); }}
         />
       )}
     </>
