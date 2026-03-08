@@ -7,6 +7,7 @@ interface ShoppingItemRowProps {
   item: ShoppingItem;
   onToggle: (id: string, checked: boolean) => void;
   onDelete: (id: string) => void;
+  onReportPrice?: (item: ShoppingItem) => void;
   hasDivider?: boolean;
 }
 
@@ -17,7 +18,7 @@ function vibrate(ms: number) {
   if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(ms);
 }
 
-export function ShoppingItemRow({ item, onToggle, onDelete, hasDivider }: ShoppingItemRowProps) {
+export function ShoppingItemRow({ item, onToggle, onDelete, onReportPrice, hasDivider }: ShoppingItemRowProps) {
   const [tx, setTx] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const txRef = useRef(0);
@@ -169,14 +170,28 @@ export function ShoppingItemRow({ item, onToggle, onDelete, hasDivider }: Shoppi
           {item.customName}
         </span>
 
-        <div className="flex shrink-0 flex-col items-end gap-0.5" aria-hidden={item.isChecked ? "true" : undefined}>
-          <span className="text-xs font-medium text-muted-foreground/70">
-            {qty} {item.unit}
-          </span>
-          {item.price && !item.isChecked && (
-            <span className="text-[10px] font-semibold text-green-600">
-              ~{item.price.estimatedCost.toFixed(2)} €
+        <div className="flex shrink-0 items-center gap-2">
+          <div className="flex flex-col items-end gap-0.5" aria-hidden={item.isChecked ? "true" : undefined}>
+            <span className="text-xs font-medium text-muted-foreground/70">
+              {qty} {item.unit}
             </span>
+            {item.price && !item.isChecked && (
+              <span className="text-[10px] font-semibold text-green-600">
+                ~{item.price.estimatedCost.toFixed(2)} €
+              </span>
+            )}
+          </div>
+          {!item.isChecked && !item.price && onReportPrice && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); vibrate(8); onReportPrice(item); }}
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-50 text-amber-500 transition active:scale-90"
+              aria-label="Ajouter un prix"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+              </svg>
+            </button>
           )}
         </div>
       </div>

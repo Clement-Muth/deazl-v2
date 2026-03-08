@@ -16,6 +16,7 @@ interface IngredientPriceSheetProps {
   shoppingItemId: string;
   ingredientName: string;
   defaultUnit?: string;
+  preselectedStore?: UserStoreItem | null;
   onClose: () => void;
   onSuccess?: () => void;
 }
@@ -24,12 +25,13 @@ export function IngredientPriceSheet({
   shoppingItemId,
   ingredientName,
   defaultUnit = "pièce",
+  preselectedStore,
   onClose,
   onSuccess,
 }: IngredientPriceSheetProps) {
   const { t } = useLingui();
   const [stores, setStores] = useState<UserStoreItem[]>([]);
-  const [selectedStore, setSelectedStore] = useState<UserStoreItem | null>(null);
+  const [selectedStore, setSelectedStore] = useState<UserStoreItem | null>(preselectedStore ?? null);
   const [price, setPrice] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [unit, setUnit] = useState(defaultUnit);
@@ -49,7 +51,7 @@ export function IngredientPriceSheet({
   const [, startTransition] = useTransition();
 
   useEffect(() => {
-    getUserStores().then(setStores);
+    if (!preselectedStore) getUserStores().then(setStores);
     triggerSearch(ingredientName);
   }, []);
 
@@ -243,7 +245,15 @@ export function IngredientPriceSheet({
 
           <div className="flex flex-col gap-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/70"><Trans>Store</Trans></p>
-            {stores.length === 0 ? (
+            {preselectedStore ? (
+              <div className="flex items-center gap-2 rounded-xl bg-primary/8 px-4 py-2.5 ring-1 ring-primary/20">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                  <polyline points="9 22 9 12 15 12 15 22" />
+                </svg>
+                <span className="text-sm font-semibold text-primary">{preselectedStore.name}</span>
+              </div>
+            ) : stores.length === 0 ? (
               <p className="text-sm text-muted-foreground/70"><Trans>Add stores in your profile first.</Trans></p>
             ) : (
               <div className="flex flex-wrap gap-2">

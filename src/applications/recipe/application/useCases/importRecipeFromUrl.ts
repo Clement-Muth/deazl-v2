@@ -95,56 +95,38 @@ export async function importRecipeFromUrl(url: string): Promise<ImportResult> {
     return { error: "URL invalide" };
   }
 
-  console.log("[import] fetching HTML for", parsedUrl.href);
   const html = await fetchHtml(parsedUrl.href);
-  console.log("[import] html result:", html ? `${html.length} chars` : "null");
 
   if (html) {
     const jsonLdBlocks = [...html.matchAll(/<script[^>]*type=["']?application\/ld\+json["']?[^>]*>([\s\S]*?)<\/script>/gi)];
-    console.log("[import] JSON-LD blocks found:", jsonLdBlocks.length);
-    jsonLdBlocks.forEach((b, i) => console.log(`[import] JSON-LD[${i}] snippet:`, b[1].slice(0, 120)));
 
     for (const block of jsonLdBlocks) {
       try {
         const parsed = JSON.parse(block[1]);
         const recipe = findRecipe(parsed);
-        if (recipe) { console.log("[import] found via JSON-LD"); return { data: { ...recipe, sourceUrl: url.trim() } }; }
+        if (recipe) return { data: { ...recipe, sourceUrl: url.trim() } };
       } catch {
         continue;
       }
     }
 
     const nextDataMatch = html.match(/<script id="__NEXT_DATA__"[^>]*>([^<]+)<\/script>/);
-    console.log("[import] __NEXT_DATA__ present:", !!nextDataMatch);
     if (nextDataMatch) {
       try {
         const nextData = JSON.parse(nextDataMatch[1]);
         const recipe = findRecipe(nextData);
-        if (recipe) { console.log("[import] found via __NEXT_DATA__ JSON-LD"); return { data: { ...recipe, sourceUrl: url.trim() } }; }
+        if (recipe) return { data: { ...recipe, sourceUrl: url.trim() } };
         const heuristic = findRecipeHeuristic(nextData);
-        if (heuristic) { console.log("[import] found via __NEXT_DATA__ heuristic"); return { data: { ...heuristic, sourceUrl: url.trim() } }; }
-        console.log("[import] __NEXT_DATA__ no recipe found");
+        if (heuristic) return { data: { ...heuristic, sourceUrl: url.trim() } };
       } catch {
         // fallthrough
       }
     }
   }
 
-  console.log("[import] fetching markdown via Jina");
   const markdown = await fetchMarkdown(parsedUrl.href);
-  console.log("[import] markdown result:", markdown ? `${markdown.length} chars` : "null");
-
   if (markdown) {
-    const first300 = markdown.slice(0, 300).replace(/\n/g, "\\n");
-    console.log("[import] markdown first 300 chars:", first300);
-
-    const checkboxLines = markdown.split("\n").filter((l) => /^- \[[ x]\]/.test(l.trim()));
-    const etapeLines = markdown.split("\n").filter((l) => /^[ÉE]tape\s+\d+/i.test(l.trim()));
-    console.log("[import] checkbox lines (ingredients):", checkboxLines.length, checkboxLines.slice(0, 3));
-    console.log("[import] étape lines (steps):", etapeLines.length, etapeLines.slice(0, 3));
-
     const recipe = parseMarkdownRecipe(markdown);
-    console.log("[import] parseMarkdownRecipe result:", recipe ? `OK name="${recipe.name}" ing=${recipe.ingredients.length} steps=${recipe.steps.length}` : "null");
     if (recipe) return { data: { ...recipe, sourceUrl: url.trim() } };
   }
 

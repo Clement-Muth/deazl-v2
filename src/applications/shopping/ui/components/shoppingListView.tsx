@@ -9,6 +9,9 @@ import { deleteShoppingItem } from "@/applications/shopping/application/useCases
 import { transferCheckedToPantry } from "@/applications/shopping/application/useCases/transferCheckedToPantry";
 import { ShoppingItemRow } from "./shoppingItemRow";
 import { AddItemForm } from "./addItemForm";
+import { ActiveStoreSelector } from "./activeStoreSelector";
+import { IngredientPriceSheet } from "./ingredientPriceSheet";
+import { useActiveStore } from "../hooks/useActiveStore";
 import type { ShoppingItem, ShoppingList, StoreCostSummary } from "@/applications/shopping/domain/entities/shopping";
 
 interface ShoppingListViewProps {
@@ -48,6 +51,7 @@ function CategorySection({
   onToggle,
   onToggleItem,
   onDelete,
+  onReportPrice,
   animationDelay = 0,
 }: {
   category: string;
@@ -56,6 +60,7 @@ function CategorySection({
   onToggle: () => void;
   onToggleItem: (id: string, checked: boolean) => void;
   onDelete: (id: string) => void;
+  onReportPrice?: (item: ShoppingItem) => void;
   animationDelay?: number;
 }) {
   const color = CATEGORY_COLORS[category] ?? "#9ca3af";
@@ -98,6 +103,7 @@ function CategorySection({
                 item={item}
                 onToggle={onToggleItem}
                 onDelete={onDelete}
+                onReportPrice={onReportPrice}
                 hasDivider={i < items.length - 1}
               />
             ))}
@@ -274,6 +280,8 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
   const prevUncheckedLenRef = useRef(list.items.filter((i) => !i.isChecked).length);
   const [showCompletion, setShowCompletion] = useState(false);
   const [openCategory, setOpenCategory] = useState<string | null>(null);
+  const { stores, activeStore, setActiveStore } = useActiveStore();
+  const [priceSheetItem, setPriceSheetItem] = useState<ShoppingItem | null>(null);
 
   useEffect(() => {
     setItems(list.items);
@@ -422,6 +430,10 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
 
   return (
     <>
+      <div className="sticky top-0 z-30 bg-background/95 px-4 pb-2 pt-2 backdrop-blur-sm">
+        <ActiveStoreSelector stores={stores} activeStore={activeStore} onSelect={setActiveStore} />
+      </div>
+
       <div className="flex flex-col gap-3 px-4 py-4 pb-44">
         <StoreBanner summaries={list.storeSummaries} />
 
@@ -454,6 +466,7 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
                 onToggle={() => toggleCategory(category)}
                 onToggleItem={handleToggle}
                 onDelete={handleDelete}
+                onReportPrice={setPriceSheetItem}
                 animationDelay={i * 55}
               />
             ))}
@@ -534,6 +547,17 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
           itemName={undoState.item.customName}
           onUndo={handleUndo}
           onDismiss={handleDismissUndo}
+        />
+      )}
+
+      {priceSheetItem && (
+        <IngredientPriceSheet
+          shoppingItemId={priceSheetItem.id}
+          ingredientName={priceSheetItem.customName}
+          defaultUnit={priceSheetItem.unit}
+          preselectedStore={activeStore}
+          onClose={() => setPriceSheetItem(null)}
+          onSuccess={() => setPriceSheetItem(null)}
         />
       )}
     </>

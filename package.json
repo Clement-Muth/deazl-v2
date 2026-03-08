@@ -28,6 +28,7 @@
     "@capacitor/local-notifications": "^8.0.2",
     "@lingui/core": "^5.9.2",
     "@lingui/react": "^5.9.2",
+    "@sentry/nextjs": "^10.42.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.98.0",
     "@tailwindcss/postcss": "^4.2.1",
