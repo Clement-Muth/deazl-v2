@@ -8,6 +8,7 @@ interface ShoppingItemRowProps {
   onToggle: (id: string, checked: boolean) => void;
   onDelete: (id: string) => void;
   onReportPrice?: (item: ShoppingItem) => void;
+  activeStoreName?: string | null;
   hasDivider?: boolean;
 }
 
@@ -18,7 +19,7 @@ function vibrate(ms: number) {
   if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(ms);
 }
 
-export function ShoppingItemRow({ item, onToggle, onDelete, onReportPrice, hasDivider }: ShoppingItemRowProps) {
+export function ShoppingItemRow({ item, onToggle, onDelete, onReportPrice, activeStoreName, hasDivider }: ShoppingItemRowProps) {
   const [tx, setTx] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const txRef = useRef(0);
@@ -176,12 +177,12 @@ export function ShoppingItemRow({ item, onToggle, onDelete, onReportPrice, hasDi
               {qty} {item.unit}
             </span>
             {item.price && !item.isChecked && (
-              <span className="text-[10px] font-semibold text-green-600">
+              <span className={`text-[10px] font-semibold ${activeStoreName && item.price.storeName !== activeStoreName ? "text-muted-foreground/50" : "text-green-600"}`}>
                 ~{item.price.estimatedCost.toFixed(2)} €
               </span>
             )}
           </div>
-          {!item.isChecked && !item.price && onReportPrice && (
+          {!item.isChecked && onReportPrice && (!item.price || (activeStoreName && item.price.storeName !== activeStoreName)) && (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); vibrate(8); onReportPrice(item); }}

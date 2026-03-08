@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useTransition, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Trans } from "@lingui/react/macro";
 import { toggleShoppingItem } from "@/applications/shopping/application/useCases/toggleShoppingItem";
@@ -52,6 +53,7 @@ function CategorySection({
   onToggleItem,
   onDelete,
   onReportPrice,
+  activeStoreName,
   animationDelay = 0,
 }: {
   category: string;
@@ -61,6 +63,7 @@ function CategorySection({
   onToggleItem: (id: string, checked: boolean) => void;
   onDelete: (id: string) => void;
   onReportPrice?: (item: ShoppingItem) => void;
+  activeStoreName?: string | null;
   animationDelay?: number;
 }) {
   const color = CATEGORY_COLORS[category] ?? "#9ca3af";
@@ -104,6 +107,7 @@ function CategorySection({
                 onToggle={onToggleItem}
                 onDelete={onDelete}
                 onReportPrice={onReportPrice}
+                activeStoreName={activeStoreName}
                 hasDivider={i < items.length - 1}
               />
             ))}
@@ -114,11 +118,16 @@ function CategorySection({
   );
 }
 
-function StoreBanner({ summaries }: { summaries: StoreCostSummary[] }) {
+function StoreBanner({ summaries, activeStoreId }: { summaries: StoreCostSummary[]; activeStoreId?: string | null }) {
   const [expanded, setExpanded] = useState(false);
   if (summaries.length === 0) return null;
-  const best = summaries[0];
-  const second = summaries[1];
+
+  const cheapest = summaries[0];
+  const activeSummary = activeStoreId ? summaries.find((s) => s.storeId === activeStoreId) : null;
+  const featured = activeSummary ?? cheapest;
+  const isActiveStoreCheapest = activeSummary ? activeSummary.storeId === cheapest.storeId : true;
+  const savings = activeSummary && !isActiveStoreCheapest ? activeSummary.totalCost - cheapest.totalCost : 0;
+  const others = summaries.filter((s) => s.storeId !== featured.storeId);
 
   return (
     <div className="overflow-hidden rounded-2xl bg-card shadow-[0_1px_4px_rgba(28,25,23,0.08)]">
@@ -127,54 +136,76 @@ function StoreBanner({ summaries }: { summaries: StoreCostSummary[] }) {
         onClick={() => setExpanded((e) => !e)}
         className="flex w-full items-center gap-3 px-4 py-3.5"
       >
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-green-500/10">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12" />
+        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${isActiveStoreCheapest ? "bg-green-500/10" : "bg-amber-50"}`}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isActiveStoreCheapest ? "#22c55e" : "#f59e0b"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            {isActiveStoreCheapest
+              ? <polyline points="20 6 9 17 4 12" />
+              : <><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></>
+            }
           </svg>
         </div>
         <div className="flex-1 text-left">
-          <p className="text-sm font-bold text-gray-800">{best.storeName}</p>
-          {best.coveredCount < best.totalCount && (
-            <p className="text-xs text-muted-foreground/70">
-              <Trans>{best.coveredCount}/{best.totalCount} items with known prices</Trans>
+          <p className="text-sm font-bold text-gray-800">
+            {activeSummary ? <Trans>Chez {featured.storeName}</Trans> : featured.storeName}
+          </p>
+          {savings > 0 ? (
+            <p className="text-xs text-amber-600">
+              <Trans>+{savings.toFixed(2)} € vs {cheapest.storeName.split(" ")[0]}</Trans>
             </p>
-          )}
+          ) : featured.coveredCount < featured.totalCount ? (
+            <p className="text-xs text-muted-foreground/70">
+              <Trans>{featured.coveredCount}/{featured.totalCount} items with known prices</Trans>
+            </p>
+          ) : isActiveStoreCheapest && activeSummary ? (
+            <p className="text-xs text-green-600"><Trans>Best price</Trans> ✓</p>
+          ) : null}
         </div>
-        <p className="text-base font-black text-green-600">~{best.totalCost.toFixed(2)} €</p>
-        <svg
-          width="14" height="14" viewBox="0 0 24 24"
-          fill="none" stroke="#D1D5DB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-          style={{ transform: expanded ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.2s ease", flexShrink: 0 }}
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
+        <p className={`text-base font-black ${isActiveStoreCheapest ? "text-green-600" : "text-amber-500"}`}>
+          ~{featured.totalCost.toFixed(2)} €
+        </p>
+        {others.length > 0 && (
+          <svg
+            width="14" height="14" viewBox="0 0 24 24"
+            fill="none" stroke="#D1D5DB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+            style={{ transform: expanded ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.2s ease", flexShrink: 0 }}
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        )}
       </button>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateRows: expanded ? "1fr" : "0fr",
-          transition: "grid-template-rows 0.28s cubic-bezier(0.4,0,0.2,1)",
-        }}
-      >
-        <div className="overflow-hidden">
-          <div className="border-t border-border/60 px-5 py-3">
-            {second && (
-              <p className="mb-2 text-[10px] font-semibold text-green-500">
-                <Trans>-{(second.totalCost - best.totalCost).toFixed(2)} € vs {second.storeName.split(" ")[0]}</Trans>
-              </p>
-            )}
-            <div className="flex flex-wrap gap-x-4 gap-y-1">
-              {summaries.slice(1).map((s) => (
-                <div key={s.storeId} className="flex items-baseline gap-1.5">
-                  <span className="text-xs font-medium text-muted-foreground">{s.storeName.split(" ")[0]}</span>
-                  <span className="text-xs text-muted-foreground/70">~{s.totalCost.toFixed(2)} €</span>
-                </div>
-              ))}
+      {others.length > 0 && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateRows: expanded ? "1fr" : "0fr",
+            transition: "grid-template-rows 0.28s cubic-bezier(0.4,0,0.2,1)",
+          }}
+        >
+          <div className="overflow-hidden">
+            <div className="border-t border-border/60 px-5 py-3">
+              {!isActiveStoreCheapest && (
+                <p className="mb-2 text-[10px] font-semibold text-green-500">
+                  <Trans>Save {savings.toFixed(2)} € by going to {cheapest.storeName.split(" ")[0]}</Trans>
+                </p>
+              )}
+              <div className="flex flex-wrap gap-x-4 gap-y-1">
+                {others.map((s) => (
+                  <div key={s.storeId} className="flex items-baseline gap-1.5">
+                    <span className={`text-xs font-medium ${s.storeId === cheapest.storeId ? "text-green-600" : "text-muted-foreground"}`}>
+                      {s.storeName.split(" ")[0]}
+                    </span>
+                    <span className="text-xs text-muted-foreground/70">~{s.totalCost.toFixed(2)} €</span>
+                    {s.storeId === cheapest.storeId && !isActiveStoreCheapest && (
+                      <span className="text-[10px] font-semibold text-green-500">✓</span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -271,6 +302,7 @@ function UndoToast({ itemName, onUndo, onDismiss }: { itemName: string; onUndo: 
 }
 
 export function ShoppingListView({ list }: ShoppingListViewProps) {
+  const router = useRouter();
   const [items, setItems] = useState<ShoppingItem[]>(list.items);
   const [isClearPending, startClearTransition] = useTransition();
   const [isTransferPending, startTransferTransition] = useTransition();
@@ -435,7 +467,7 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
       </div>
 
       <div className="flex flex-col gap-3 px-4 py-4 pb-44">
-        <StoreBanner summaries={list.storeSummaries} />
+        <StoreBanner summaries={list.storeSummaries} activeStoreId={activeStore?.id} />
 
         {unchecked.length === 0 && checked.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-12 text-center">
@@ -467,6 +499,7 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
                 onToggleItem={handleToggle}
                 onDelete={handleDelete}
                 onReportPrice={setPriceSheetItem}
+                activeStoreName={activeStore?.name}
                 animationDelay={i * 55}
               />
             ))}
@@ -557,7 +590,7 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
           defaultUnit={priceSheetItem.unit}
           preselectedStore={activeStore}
           onClose={() => setPriceSheetItem(null)}
-          onSuccess={() => setPriceSheetItem(null)}
+          onSuccess={() => { setPriceSheetItem(null); router.refresh(); }}
         />
       )}
     </>
