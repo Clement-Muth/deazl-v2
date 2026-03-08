@@ -60,6 +60,23 @@ async function fetchHtml(url: string): Promise<string | null> {
   return null;
 }
 
+async function fetchMarkdown(url: string): Promise<string | null> {
+  try {
+    const jinaUrl = `https://r.jina.ai/${url}`;
+    const res = await fetch(jinaUrl, {
+      headers: { "X-Return-Format": "markdown", "X-Timeout": "15" },
+      signal: AbortSignal.timeout(20000),
+    });
+    if (res.ok) {
+      const md = await res.text();
+      if (md.length > 200) return md;
+    }
+  } catch {
+    // fallthrough
+  }
+  return null;
+}
+
 function isBlockedPage(html: string): boolean {
   const lower = html.toLowerCase();
   return (
@@ -79,18 +96,37 @@ export async function importRecipeFromUrl(url: string): Promise<ImportResult> {
   }
 
   const html = await fetchHtml(parsedUrl.href);
-  if (!html) return { error: "Impossible de charger la page (site protégé ou inaccessible)" };
+  if (html) {
+    const jsonLdBlocks = [...html.matchAll(/<script[^>]*type=["']?application\/ld\+json["']?[^>]*>([\s\S]*?)<\/script>/gi)];
 
-  const jsonLdBlocks = [...html.matchAll(/<script[^>]*type=["']?application\/ld\+json["']?[^>]*>([\s\S]*?)<\/script>/gi)];
-
-  for (const block of jsonLdBlocks) {
-    try {
-      const parsed = JSON.parse(block[1]);
-      const recipe = findRecipe(parsed);
-      if (recipe) return { data: { ...recipe, sourceUrl: url.trim() } };
-    } catch {
-      continue;
+    for (const block of jsonLdBlocks) {
+      try {
+        const parsed = JSON.parse(block[1]);
+        const recipe = findRecipe(parsed);
+        if (recipe) return { data: { ...recipe, sourceUrl: url.trim() } };
+      } catch {
+        continue;
+      }
     }
+
+    const nextDataMatch = html.match(/<script id="__NEXT_DATA__"[^>]*>([^<]+)<\/script>/);
+    if (nextDataMatch) {
+      try {
+        const nextData = JSON.parse(nextDataMatch[1]);
+        const recipe = findRecipe(nextData);
+        if (recipe) return { data: { ...recipe, sourceUrl: url.trim() } };
+        const heuristic = findRecipeHeuristic(nextData);
+        if (heuristic) return { data: { ...heuristic, sourceUrl: url.trim() } };
+      } catch {
+        // fallthrough
+      }
+    }
+  }
+
+  const markdown = await fetchMarkdown(parsedUrl.href);
+  if (markdown) {
+    const recipe = parseMarkdownRecipe(markdown);
+    if (recipe) return { data: { ...recipe, sourceUrl: url.trim() } };
   }
 
   return { error: "Aucune recette trouvée sur cette page. Essaie un site comme Marmiton, 750g ou AllRecipes." };
@@ -121,20 +157,150 @@ function findRecipe(data: unknown): Omit<ImportedRecipe, "sourceUrl"> | null {
     type === "Recipe" ||
     (Array.isArray(type) && type.includes("Recipe"));
 
-  if (!isRecipe) return null;
+  if (isRecipe) {
+    const name = typeof obj.name === "string" ? obj.name.trim() : null;
+    if (name) {
+      return {
+        name,
+        description: typeof obj.description === "string" ? obj.description.replace(/<[^>]*>/g, "").trim() || null : null,
+        servings: parseServings(obj.recipeYield),
+        prepTimeMinutes: parseDuration(obj.prepTime),
+        cookTimeMinutes: parseDuration(obj.cookTime),
+        imageUrl: parseImage(obj.image),
+        ingredients: parseIngredients(obj.recipeIngredient),
+        steps: parseSteps(obj.recipeInstructions),
+      };
+    }
+  }
 
-  const name = typeof obj.name === "string" ? obj.name.trim() : null;
-  if (!name) return null;
+  for (const val of Object.values(obj)) {
+    if (val && typeof val === "object") {
+      const r = findRecipe(val);
+      if (r) return r;
+    }
+  }
+
+  return null;
+}
+
+function findRecipeHeuristic(data: unknown, depth = 0): Omit<ImportedRecipe, "sourceUrl"> | null {
+  if (depth > 10 || !data || typeof data !== "object") return null;
+
+  if (Array.isArray(data)) {
+    for (const item of data) {
+      const r = findRecipeHeuristic(item, depth + 1);
+      if (r) return r;
+    }
+    return null;
+  }
+
+  const obj = data as Record<string, unknown>;
+
+  const hasIngredients = Array.isArray(obj.ingredients) || Array.isArray(obj.recipeIngredient);
+  const hasSteps = Array.isArray(obj.steps) || Array.isArray(obj.instructions) || Array.isArray(obj.recipeInstructions);
+  const hasName = typeof obj.name === "string" || typeof obj.title === "string";
+
+  if (hasIngredients && hasSteps && hasName) {
+    const name = (typeof obj.name === "string" ? obj.name : typeof obj.title === "string" ? obj.title : "") as string;
+    const rawIngredients = (obj.ingredients ?? obj.recipeIngredient) as unknown[];
+    const rawSteps = (obj.steps ?? obj.instructions ?? obj.recipeInstructions) as unknown[];
+
+    const ingredients = Array.isArray(rawIngredients)
+      ? rawIngredients
+          .map((v) => (typeof v === "string" ? parseIngredientString(v) : typeof v === "object" && v !== null ? parseIngredientString(String((v as Record<string, unknown>).text ?? (v as Record<string, unknown>).name ?? "")) : null))
+          .filter((v): v is ImportedIngredient => v !== null && v.name.length > 0)
+      : [];
+
+    const steps = Array.isArray(rawSteps)
+      ? rawSteps
+          .map((v) => typeof v === "string" ? v.trim() : typeof v === "object" && v !== null ? String((v as Record<string, unknown>).text ?? (v as Record<string, unknown>).description ?? "").trim() : "")
+          .filter(Boolean)
+      : [];
+
+    if (name && (ingredients.length > 0 || steps.length > 0)) {
+      return {
+        name: name.trim(),
+        description: typeof obj.description === "string" ? obj.description.trim() || null : null,
+        servings: parseServings(obj.servings ?? obj.yield ?? obj.recipeYield),
+        prepTimeMinutes: typeof obj.prepTime === "number" ? obj.prepTime : parseDuration(obj.prepTime),
+        cookTimeMinutes: typeof obj.cookTime === "number" ? obj.cookTime : parseDuration(obj.cookTime),
+        imageUrl: parseImage(obj.image ?? obj.imageUrl ?? obj.thumbnail),
+        ingredients,
+        steps,
+      };
+    }
+  }
+
+  for (const val of Object.values(obj)) {
+    if (val && typeof val === "object") {
+      const r = findRecipeHeuristic(val, depth + 1);
+      if (r) return r;
+    }
+  }
+
+  return null;
+}
+
+function parseMarkdownRecipe(md: string): Omit<ImportedRecipe, "sourceUrl"> | null {
+  const lines = md.split("\n");
+
+  const h1 = lines.find((l) => /^#{1,2}\s/.test(l.trim()));
+  const name = h1?.replace(/^#+\s+/, "").trim() ?? null;
+  if (!name || name.length > 120) return null;
+
+  const servMatch = md.match(/\b(\d+)\s*(?:personnes?|portions?|parts?|servings?)\b/i);
+  const servings = servMatch ? parseInt(servMatch[1]) : 4;
+
+  const prepMatch = md.match(/(?:préparation|prep(?:aration)?)\s*[:\-–]\s*(?:(\d+)\s*h\s*)?(\d+)\s*min/i);
+  const prepTimeMinutes = prepMatch ? (parseInt(prepMatch[1] ?? "0") * 60 + parseInt(prepMatch[2])) : null;
+
+  const cookMatch = md.match(/(?:cuisson|cook(?:ing)?)\s*[:\-–]\s*(?:(\d+)\s*h\s*)?(\d+)\s*min/i);
+  const cookTimeMinutes = cookMatch ? (parseInt(cookMatch[1] ?? "0") * 60 + parseInt(cookMatch[2])) : null;
+
+  const normalizedLines = lines.map((l) => l.trim()).filter(Boolean);
+
+  const ingredientSectionIdx = normalizedLines.findIndex((l) =>
+    /^#{1,4}\s*(ingr[eé]dients?)/i.test(l)
+  );
+  const stepsSectionIdx = normalizedLines.findIndex((l) =>
+    /^#{1,4}\s*(pr[eé]paration|[eé]tapes?|instructions?|recette|m[eé]thode|directions?)/i.test(l)
+  );
+
+  let ingredientLines: string[] = [];
+  if (ingredientSectionIdx >= 0) {
+    const end = stepsSectionIdx > ingredientSectionIdx ? stepsSectionIdx : normalizedLines.length;
+    ingredientLines = normalizedLines
+      .slice(ingredientSectionIdx + 1, end)
+      .filter((l) => /^[-*•]/.test(l) || /^\d/.test(l));
+  }
+
+  let stepLines: string[] = [];
+  if (stepsSectionIdx >= 0) {
+    stepLines = normalizedLines
+      .slice(stepsSectionIdx + 1)
+      .filter((l) => /^[-*•\d]/.test(l) && l.length > 10);
+  }
+
+  const ingredients = ingredientLines
+    .map((l) => l.replace(/^[-*•]\s*/, "").trim())
+    .filter(Boolean)
+    .map(parseIngredientString);
+
+  const steps = stepLines
+    .map((l) => l.replace(/^(\d+[\.\)]\s*|[-*•]\s*)/, "").trim())
+    .filter((l) => l.length > 5);
+
+  if (ingredients.length === 0 && steps.length === 0) return null;
 
   return {
     name,
-    description: typeof obj.description === "string" ? obj.description.replace(/<[^>]*>/g, "").trim() || null : null,
-    servings: parseServings(obj.recipeYield),
-    prepTimeMinutes: parseDuration(obj.prepTime),
-    cookTimeMinutes: parseDuration(obj.cookTime),
-    imageUrl: parseImage(obj.image),
-    ingredients: parseIngredients(obj.recipeIngredient),
-    steps: parseSteps(obj.recipeInstructions),
+    description: null,
+    servings,
+    prepTimeMinutes,
+    cookTimeMinutes,
+    imageUrl: null,
+    ingredients,
+    steps,
   };
 }
 
