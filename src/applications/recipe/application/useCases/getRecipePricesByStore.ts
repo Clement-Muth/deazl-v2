@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 
+export type PriceConfidence = "exact" | "brand_city" | "national";
+
 export interface StorePriceSummary {
   storeId: string;
   storeName: string;
@@ -7,16 +9,19 @@ export interface StorePriceSummary {
   totalCost: number;
   coveredCount: number;
   totalCount: number;
+  hasEstimates: boolean;
+  latestReportedAt: string | null;
 }
 
-interface PriceRow {
+interface TieredPriceRow {
   product_id: string;
   store_id: string;
   price: number;
   quantity: number;
   unit: string;
-  store_name: string;
-  store_city: string;
+  confidence: PriceConfidence;
+  reported_at: string | null;
+  reporter_count: number;
 }
 
 function estimateCost(
@@ -58,13 +63,12 @@ export async function getRecipePricesByStore(
   const productIds = ingredients.map((i) => i.product_id as string);
   const storeIds = userStores.map((us) => us.store_id);
 
-  const { data: prices } = await supabase
-    .from("latest_prices")
-    .select("product_id, store_id, price, quantity, unit, store_name, store_city")
-    .in("product_id", productIds)
-    .in("store_id", storeIds);
+  const { data: prices } = await supabase.rpc("get_tiered_prices_for_stores", {
+    p_product_ids: productIds,
+    p_store_ids: storeIds,
+  });
 
-  const priceRows: PriceRow[] = (prices ?? []) as PriceRow[];
+  const priceRows: TieredPriceRow[] = (prices ?? []) as TieredPriceRow[];
 
   const result: StorePriceSummary[] = [];
 
@@ -74,6 +78,8 @@ export async function getRecipePricesByStore(
 
     let totalCost = 0;
     let coveredCount = 0;
+    let hasEstimates = false;
+    let latestReportedAt: string | null = null;
 
     for (const ing of ingredients) {
       const p = priceRows.find(
@@ -82,6 +88,10 @@ export async function getRecipePricesByStore(
       if (p) {
         totalCost += estimateCost(ing.quantity, ing.unit, p.price, p.quantity, p.unit);
         coveredCount++;
+        if (p.confidence !== "exact") hasEstimates = true;
+        if (p.reported_at && (!latestReportedAt || p.reported_at > latestReportedAt)) {
+          latestReportedAt = p.reported_at;
+        }
       }
     }
 
@@ -92,6 +102,8 @@ export async function getRecipePricesByStore(
       totalCost,
       coveredCount,
       totalCount: ingredients.length,
+      hasEstimates,
+      latestReportedAt,
     });
   }
 

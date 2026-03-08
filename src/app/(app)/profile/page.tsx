@@ -67,6 +67,27 @@ export default async function ProfilePage() {
           </svg>
         </Link>
 
+        <Link
+          href="/pantry"
+          className="flex items-center justify-between rounded-2xl bg-card px-4 py-4 shadow-[0_1px_4px_rgba(28,25,23,0.08)] transition active:scale-[0.98]"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+                <path d="m3.3 7 8.7 5 8.7-5"/><line x1="12" y1="22" x2="12" y2="12"/>
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Mon stock</p>
+              <p className="text-xs text-muted-foreground">Gérer vos stocks à la maison</p>
+            </div>
+          </div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground/40">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </Link>
+
         <HouseholdManager initialHousehold={household} currentUserId={user?.id ?? ""} />
 
         <StoreManager initialStores={stores} />

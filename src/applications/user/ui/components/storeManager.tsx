@@ -4,6 +4,7 @@ import { useState, useTransition, useEffect, useRef } from "react";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { searchStores } from "@/applications/user/application/useCases/searchStores";
 import { searchOSMStores } from "@/applications/user/application/useCases/searchOSMStores";
+import { getNearbyStores } from "@/applications/user/application/useCases/getNearbyStores";
 import { createStoreFromOSM, createStoreManual } from "@/applications/user/application/useCases/createStore";
 import { addUserStore } from "@/applications/user/application/useCases/addUserStore";
 import { removeUserStore } from "@/applications/user/application/useCases/removeUserStore";
@@ -37,6 +38,8 @@ export function StoreManager({ initialStores }: Props) {
   const [createCity, setCreateCity] = useState("");
   const [createAddress, setCreateAddress] = useState("");
   const [isPending, startTransition] = useTransition();
+  const [isGeolocating, setIsGeolocating] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -64,6 +67,34 @@ export function StoreManager({ initialStores }: Props) {
     }, 400);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query, stores]);
+
+  function handleGeolocate() {
+    if (!navigator.geolocation) {
+      setGeoError("Géolocalisation non supportée par ce navigateur.");
+      return;
+    }
+    setIsGeolocating(true);
+    setGeoError(null);
+    setShowDropdown(false);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const nearby = await getNearbyStores(pos.coords.latitude, pos.coords.longitude);
+        const filtered = nearby.filter(
+          (r) => !stores.some((s) => s.name === r.name && s.city === r.city),
+        );
+        setResults(filtered.map((r: OSMStoreResult) => ({
+          type: "osm" as const, osm: r, name: r.name, city: r.city, detail: r.displayAddress,
+        })));
+        setShowDropdown(true);
+        setIsGeolocating(false);
+      },
+      () => {
+        setGeoError("Impossible d'accéder à votre position. Vérifiez les autorisations.");
+        setIsGeolocating(false);
+      },
+      { timeout: 8000, maximumAge: 60000 },
+    );
+  }
 
   async function handleSelect(result: SearchResult) {
     if (result.type === "db" && result.id) {
@@ -163,8 +194,8 @@ export function StoreManager({ initialStores }: Props) {
 
       {showSearch && (
         <div className="p-4">
-          <div className="relative">
-            <div className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 transition ${showDropdown && query.length >= 2 ? "border-primary bg-white ring-2 ring-primary/20" : "border-border bg-muted/60"}`}>
+          <div className="mb-3 flex gap-2">
+            <div className={`relative flex flex-1 items-center gap-2 rounded-xl border px-3 py-2.5 transition ${showDropdown && query.length >= 2 ? "border-primary bg-white ring-2 ring-primary/20" : "border-border bg-muted/60"}`}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
               </svg>
@@ -178,17 +209,48 @@ export function StoreManager({ initialStores }: Props) {
                 autoFocus
                 className="flex-1 bg-transparent text-sm text-gray-800 outline-none placeholder:text-muted-foreground/70"
               />
-              {isSearching ? (
+              {isSearching && (
                 <svg className="animate-spin text-muted-foreground/70" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                 </svg>
-              ) : null}
+              )}
             </div>
 
-            {showDropdown && query.length >= 2 && !isSearching && (
-              <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg shadow-black/8">
+            <button
+              type="button"
+              onClick={handleGeolocate}
+              disabled={isGeolocating}
+              title="Magasins autour de moi"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/60 text-muted-foreground transition hover:bg-primary/5 hover:text-primary active:scale-95 disabled:opacity-40"
+            >
+              {isGeolocating ? (
+                <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+              ) : (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+                  <path d="M12 2a10 10 0 1 0 10 10" />
+                </svg>
+              )}
+            </button>
+          </div>
+
+          {geoError && (
+            <p className="mb-2 rounded-xl bg-destructive-light px-3 py-2 text-xs text-destructive">{geoError}</p>
+          )}
+
+          <div className="relative">
+            {showDropdown && !isSearching && results.length >= 0 && (
+              <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg shadow-black/8">
                 {results.length > 0 ? (
                   <>
+                    {query.trim().length < 2 && (
+                      <p className="border-b border-gray-50 px-3.5 py-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
+                        Autour de vous
+                      </p>
+                    )}
                     {results.map((result, i) => (
                       <button
                         key={`${result.type}-${result.id ?? result.osm?.osmKey ?? i}`}
@@ -210,15 +272,17 @@ export function StoreManager({ initialStores }: Props) {
                         </svg>
                       </button>
                     ))}
-                    <button
-                      type="button"
-                      onMouseDown={handleCreateOpen}
-                      className="flex w-full items-center gap-1.5 border-t border-gray-100 px-3.5 py-2.5 text-xs font-medium text-muted-foreground/70 hover:bg-muted/60 hover:text-gray-600"
-                    >
-                      <Trans>Not found? Add manually</Trans>
-                    </button>
+                    {query.trim().length >= 2 && (
+                      <button
+                        type="button"
+                        onMouseDown={handleCreateOpen}
+                        className="flex w-full items-center gap-1.5 border-t border-gray-100 px-3.5 py-2.5 text-xs font-medium text-muted-foreground/70 hover:bg-muted/60 hover:text-gray-600"
+                      >
+                        <Trans>Not found? Add manually</Trans>
+                      </button>
+                    )}
                   </>
-                ) : (
+                ) : query.trim().length >= 2 ? (
                   <div className="px-3.5 py-3">
                     <p className="mb-2 text-xs text-muted-foreground/70"><Trans>No result for "{query}"</Trans></p>
                     <button
@@ -229,7 +293,7 @@ export function StoreManager({ initialStores }: Props) {
                       <Trans>Add manually</Trans>
                     </button>
                   </div>
-                )}
+                ) : null}
               </div>
             )}
           </div>
@@ -274,7 +338,7 @@ export function StoreManager({ initialStores }: Props) {
             <div className="mt-3 flex justify-end">
               <button
                 type="button"
-                onClick={() => { setShowSearch(false); setQuery(""); setShowDropdown(false); }}
+                onClick={() => { setShowSearch(false); setQuery(""); setShowDropdown(false); setGeoError(null); }}
                 className="text-xs font-medium text-muted-foreground/70 hover:text-gray-600"
               >
                 <Trans>Done</Trans>

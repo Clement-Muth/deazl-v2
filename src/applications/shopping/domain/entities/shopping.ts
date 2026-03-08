@@ -1,12 +1,20 @@
+export type PriceConfidence = "exact" | "brand_city" | "national";
+
 export interface ShoppingItemPrice {
   estimatedCost: number;
   storeName: string;
+  confidence: PriceConfidence;
+  reportedAt: string | null;
+  reporterCount: number;
 }
 
 export interface ShoppingItemStorePrice {
   storeId: string;
   storeName: string;
   estimatedCost: number;
+  confidence: PriceConfidence;
+  reportedAt: string | null;
+  reporterCount: number;
 }
 
 export interface ShoppingItem {
@@ -29,6 +37,8 @@ export interface StoreCostSummary {
   totalCost: number;
   coveredCount: number;
   totalCount: number;
+  hasEstimates: boolean;
+  latestReportedAt: string | null;
 }
 
 export interface ShoppingList {

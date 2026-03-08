@@ -6,6 +6,7 @@ import type {
   ShoppingItemPrice,
   ShoppingItemStorePrice,
   StoreCostSummary,
+  PriceConfidence,
 } from "@/applications/shopping/domain/entities/shopping";
 
 function estimateCost(
@@ -33,24 +34,26 @@ interface RawItem {
   category: string | null;
 }
 
-interface ProductPriceRow {
+interface TieredPriceRow {
   product_id: string;
   store_id: string;
   price: number;
   quantity: number;
   unit: string;
-  store_name: string;
-  store_city: string;
+  confidence: PriceConfidence;
+  reported_at: string | null;
+  reporter_count: number;
 }
 
-interface IngredientPriceRow {
+interface TieredIngredientPriceRow {
   ingredient_name: string;
   store_id: string;
   price: number;
   quantity: number;
   unit: string;
-  store_name: string;
-  store_city: string;
+  confidence: PriceConfidence;
+  reported_at: string | null;
+  reporter_count: number;
 }
 
 export async function getActiveShoppingList(): Promise<ShoppingList | null> {
@@ -96,32 +99,30 @@ export async function getActiveShoppingList(): Promise<ShoppingList | null> {
     }),
   );
 
-  let productPriceRows: ProductPriceRow[] = [];
-  let ingredientPriceRows: IngredientPriceRow[] = [];
+  let productPriceRows: TieredPriceRow[] = [];
+  let ingredientPriceRows: TieredIngredientPriceRow[] = [];
 
   if (rawItems.length > 0 && storeIds.length > 0) {
     const productIds = [...new Set(rawItems.map((i) => i.product_id).filter(Boolean))] as string[];
     if (productIds.length > 0) {
-      const { data } = await supabase
-        .from("latest_prices")
-        .select("product_id, store_id, price, quantity, unit, store_name, store_city")
-        .in("product_id", productIds)
-        .in("store_id", storeIds);
-      productPriceRows = (data ?? []) as ProductPriceRow[];
+      const { data } = await supabase.rpc("get_tiered_prices_for_stores", {
+        p_product_ids: productIds,
+        p_store_ids: storeIds,
+      });
+      productPriceRows = (data ?? []) as TieredPriceRow[];
     }
 
     const normalizedNames = [...new Set(rawItems.map((i) => normalizeIngredientName(i.custom_name)))];
-    const { data } = await supabase
-      .from("latest_ingredient_prices")
-      .select("ingredient_name, store_id, price, quantity, unit, store_name, store_city")
-      .in("ingredient_name", normalizedNames)
-      .in("store_id", storeIds);
-    ingredientPriceRows = (data ?? []) as IngredientPriceRow[];
+    const { data } = await supabase.rpc("get_tiered_ingredient_prices_for_stores", {
+      p_ingredient_names: normalizedNames,
+      p_store_ids: storeIds,
+    });
+    ingredientPriceRows = (data ?? []) as TieredIngredientPriceRow[];
   }
 
   const items: ShoppingItem[] = rawItems
     .map((rawItem) => {
-      type Candidate = { store_id: string; price: number; quantity: number; unit: string; store_name: string };
+      type Candidate = { store_id: string; price: number; quantity: number; unit: string; store_name?: string; confidence: PriceConfidence; reported_at: string | null; reporter_count: number };
       let candidates: Candidate[] = [];
 
       if (rawItem.product_id) {
@@ -142,6 +143,9 @@ export async function getActiveShoppingList(): Promise<ShoppingList | null> {
             storeId,
             storeName: store.name,
             estimatedCost: estimateCost(rawItem.quantity, rawItem.unit, candidate.price, candidate.quantity, candidate.unit),
+            confidence: candidate.confidence,
+            reportedAt: candidate.reported_at,
+            reporterCount: candidate.reporter_count,
           });
         }
       }
@@ -156,7 +160,10 @@ export async function getActiveShoppingList(): Promise<ShoppingList | null> {
         const store = storeMap.get(cheapest.store_id);
         price = {
           estimatedCost: estimateCost(rawItem.quantity, rawItem.unit, cheapest.price, cheapest.quantity, cheapest.unit),
-          storeName: store?.name ?? cheapest.store_name,
+          storeName: store?.name ?? cheapest.store_name ?? "",
+          confidence: cheapest.confidence,
+          reportedAt: cheapest.reported_at,
+          reporterCount: cheapest.reporter_count,
         };
       }
 
@@ -183,8 +190,11 @@ export async function getActiveShoppingList(): Promise<ShoppingList | null> {
     if (!store) continue;
     let totalCost = 0;
     let coveredCount = 0;
+    let hasEstimates = false;
+    let latestReportedAt: string | null = null;
+
     for (const rawItem of rawItems) {
-      let p: { price: number; quantity: number; unit: string } | undefined;
+      let p: { price: number; quantity: number; unit: string; confidence: PriceConfidence; reported_at: string | null } | undefined;
 
       if (rawItem.product_id) {
         p = productPriceRows.find((r) => r.product_id === rawItem.product_id && r.store_id === storeId);
@@ -200,6 +210,10 @@ export async function getActiveShoppingList(): Promise<ShoppingList | null> {
       if (p) {
         totalCost += estimateCost(rawItem.quantity, rawItem.unit, p.price, p.quantity, p.unit);
         coveredCount++;
+        if (p.confidence !== "exact") hasEstimates = true;
+        if (p.reported_at && (!latestReportedAt || p.reported_at > latestReportedAt)) {
+          latestReportedAt = p.reported_at;
+        }
       }
     }
     if (coveredCount > 0) {
@@ -210,6 +224,8 @@ export async function getActiveShoppingList(): Promise<ShoppingList | null> {
         totalCost,
         coveredCount,
         totalCount: rawItems.length,
+        hasEstimates,
+        latestReportedAt,
       });
     }
   }

@@ -1,5 +1,6 @@
 import { Trans } from "@lingui/react/macro";
 import type { StorePriceSummary } from "@/applications/recipe/application/useCases/getRecipePricesByStore";
+import { formatRelativeTime } from "@/shared/utils/formatRelativeTime";
 
 interface RecipePriceCardProps {
   stores: StorePriceSummary[];
@@ -9,6 +10,7 @@ export function RecipePriceCard({ stores }: RecipePriceCardProps) {
   if (stores.length === 0) return null;
 
   const cheapest = stores[0];
+  const anyEstimates = stores.some((s) => s.hasEstimates);
 
   return (
     <div className="overflow-hidden rounded-2xl bg-card shadow-[0_1px_4px_rgba(28,25,23,0.08)]">
@@ -27,14 +29,13 @@ export function RecipePriceCard({ stores }: RecipePriceCardProps) {
               className={`flex items-center justify-between px-5 py-3.5 ${isCheapest ? "bg-green-50/60" : ""}`}
             >
               <div className="flex items-center gap-3">
-                {isCheapest && (
+                {isCheapest ? (
                   <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
                     <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                   </div>
-                )}
-                {!isCheapest && (
+                ) : (
                   <div className="flex h-5 w-5 items-center justify-center rounded-full bg-muted">
                     <span className="text-[9px] font-bold text-muted-foreground/70">{i + 1}</span>
                   </div>
@@ -48,9 +49,14 @@ export function RecipePriceCard({ stores }: RecipePriceCardProps) {
                       ? <Trans>{store.coveredCount}/{store.totalCount} ingredients</Trans>
                       : store.storeCity}
                   </p>
+                  {store.latestReportedAt && (
+                    <p className="text-[10px] text-muted-foreground/40">
+                      {formatRelativeTime(store.latestReportedAt)}
+                    </p>
+                  )}
                 </div>
               </div>
-              <div className="text-right">
+              <div className="flex flex-col items-end gap-1">
                 <p className={`text-base font-black ${isCheapest ? "text-green-600" : "text-gray-700"}`}>
                   ~{store.totalCost.toFixed(2)} €
                 </p>
@@ -59,15 +65,26 @@ export function RecipePriceCard({ stores }: RecipePriceCardProps) {
                     <Trans>-{(stores[1].totalCost - store.totalCost).toFixed(2)} €</Trans>
                   </p>
                 )}
+                {store.hasEstimates && (
+                  <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold text-amber-600">
+                    estimé
+                  </span>
+                )}
               </div>
             </div>
           );
         })}
       </div>
       <div className="border-t border-border/60 px-5 py-3">
-        <p className="text-[10px] text-muted-foreground/40">
-          <Trans>Based on prices reported by the community</Trans>
-        </p>
+        {anyEstimates ? (
+          <p className="text-[10px] text-amber-500/80">
+            * Prix estimés à partir d'autres magasins de la même enseigne — signalez un prix pour affiner.
+          </p>
+        ) : (
+          <p className="text-[10px] text-muted-foreground/40">
+            <Trans>Based on prices reported by the community</Trans>
+          </p>
+        )}
       </div>
     </div>
   );

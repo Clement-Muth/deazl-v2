@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
+import { formatRelativeTime } from "@/shared/utils/formatRelativeTime";
 import { BottomSheet, SheetHandle, type BottomSheetHandle } from "@/shared/components/ui/bottomSheet";
 import {
   ProductDetailContent,
@@ -196,11 +197,24 @@ export function ItemDetailSheet({ item, userStores, activeStoreId, onClose, onAd
                       <p className={`text-sm font-semibold ${isActive ? "text-primary" : "text-foreground"}`}>{store.name}</p>
                       {isActive && <p className="text-[10px] text-primary/60 font-medium">Magasin actif</p>}
                       {isCheapest && !isActive && <p className="text-[10px] text-green-600 font-semibold">Le moins cher ✓</p>}
+                      {sp && sp.reportedAt && (
+                        <p className="text-[10px] text-muted-foreground/40">
+                          {formatRelativeTime(sp.reportedAt)}
+                          {sp.reporterCount > 1 && ` · ${sp.reporterCount} contributeurs`}
+                        </p>
+                      )}
                     </div>
                     {sp ? (
-                      <span className={`text-lg font-black shrink-0 ${isCheapest ? "text-green-600" : isActive ? "text-primary" : "text-foreground"}`}>
-                        {sp.estimatedCost.toFixed(2)} €
-                      </span>
+                      <div className="flex shrink-0 flex-col items-end gap-0.5">
+                        <span className={`text-lg font-black ${isCheapest ? "text-green-600" : isActive ? "text-primary" : "text-foreground"}`}>
+                          {sp.estimatedCost.toFixed(2)} €
+                        </span>
+                        {sp.confidence !== "exact" && (
+                          <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold text-amber-600">
+                            {sp.confidence === "brand_city" ? "Moy. ville" : "Moy. nationale"}
+                          </span>
+                        )}
+                      </div>
                     ) : (
                       <button
                         type="button"
