@@ -4,6 +4,7 @@ import type {
   ShoppingList,
   ShoppingItem,
   ShoppingItemPrice,
+  ShoppingItemStorePrice,
   StoreCostSummary,
 } from "@/applications/shopping/domain/entities/shopping";
 
@@ -132,6 +133,19 @@ export async function getActiveShoppingList(): Promise<ShoppingList | null> {
         candidates = ingredientPriceRows.filter((p) => p.ingredient_name === normalizedName);
       }
 
+      const allStorePrices: ShoppingItemStorePrice[] = [];
+      for (const [storeId, store] of storeMap) {
+        if (!store) continue;
+        const candidate = candidates.find((c) => c.store_id === storeId);
+        if (candidate) {
+          allStorePrices.push({
+            storeId,
+            storeName: store.name,
+            estimatedCost: estimateCost(rawItem.quantity, rawItem.unit, candidate.price, candidate.quantity, candidate.unit),
+          });
+        }
+      }
+
       let price: ShoppingItemPrice | undefined;
       if (candidates.length > 0) {
         const cheapest = candidates.reduce((min, p) => {
@@ -141,10 +155,7 @@ export async function getActiveShoppingList(): Promise<ShoppingList | null> {
         });
         const store = storeMap.get(cheapest.store_id);
         price = {
-          estimatedCost: estimateCost(
-            rawItem.quantity, rawItem.unit,
-            cheapest.price, cheapest.quantity, cheapest.unit,
-          ),
+          estimatedCost: estimateCost(rawItem.quantity, rawItem.unit, cheapest.price, cheapest.quantity, cheapest.unit),
           storeName: store?.name ?? cheapest.store_name,
         };
       }
@@ -159,6 +170,7 @@ export async function getActiveShoppingList(): Promise<ShoppingList | null> {
         productId: rawItem.product_id,
         category: rawItem.category,
         price,
+        allStorePrices,
       };
     })
     .sort((a, b) => {

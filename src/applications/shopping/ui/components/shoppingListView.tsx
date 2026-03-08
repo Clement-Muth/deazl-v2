@@ -53,7 +53,8 @@ function CategorySection({
   onToggleItem,
   onDelete,
   onReportPrice,
-  activeStoreName,
+  activeStoreId,
+  isStoreMode,
   animationDelay = 0,
 }: {
   category: string;
@@ -63,7 +64,8 @@ function CategorySection({
   onToggleItem: (id: string, checked: boolean) => void;
   onDelete: (id: string) => void;
   onReportPrice?: (item: ShoppingItem) => void;
-  activeStoreName?: string | null;
+  activeStoreId?: string | null;
+  isStoreMode?: boolean;
   animationDelay?: number;
 }) {
   const color = CATEGORY_COLORS[category] ?? "#9ca3af";
@@ -83,13 +85,15 @@ function CategorySection({
           {category}
         </span>
         <span className="text-xs font-medium text-muted-foreground/40">{items.length}</span>
-        <svg
-          width="14" height="14" viewBox="0 0 24 24"
-          fill="none" stroke="#D1D5DB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-          style={{ transform: isOpen ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.25s cubic-bezier(0.4,0,0.2,1)", flexShrink: 0 }}
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
+        {!isStoreMode && (
+          <svg
+            width="14" height="14" viewBox="0 0 24 24"
+            fill="none" stroke="#D1D5DB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+            style={{ transform: isOpen ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.25s cubic-bezier(0.4,0,0.2,1)", flexShrink: 0 }}
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        )}
       </button>
       <div
         style={{
@@ -107,7 +111,8 @@ function CategorySection({
                 onToggle={onToggleItem}
                 onDelete={onDelete}
                 onReportPrice={onReportPrice}
-                activeStoreName={activeStoreName}
+                activeStoreId={activeStoreId}
+                isStoreMode={isStoreMode}
                 hasDivider={i < items.length - 1}
               />
             ))}
@@ -314,6 +319,7 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const { stores, activeStore, setActiveStore } = useActiveStore();
   const [priceSheetItem, setPriceSheetItem] = useState<ShoppingItem | null>(null);
+  const isStoreMode = !!activeStore;
 
   useEffect(() => {
     setItems(list.items);
@@ -330,7 +336,7 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
           const r = payload.new as { id: string; custom_name: string; quantity: number; unit: string; is_checked: boolean; sort_order: number; product_id: string | null; category: string | null };
           setItems((prev) => {
             if (prev.some((i) => i.id === r.id)) return prev;
-            return [...prev, { id: r.id, customName: r.custom_name, quantity: r.quantity, unit: r.unit, isChecked: r.is_checked, sortOrder: r.sort_order, productId: r.product_id, category: r.category }];
+            return [...prev, { id: r.id, customName: r.custom_name, quantity: r.quantity, unit: r.unit, isChecked: r.is_checked, sortOrder: r.sort_order, productId: r.product_id, category: r.category, allStorePrices: [] }];
           });
         }
       )
@@ -376,6 +382,14 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
       setOpenCategory(sortedCategories[0]);
     }
   }, [sortedCategories.length]);
+
+  useEffect(() => {
+    if (isStoreMode || !openCategory) return;
+    const currentItems = groupedUnchecked[openCategory];
+    if (!currentItems || currentItems.length > 0) return;
+    const nextCat = sortedCategories.find((c) => c !== openCategory && groupedUnchecked[c]?.length > 0);
+    if (nextCat) setOpenCategory(nextCat);
+  }, [items]);
 
   useEffect(() => {
     const prev = prevUncheckedLenRef.current;
@@ -464,10 +478,32 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
     <>
       <div className="sticky top-0 z-30 bg-background/95 px-4 pb-2 pt-2 backdrop-blur-sm">
         <ActiveStoreSelector stores={stores} activeStore={activeStore} onSelect={setActiveStore} />
+        {isStoreMode && unchecked.length > 0 && (
+          <div className="mt-1.5 flex items-center justify-between">
+            <p className="text-xs font-semibold text-muted-foreground">
+              <span className="text-foreground">{unchecked.length}</span> restant{unchecked.length > 1 ? "s" : ""}
+              {checked.length > 0 && <span className="text-primary"> · {checked.length} coché{checked.length > 1 ? "s" : ""}</span>}
+            </p>
+            {checked.length > 0 && (
+              <button
+                type="button"
+                onClick={handleTransferToPantry}
+                disabled={isTransferPending || transferDone}
+                className="flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary transition active:scale-95 disabled:opacity-50"
+              >
+                {transferDone ? (
+                  <><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>Ajouté !</>
+                ) : (
+                  <><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><line x1="12" y1="22" x2="12" y2="12"/></svg>Au stock ({checked.length})</>
+                )}
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-3 px-4 py-4 pb-44">
-        <StoreBanner summaries={list.storeSummaries} activeStoreId={activeStore?.id} />
+        {!isStoreMode && <StoreBanner summaries={list.storeSummaries} activeStoreId={activeStore?.id} />}
 
         {unchecked.length === 0 && checked.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-12 text-center">
@@ -494,12 +530,13 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
                 key={category}
                 category={category}
                 items={groupedUnchecked[category]}
-                isOpen={openCategory === category}
-                onToggle={() => toggleCategory(category)}
+                isOpen={isStoreMode || openCategory === category}
+                onToggle={() => !isStoreMode && toggleCategory(category)}
                 onToggleItem={handleToggle}
                 onDelete={handleDelete}
                 onReportPrice={setPriceSheetItem}
-                activeStoreName={activeStore?.name}
+                activeStoreId={activeStore?.id}
+                isStoreMode={isStoreMode}
                 animationDelay={i * 55}
               />
             ))}
@@ -511,27 +548,29 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
                     <Trans>{checkedCount} checked</Trans>
                   </span>
                   <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={handleTransferToPantry}
-                      disabled={isTransferPending || transferDone}
-                      className="flex items-center gap-1 text-xs font-semibold text-primary transition disabled:opacity-50"
-                    >
-                      {isTransferPending ? (
-                        <svg className="animate-spin" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                        </svg>
-                      ) : transferDone ? (
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      ) : (
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="3" y="2" width="18" height="20" rx="2" /><line x1="12" y1="2" x2="12" y2="22" />
-                        </svg>
-                      )}
-                      {transferDone ? "Ajouté !" : "Au stock"}
-                    </button>
+                    {!isStoreMode && (
+                      <button
+                        type="button"
+                        onClick={handleTransferToPantry}
+                        disabled={isTransferPending || transferDone}
+                        className="flex items-center gap-1 text-xs font-semibold text-primary transition disabled:opacity-50"
+                      >
+                        {isTransferPending ? (
+                          <svg className="animate-spin" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                          </svg>
+                        ) : transferDone ? (
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        ) : (
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="2" width="18" height="20" rx="2" /><line x1="12" y1="2" x2="12" y2="22" />
+                          </svg>
+                        )}
+                        {transferDone ? "Ajouté !" : "Au stock"}
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={handleClear}

@@ -8,7 +8,8 @@ interface ShoppingItemRowProps {
   onToggle: (id: string, checked: boolean) => void;
   onDelete: (id: string) => void;
   onReportPrice?: (item: ShoppingItem) => void;
-  activeStoreName?: string | null;
+  activeStoreId?: string | null;
+  isStoreMode?: boolean;
   hasDivider?: boolean;
 }
 
@@ -19,7 +20,13 @@ function vibrate(ms: number) {
   if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(ms);
 }
 
-export function ShoppingItemRow({ item, onToggle, onDelete, onReportPrice, activeStoreName, hasDivider }: ShoppingItemRowProps) {
+export function ShoppingItemRow({ item, onToggle, onDelete, onReportPrice, activeStoreId, isStoreMode, hasDivider }: ShoppingItemRowProps) {
+  const activeStorePrice = activeStoreId
+    ? item.allStorePrices.find((p) => p.storeId === activeStoreId)
+    : null;
+  const displayPrice = activeStoreId ? activeStorePrice : item.price;
+  const showPriceGap = isStoreMode && !item.isChecked && activeStoreId && !activeStorePrice && item.allStorePrices.length === 0;
+  const showEuroButton = !item.isChecked && onReportPrice && (isStoreMode || (!activeStoreId && !item.price));
   const [tx, setTx] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const txRef = useRef(0);
@@ -176,16 +183,19 @@ export function ShoppingItemRow({ item, onToggle, onDelete, onReportPrice, activ
             <span className="text-xs font-medium text-muted-foreground/70">
               {qty} {item.unit}
             </span>
-            {item.price && !item.isChecked && (
-              <span className={`text-[10px] font-semibold ${activeStoreName && item.price.storeName !== activeStoreName ? "text-muted-foreground/50" : "text-green-600"}`}>
-                ~{item.price.estimatedCost.toFixed(2)} €
+            {!item.isChecked && displayPrice && (
+              <span className="text-[10px] font-semibold text-green-600">
+                ~{displayPrice.estimatedCost.toFixed(2)} €
               </span>
             )}
+            {showPriceGap && (
+              <span className="text-[10px] font-medium text-muted-foreground/40">prix ?</span>
+            )}
           </div>
-          {!item.isChecked && onReportPrice && (!item.price || (activeStoreName && item.price.storeName !== activeStoreName)) && (
+          {showEuroButton && (
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); vibrate(8); onReportPrice(item); }}
+              onClick={(e) => { e.stopPropagation(); vibrate(8); onReportPrice!(item); }}
               className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-50 text-amber-500 transition active:scale-90"
               aria-label="Ajouter un prix"
             >
