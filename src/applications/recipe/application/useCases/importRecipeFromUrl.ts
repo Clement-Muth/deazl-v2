@@ -20,6 +20,56 @@ export interface ImportedRecipe {
 
 export type ImportResult = { data: ImportedRecipe } | { error: string };
 
+const BROWSER_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
+  "Accept-Encoding": "gzip, deflate, br",
+  "Cache-Control": "no-cache",
+};
+
+async function fetchHtml(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, {
+      headers: BROWSER_HEADERS,
+      redirect: "follow",
+      signal: AbortSignal.timeout(10000),
+    });
+    if (res.ok) {
+      const html = await res.text();
+      if (!isBlockedPage(html)) return html;
+    }
+  } catch {
+    // fallthrough
+  }
+
+  try {
+    const jinaUrl = `https://r.jina.ai/${url}`;
+    const res = await fetch(jinaUrl, {
+      headers: { Accept: "text/html", "X-Return-Format": "html" },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (res.ok) {
+      const html = await res.text();
+      if (!isBlockedPage(html)) return html;
+    }
+  } catch {
+    // fallthrough
+  }
+
+  return null;
+}
+
+function isBlockedPage(html: string): boolean {
+  const lower = html.toLowerCase();
+  return (
+    (lower.includes("cloudflare") && lower.includes("challenge")) ||
+    lower.includes("enable javascript") ||
+    lower.includes("access denied") ||
+    html.length < 500
+  );
+}
+
 export async function importRecipeFromUrl(url: string): Promise<ImportResult> {
   let parsedUrl: URL;
   try {
@@ -28,22 +78,10 @@ export async function importRecipeFromUrl(url: string): Promise<ImportResult> {
     return { error: "URL invalide" };
   }
 
-  let html: string;
-  try {
-    const res = await fetch(parsedUrl.href, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; Deazl/1.0; recipe-importer)",
-        Accept: "text/html",
-      },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return { error: `Page inaccessible (${res.status})` };
-    html = await res.text();
-  } catch {
-    return { error: "Impossible de charger la page" };
-  }
+  const html = await fetchHtml(parsedUrl.href);
+  if (!html) return { error: "Impossible de charger la page (site protégé ou inaccessible)" };
 
-  const jsonLdBlocks = [...html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
+  const jsonLdBlocks = [...html.matchAll(/<script[^>]*type=["']?application\/ld\+json["']?[^>]*>([\s\S]*?)<\/script>/gi)];
 
   for (const block of jsonLdBlocks) {
     try {
