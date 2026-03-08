@@ -267,8 +267,18 @@ function stripMdLinks(text: string): string {
 function parseMarkdownRecipe(md: string): Omit<ImportedRecipe, "sourceUrl"> | null {
   const lines = md.split("\n");
 
-  const h1 = lines.find((l) => /^#{1,2}\s/.test(l.trim()) && l.trim().length < 150);
-  const name = h1 ? stripMdLinks(h1.replace(/^#+\s+/, "").trim()) : null;
+  let name: string | null = null;
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i].trim();
+    if (/^#{1,2}\s/.test(l) && l.length < 150) {
+      name = stripMdLinks(l.replace(/^#+\s+/, "").trim());
+      break;
+    }
+    if (i + 1 < lines.length && /^={3,}/.test(lines[i + 1].trim()) && l.length > 2 && l.length < 150) {
+      name = stripMdLinks(l);
+      break;
+    }
+  }
   if (!name || name.length > 150) return null;
 
   const servMatch = md.match(/(\d+)\s*\n\s*personnes?/i) ?? md.match(/(\d+)\s+personnes?/i);
