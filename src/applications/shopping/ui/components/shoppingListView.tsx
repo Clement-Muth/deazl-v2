@@ -430,8 +430,11 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
 
   return (
     <>
-      <div className="flex flex-col gap-3 px-4 py-4 pb-44">
+      <div className="sticky top-0 z-30 bg-background/95 px-4 pb-2 pt-2 backdrop-blur-sm">
         <ActiveStoreSelector stores={stores} activeStore={activeStore} onSelect={setActiveStore} />
+      </div>
+
+      <div className="flex flex-col gap-3 px-4 py-4 pb-44">
         <StoreBanner summaries={list.storeSummaries} />
 
         {unchecked.length === 0 && checked.length === 0 ? (

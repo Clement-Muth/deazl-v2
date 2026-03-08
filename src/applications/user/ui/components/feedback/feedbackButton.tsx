@@ -46,7 +46,7 @@ export function FeedbackButton() {
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end" onClick={(e) => e.target === e.currentTarget && setOpen(false)}>
+        <div className="fixed inset-0 z-[60] flex items-end" onClick={(e) => e.target === e.currentTarget && setOpen(false)}>
           <div className="w-full rounded-t-3xl bg-white p-6 shadow-2xl">
             <div className="mb-1 flex items-center justify-between">
               <h2 className="text-base font-semibold">Ton avis nous aide</h2>
