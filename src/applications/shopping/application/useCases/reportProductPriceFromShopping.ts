@@ -11,7 +11,7 @@ export async function reportProductPriceFromShopping(
   price: number,
   quantity: number,
   unit: string,
-): Promise<{ error?: string }> {
+): Promise<{ error?: string; productId?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthenticated" };
@@ -54,5 +54,5 @@ export async function reportProductPriceFromShopping(
   if (priceError) return { error: priceError.message };
 
   revalidatePath("/shopping");
-  return {};
+  return { productId: upserted.id };
 }

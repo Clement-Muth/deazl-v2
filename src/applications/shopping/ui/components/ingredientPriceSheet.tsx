@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect, useTransition } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { reportIngredientPrice } from "@/applications/shopping/application/useCases/reportIngredientPrice";
 import { searchProductsForPricing } from "@/applications/shopping/application/useCases/searchProductsForPricing";
 import { reportProductPriceFromShopping } from "@/applications/shopping/application/useCases/reportProductPriceFromShopping";
 import { getProductByBarcode } from "@/applications/shopping/application/useCases/getProductByBarcode";
+import { getProductPriceHistory, type PriceHistoryPoint } from "@/applications/catalog/application/useCases/getProductPriceHistory";
 import { getUserStores } from "@/applications/user/application/useCases/getUserStores";
 import { BarcodeScannerModal } from "./barcodeScannerModal";
 import type { UserStoreItem } from "@/applications/user/application/useCases/getUserStores";
@@ -45,10 +46,10 @@ export function IngredientPriceSheet({
   const [showScanner, setShowScanner] = useState(false);
   const [isBarcodeLoading, setIsBarcodeLoading] = useState(false);
   const [barcodeError, setBarcodeError] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const [successData, setSuccessData] = useState<{ price: number; quantity: number; unit: string; storeName: string; history: PriceHistoryPoint[] } | null>(null);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bsRef = useRef<BottomSheetHandle>(null);
-
-  const [, startTransition] = useTransition();
 
   useEffect(() => {
     if (!preselectedStore) getUserStores().then(setStores);
@@ -85,7 +86,7 @@ export function IngredientPriceSheet({
     }
   }
 
-  function handleSubmit(e: { preventDefault(): void }) {
+  async function handleSubmit(e: { preventDefault(): void }) {
     e.preventDefault();
     setError(null);
     if (!selectedStore) { setError(t`Select a store`); return; }
@@ -93,17 +94,21 @@ export function IngredientPriceSheet({
     const qtyVal = parseFloat(quantity.replace(",", "."));
     if (isNaN(priceVal) || priceVal <= 0) { setError(t`Invalid price`); return; }
     if (isNaN(qtyVal) || qtyVal <= 0) { setError(t`Invalid quantity`); return; }
-    bsRef.current?.dismiss();
+    setIsSending(true);
     if (useNameFallback || !selectedProduct) {
-      startTransition(async () => {
-        await reportIngredientPrice(ingredientName, selectedStore.id, priceVal, qtyVal, unit);
-        onSuccess?.();
-      });
+      await reportIngredientPrice(ingredientName, selectedStore.id, priceVal, qtyVal, unit);
+      setIsSending(false);
+      setSuccessData({ price: priceVal, quantity: qtyVal, unit, storeName: selectedStore.name, history: [] });
+      onSuccess?.();
+      setTimeout(() => bsRef.current?.dismiss(), 2200);
     } else {
-      startTransition(async () => {
-        await reportProductPriceFromShopping(shoppingItemId, selectedProduct, selectedStore.id, priceVal, qtyVal, unit);
-        onSuccess?.();
-      });
+      const result = await reportProductPriceFromShopping(shoppingItemId, selectedProduct, selectedStore.id, priceVal, qtyVal, unit);
+      setIsSending(false);
+      if (result.error) { setError(result.error); return; }
+      const history = result.productId ? await getProductPriceHistory(result.productId) : [];
+      setSuccessData({ price: priceVal, quantity: qtyVal, unit, storeName: selectedStore.name, history });
+      onSuccess?.();
+      setTimeout(() => bsRef.current?.dismiss(), history.length > 1 ? 4000 : 2200);
     }
   }
 
@@ -130,7 +135,36 @@ export function IngredientPriceSheet({
           </div>
         </SheetHandle>
 
-        <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 pb-8 pt-1">
+        {successData && (
+          <div className="flex flex-1 flex-col items-center gap-4 px-5 pb-10 pt-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
+            <div className="text-center">
+              <p className="text-base font-semibold text-foreground"><Trans>Price saved!</Trans></p>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {successData.price.toFixed(2)} € / {successData.quantity > 1 ? `${successData.quantity} ` : ""}{successData.unit} — {successData.storeName}
+              </p>
+            </div>
+            {successData.history.length > 1 && (
+              <div className="w-full rounded-2xl bg-muted/60 px-4 py-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground/70"><Trans>Price history</Trans></p>
+                <div className="flex flex-col gap-1">
+                  {successData.history.slice(-5).reverse().map((h, i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">{h.storeName} · {h.date}</span>
+                      <span className={`text-sm font-semibold ${i === 0 ? "text-primary" : "text-foreground"}`}>{h.price.toFixed(2)} €</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {!successData && <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 pb-8 pt-1">
           <div className="flex flex-col gap-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/70"><Trans>Product</Trans></p>
 
@@ -302,12 +336,12 @@ export function IngredientPriceSheet({
 
           <button
             type="submit"
-            disabled={!useNameFallback && !selectedProduct}
+            disabled={(!useNameFallback && !selectedProduct) || isSending}
             className="mt-auto rounded-2xl bg-primary py-3.5 text-sm font-semibold text-white transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-40"
           >
-            <Trans>Submit price</Trans>
+            {isSending ? <Trans>Saving…</Trans> : <Trans>Submit price</Trans>}
           </button>
-        </form>
+        </form>}
       </BottomSheet>
 
       {showScanner && (

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Trans } from "@lingui/react/macro";
 import { initLinguiFromCookie } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
@@ -36,6 +37,15 @@ export default async function RecipesPage() {
             <p className="font-bold text-foreground"><Trans>No recipes yet</Trans></p>
             <p className="mt-1 text-sm text-muted-foreground"><Trans>Create your first recipe to get started</Trans></p>
           </div>
+          <Link
+            href="/recipes/new"
+            className="flex items-center gap-2 rounded-2xl bg-primary px-6 py-3 text-sm font-semibold text-white transition active:scale-95"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            <Trans>Add a recipe</Trans>
+          </Link>
         </div>
       ) : (
         <RecipesView recipes={recipes} userPreferences={userPreferences} />
