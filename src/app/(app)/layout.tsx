@@ -1,3 +1,4 @@
+import { FeedbackButton } from "@/applications/user/ui/components/feedback/feedbackButton";
 import { NavBar } from "@/applications/user/ui/components/navigation/navBar";
 import { NotificationScheduler } from "@/applications/user/ui/components/notifications/notificationScheduler";
 import { OfflineIndicator } from "@/shared/components/offlineIndicator";
@@ -10,6 +11,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
       <NavBar />
+      <FeedbackButton />
       <NotificationScheduler />
     </div>
   );
