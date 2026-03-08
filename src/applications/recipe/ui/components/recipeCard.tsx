@@ -43,103 +43,75 @@ function fmtTime(min: number): string {
 export function RecipeCard({ recipe }: RecipeCardProps) {
   const totalTime = (recipe.prepTimeMinutes ?? 0) + (recipe.cookTimeMinutes ?? 0);
   const pal = paletteForName(recipe.name);
-  const initial = recipe.name.trim().charAt(0).toUpperCase();
-  const totalPrice = recipe.ingredients.reduce(
-    (sum, ing) => (ing.latestPrice ? sum + ing.latestPrice.price : sum),
-    0,
-  );
+  const hasImg = !!recipe.imageUrl;
 
   return (
     <Link
       href={`/recipes/${recipe.id}`}
-      className="group flex flex-col overflow-hidden rounded-2xl bg-card shadow-[0_1px_4px_rgba(28,25,23,0.08)] transition active:scale-[0.97]"
+      className="group flex flex-col overflow-hidden rounded-2xl shadow-[0_2px_10px_rgba(28,25,23,0.1)] transition active:scale-[0.97]"
+      style={{ backgroundColor: hasImg ? undefined : pal.bg }}
     >
       <div
-        className="relative flex h-32 flex-col justify-end overflow-hidden p-3.5"
-        style={recipe.imageUrl ? undefined : { backgroundColor: pal.bg }}
+        className="relative flex h-44 flex-col justify-end overflow-hidden"
+        style={hasImg ? undefined : { backgroundColor: pal.bg }}
       >
-        {recipe.imageUrl ? (
+        {hasImg ? (
           <>
-            <img src={recipe.imageUrl} alt={recipe.name} className="absolute inset-0 h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-linear-to-t from-black/60 via-black/10 to-transparent" />
+            <img src={recipe.imageUrl!} alt={recipe.name} className="absolute inset-0 h-full w-full object-cover" />
+            <div
+              className="absolute inset-0"
+              style={{ background: "linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.05) 55%, transparent 100%)" }}
+            />
           </>
         ) : (
           <span
-            className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 select-none text-[72px] font-black leading-none"
-            style={{ color: pal.accent, opacity: 0.12 }}
+            className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 select-none text-[80px] font-black leading-none"
+            style={{ color: pal.accent, opacity: 0.11 }}
           >
-            {initial}
+            {recipe.name.charAt(0).toUpperCase()}
           </span>
         )}
 
-        {totalPrice > 0 && (
-          <span
-            className="absolute right-3 top-3 rounded-full px-2 py-0.5 text-[10px] font-bold"
-            style={recipe.imageUrl
-              ? { background: "rgba(0,0,0,0.35)", color: "#fff" }
-              : { background: `${pal.accent}18`, color: pal.accent }}
+        {totalTime > 0 && (
+          <div
+            className="absolute right-2.5 top-2.5 flex items-center gap-1 rounded-full px-2 py-1"
+            style={hasImg
+              ? { background: "rgba(0,0,0,0.38)", backdropFilter: "blur(6px)" }
+              : { background: `${pal.accent}1a` }}
           >
-            ~{totalPrice.toFixed(0)} €
-          </span>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: hasImg ? "#fff" : pal.accent }}>
+              <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+            </svg>
+            <span className="text-[10px] font-bold" style={{ color: hasImg ? "#fff" : pal.accent }}>
+              {fmtTime(totalTime)}
+            </span>
+          </div>
         )}
 
-        <div
-          className="absolute bottom-0 left-0 right-0 px-3.5 pb-3 pt-8"
-          style={{
-            background: recipe.imageUrl
-              ? undefined
-              : `linear-gradient(to top, ${pal.bg}f0 50%, transparent)`,
-          }}
-        >
-          <span
-            className="line-clamp-2 text-sm font-black leading-snug"
-            style={{ color: recipe.imageUrl ? "#fff" : pal.text }}
-          >
+        <div className="relative px-3 pb-3 pt-10" style={{ background: hasImg ? undefined : `linear-gradient(to top, ${pal.bg}f5 50%, transparent)` }}>
+          <span className="line-clamp-2 text-sm font-black leading-snug" style={{ color: hasImg ? "#fff" : pal.text }}>
             {recipe.name}
           </span>
         </div>
       </div>
 
-      <div className="flex items-center gap-2.5 px-3.5 py-2.5">
-        <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
-          </svg>
-          {recipe.servings}
-        </span>
-        {totalTime > 0 && (
+      <div className="flex items-center gap-1.5 px-3 py-2" style={{ backgroundColor: hasImg ? "#fff" : pal.bg }}>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground/50">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+        </svg>
+        <span className="text-[11px] font-semibold text-muted-foreground">{recipe.servings}</span>
+        {recipe.dietaryTags.length > 0 && (
           <>
-            <span className="text-muted-foreground/30">·</span>
-            <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-              </svg>
-              {fmtTime(totalTime)}
-            </span>
-          </>
-        )}
-        {recipe.ingredients.length > 0 && (
-          <>
-            <span className="text-muted-foreground/30">·</span>
-            <span className="text-[11px] font-medium text-muted-foreground">
-              {recipe.ingredients.length} ingr.
+            <span className="text-muted-foreground/25">·</span>
+            <span
+              className="rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+              style={{ background: `${pal.accent}15`, color: pal.text }}
+            >
+              {DIETARY_LABELS[recipe.dietaryTags[0]] ?? recipe.dietaryTags[0]}
             </span>
           </>
         )}
       </div>
-      {recipe.dietaryTags.length > 0 && (
-        <div className="flex flex-wrap gap-1 px-3.5 pb-2.5 -mt-1">
-          {recipe.dietaryTags.slice(0, 3).map((tag) => (
-            <span
-              key={tag}
-              className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
-              style={{ background: `${pal.accent}15`, color: pal.text }}
-            >
-              {DIETARY_LABELS[tag] ?? tag}
-            </span>
-          ))}
-        </div>
-      )}
     </Link>
   );
 }
