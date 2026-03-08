@@ -3,6 +3,12 @@ export interface ShoppingItemPrice {
   storeName: string;
 }
 
+export interface ShoppingItemStorePrice {
+  storeId: string;
+  storeName: string;
+  estimatedCost: number;
+}
+
 export interface ShoppingItem {
   id: string;
   customName: string;
@@ -13,6 +19,7 @@ export interface ShoppingItem {
   productId?: string | null;
   category?: string | null;
   price?: ShoppingItemPrice;
+  allStorePrices: ShoppingItemStorePrice[];
 }
 
 export interface StoreCostSummary {
