@@ -7,6 +7,7 @@ import { searchProductsForPricing } from "@/applications/shopping/application/us
 import { reportProductPriceFromShopping } from "@/applications/shopping/application/useCases/reportProductPriceFromShopping";
 import { getProductByBarcode } from "@/applications/shopping/application/useCases/getProductByBarcode";
 import { getProductPriceHistory, type PriceHistoryPoint } from "@/applications/catalog/application/useCases/getProductPriceHistory";
+import { getAlternativesByOffId } from "@/applications/catalog/application/useCases/getAlternativesByOffId";
 import { getUserStores } from "@/applications/user/application/useCases/getUserStores";
 import { BarcodeScannerModal } from "./barcodeScannerModal";
 import type { UserStoreItem } from "@/applications/user/application/useCases/getUserStores";
@@ -48,6 +49,7 @@ export function IngredientPriceSheet({
   const [barcodeError, setBarcodeError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [successData, setSuccessData] = useState<{ price: number; quantity: number; unit: string; storeName: string; history: PriceHistoryPoint[] } | null>(null);
+  const [alternatives, setAlternatives] = useState<OFFProduct[]>([]);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bsRef = useRef<BottomSheetHandle>(null);
 
@@ -55,6 +57,14 @@ export function IngredientPriceSheet({
     if (!preselectedStore) getUserStores().then(setStores);
     triggerSearch(ingredientName);
   }, []);
+
+  useEffect(() => {
+    setAlternatives([]);
+    if (!selectedProduct?.nutriscoreGrade) return;
+    const BAD = ["c", "d", "e"];
+    if (!BAD.includes(selectedProduct.nutriscoreGrade.toLowerCase())) return;
+    getAlternativesByOffId(selectedProduct.offId, selectedProduct.nutriscoreGrade).then(setAlternatives);
+  }, [selectedProduct]);
 
   function triggerSearch(q: string) {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
@@ -274,6 +284,37 @@ export function IngredientPriceSheet({
               >
                 <Trans>No product found — report by ingredient name</Trans>
               </button>
+            )}
+
+            {selectedProduct && alternatives.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-amber-600">
+                  <Trans>Better alternatives</Trans>
+                </p>
+                {alternatives.map((alt) => (
+                  <button
+                    key={alt.offId}
+                    type="button"
+                    onClick={() => setSelectedProduct(alt)}
+                    className="flex items-center gap-3 rounded-xl bg-amber-50/70 px-3 py-2.5 text-left ring-1 ring-amber-100 transition hover:bg-amber-50 active:scale-[0.98]"
+                  >
+                    {alt.imageUrl ? (
+                      <img src={alt.imageUrl} alt="" className="h-8 w-8 rounded-lg object-contain" />
+                    ) : (
+                      <div className="h-8 w-8 shrink-0 rounded-lg bg-amber-100" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-semibold text-foreground">{alt.name}</p>
+                      {alt.brand && <p className="text-[10px] text-muted-foreground/60">{alt.brand}</p>}
+                    </div>
+                    {alt.nutriscoreGrade && (
+                      <span className="shrink-0 rounded-md bg-green-500 px-1.5 py-0.5 text-[10px] font-black uppercase text-white">
+                        {alt.nutriscoreGrade}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
 
