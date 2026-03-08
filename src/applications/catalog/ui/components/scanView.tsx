@@ -57,7 +57,7 @@ export function ScanView() {
       setStores(s);
       if (s.length === 1) setSelectedStore(s[0]);
     });
-    if (!isNative) {
+    if (mode === "scan") {
       startWebScanner();
     }
     return () => {
@@ -168,7 +168,7 @@ export function ScanView() {
     setPantryQty("1");
     setSearchQuery("");
     setSearchResults([]);
-    if (!isNative && mode === "scan") {
+    if (mode === "scan") {
       startWebScanner();
     }
   }
@@ -182,7 +182,7 @@ export function ScanView() {
     setPriceSubmitted(false);
     setPantrySubmitted(false);
     setSubmitError(null);
-    if (m === "scan" && !isNative) {
+    if (m === "scan") {
       stoppedRef.current = false;
       startWebScanner();
     } else if (m === "search") {
@@ -267,51 +267,24 @@ export function ScanView() {
 
       {mode === "scan" && (
         <div className={`relative shrink-0 overflow-hidden bg-black transition-all duration-500 ${isScanFullscreen ? "h-[calc(100dvh-8rem-var(--sat))] rounded-b-3xl" : "mx-4 h-52 rounded-3xl"}`}>
-          {!isNative && <video ref={videoRef} className="h-full w-full object-cover" playsInline muted />}
+          <video ref={videoRef} className="h-full w-full object-cover" playsInline muted />
 
           {phase === "scanning" && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-6">
-              {isNative ? (
-                <div className="flex flex-col items-center gap-4">
-                  <button
-                    type="button"
-                    onClick={startNativeScanner}
-                    className="flex h-24 w-24 items-center justify-center rounded-full bg-white/10 transition active:scale-95 active:bg-white/20"
-                  >
-                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/>
-                      <path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
-                      <line x1="7" y1="8" x2="7" y2="16"/><line x1="10.5" y1="8" x2="10.5" y2="16"/>
-                      <line x1="14" y1="8" x2="14" y2="16"/><line x1="17" y1="8" x2="17" y2="16"/>
-                    </svg>
-                  </button>
-                  <p className="text-sm font-semibold tracking-wide text-white/70">
-                    <Trans>Tap to scan</Trans>
-                  </p>
-                  {scanError && (
-                    <p className="max-w-[240px] rounded-xl bg-red-500/20 px-4 py-2 text-center text-xs font-semibold text-red-300">
-                      {scanError}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="relative h-40 w-72">
-                  <div className="absolute inset-0" style={{ boxShadow: "0 0 0 9999px rgba(0,0,0,0.55)" }} />
-                  <div className="absolute left-0 top-0 h-6 w-6 rounded-tl-xl border-l-2 border-t-2 border-white" />
-                  <div className="absolute right-0 top-0 h-6 w-6 rounded-tr-xl border-r-2 border-t-2 border-white" />
-                  <div className="absolute bottom-0 left-0 h-6 w-6 rounded-bl-xl border-b-2 border-l-2 border-white" />
-                  <div className="absolute bottom-0 right-0 h-6 w-6 rounded-br-xl border-b-2 border-r-2 border-white" />
-                  <div
-                    className="absolute inset-x-3 h-0.5 rounded-full bg-primary"
-                    style={{ animation: "scanline 2s ease-in-out infinite", top: "50%", boxShadow: "0 0 8px rgba(22,163,74,0.8)" }}
-                  />
-                </div>
-              )}
-              {!isNative && (
-                <p className="text-xs font-semibold tracking-wide text-white/50">
-                  <Trans>Point at a product barcode</Trans>
-                </p>
-              )}
+              <div className="relative h-40 w-72">
+                <div className="absolute inset-0" style={{ boxShadow: "0 0 0 9999px rgba(0,0,0,0.55)" }} />
+                <div className="absolute left-0 top-0 h-6 w-6 rounded-tl-xl border-l-2 border-t-2 border-white" />
+                <div className="absolute right-0 top-0 h-6 w-6 rounded-tr-xl border-r-2 border-t-2 border-white" />
+                <div className="absolute bottom-0 left-0 h-6 w-6 rounded-bl-xl border-b-2 border-l-2 border-white" />
+                <div className="absolute bottom-0 right-0 h-6 w-6 rounded-br-xl border-b-2 border-r-2 border-white" />
+                <div
+                  className="absolute inset-x-3 h-0.5 rounded-full bg-primary"
+                  style={{ animation: "scanline 2s ease-in-out infinite", top: "50%", boxShadow: "0 0 8px rgba(22,163,74,0.8)" }}
+                />
+              </div>
+              <p className="text-xs font-semibold tracking-wide text-white/50">
+                <Trans>Point at a product barcode</Trans>
+              </p>
             </div>
           )}
 
