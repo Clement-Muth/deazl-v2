@@ -241,54 +241,81 @@ function findRecipeHeuristic(data: unknown, depth = 0): Omit<ImportedRecipe, "so
   return null;
 }
 
+function stripMdLinks(text: string): string {
+  return text.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").trim();
+}
+
 function parseMarkdownRecipe(md: string): Omit<ImportedRecipe, "sourceUrl"> | null {
   const lines = md.split("\n");
 
-  const h1 = lines.find((l) => /^#{1,2}\s/.test(l.trim()));
-  const name = h1?.replace(/^#+\s+/, "").trim() ?? null;
-  if (!name || name.length > 120) return null;
+  const h1 = lines.find((l) => /^#{1,2}\s/.test(l.trim()) && l.trim().length < 150);
+  const name = h1 ? stripMdLinks(h1.replace(/^#+\s+/, "").trim()) : null;
+  if (!name || name.length > 150) return null;
 
-  const servMatch = md.match(/\b(\d+)\s*(?:personnes?|portions?|parts?|servings?)\b/i);
+  const servMatch = md.match(/(\d+)\s*\n\s*personnes?/i) ?? md.match(/(\d+)\s+personnes?/i);
   const servings = servMatch ? parseInt(servMatch[1]) : 4;
 
-  const prepMatch = md.match(/(?:préparation|prep(?:aration)?)\s*[:\-–]\s*(?:(\d+)\s*h\s*)?(\d+)\s*min/i);
+  const prepMatch = md.match(/[Pp]r[eé]paration\s*[:\-–]\s*\n\s*(?:(\d+)\s*h\s*)?(\d+)\s*min/) ??
+    md.match(/[Pp]r[eé]paration\s*[:\-–]\s*(?:(\d+)\s*h\s*)?(\d+)\s*min/i);
   const prepTimeMinutes = prepMatch ? (parseInt(prepMatch[1] ?? "0") * 60 + parseInt(prepMatch[2])) : null;
 
-  const cookMatch = md.match(/(?:cuisson|cook(?:ing)?)\s*[:\-–]\s*(?:(\d+)\s*h\s*)?(\d+)\s*min/i);
+  const cookMatch = md.match(/[Cc]uisson\s*[:\-–]\s*\n\s*(?:(\d+)\s*h\s*)?(\d+)\s*min/) ??
+    md.match(/[Cc]uisson\s*[:\-–]\s*(?:(\d+)\s*h\s*)?(\d+)\s*min/i);
   const cookTimeMinutes = cookMatch ? (parseInt(cookMatch[1] ?? "0") * 60 + parseInt(cookMatch[2])) : null;
 
-  const normalizedLines = lines.map((l) => l.trim()).filter(Boolean);
+  const ingredients: ImportedIngredient[] = [];
+  const steps: string[] = [];
 
-  const ingredientSectionIdx = normalizedLines.findIndex((l) =>
-    /^#{1,4}\s*(ingr[eé]dients?)/i.test(l)
-  );
-  const stepsSectionIdx = normalizedLines.findIndex((l) =>
-    /^#{1,4}\s*(pr[eé]paration|[eé]tapes?|instructions?|recette|m[eé]thode|directions?)/i.test(l)
-  );
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
 
-  let ingredientLines: string[] = [];
-  if (ingredientSectionIdx >= 0) {
-    const end = stepsSectionIdx > ingredientSectionIdx ? stepsSectionIdx : normalizedLines.length;
-    ingredientLines = normalizedLines
-      .slice(ingredientSectionIdx + 1, end)
-      .filter((l) => /^[-*•]/.test(l) || /^\d/.test(l));
+    if (/^- \[[ x]\]\s*$/.test(line)) {
+      for (let j = i + 1; j < Math.min(i + 6, lines.length); j++) {
+        const next = lines[j].trim();
+        if (!next || /^!\[/.test(next)) continue;
+        const text = stripMdLinks(next);
+        if (text.length > 1 && !/^[-+]$/.test(text)) {
+          ingredients.push(parseIngredientString(text));
+        }
+        break;
+      }
+      continue;
+    }
+
+    if (/^[ÉE]tape\s+\d+\s*$/i.test(line)) {
+      for (let j = i + 1; j < Math.min(i + 8, lines.length); j++) {
+        const next = lines[j].trim();
+        if (!next || /^!\[/.test(next)) continue;
+        if (/^[ÉE]tape\s+\d+/i.test(next)) break;
+        if (next.length > 5) {
+          steps.push(stripMdLinks(next));
+        }
+        break;
+      }
+      continue;
+    }
   }
 
-  let stepLines: string[] = [];
-  if (stepsSectionIdx >= 0) {
-    stepLines = normalizedLines
-      .slice(stepsSectionIdx + 1)
-      .filter((l) => /^[-*•\d]/.test(l) && l.length > 10);
+  if (ingredients.length === 0) {
+    const normalizedLines = lines.map((l) => l.trim()).filter(Boolean);
+    const ingredientSectionIdx = normalizedLines.findIndex((l) => /^#{1,4}\s*(ingr[eé]dients?)/i.test(l));
+    const stepsSectionIdx = normalizedLines.findIndex((l) => /^#{1,4}\s*(pr[eé]paration|[eé]tapes?|instructions?|directions?)/i.test(l));
+
+    if (ingredientSectionIdx >= 0) {
+      const end = stepsSectionIdx > ingredientSectionIdx ? stepsSectionIdx : normalizedLines.length;
+      normalizedLines
+        .slice(ingredientSectionIdx + 1, end)
+        .filter((l) => /^[-*•]/.test(l) || /^\d/.test(l))
+        .forEach((l) => ingredients.push(parseIngredientString(stripMdLinks(l.replace(/^[-*•]\s*/, "")))));
+    }
+
+    if (steps.length === 0 && stepsSectionIdx >= 0) {
+      normalizedLines
+        .slice(stepsSectionIdx + 1)
+        .filter((l) => /^[-*•\d]/.test(l) && l.length > 10)
+        .forEach((l) => steps.push(stripMdLinks(l.replace(/^(\d+[\.\)]\s*|[-*•]\s*)/, "").trim())));
+    }
   }
-
-  const ingredients = ingredientLines
-    .map((l) => l.replace(/^[-*•]\s*/, "").trim())
-    .filter(Boolean)
-    .map(parseIngredientString);
-
-  const steps = stepLines
-    .map((l) => l.replace(/^(\d+[\.\)]\s*|[-*•]\s*)/, "").trim())
-    .filter((l) => l.length > 5);
 
   if (ingredients.length === 0 && steps.length === 0) return null;
 
