@@ -31,7 +31,7 @@ export function ScanView() {
   const [scanError, setScanError] = useState<string | null>(null);
 
   const [mode, setMode] = useState<Mode>("scan");
-  const [phase, setPhase] = useState<Phase>(isNative ? "idle" : "scanning");
+  const [phase, setPhase] = useState<Phase>("scanning");
   const [product, setProduct] = useState<ScannedProductInfo | null>(null);
   const [scannedEan, setScannedEan] = useState("");
   const [stores, setStores] = useState<UserStoreItem[]>([]);
@@ -157,7 +157,7 @@ export function ScanView() {
   }
 
   function handleRescan() {
-    setPhase(isNative ? "idle" : "scanning");
+    setPhase("scanning");
     setProduct(null);
     setPrice("");
     setQuantity("1");
@@ -175,7 +175,7 @@ export function ScanView() {
 
   function switchMode(m: Mode) {
     setMode(m);
-    setPhase(m === "scan" ? (isNative ? "idle" : "scanning") : "idle");
+    setPhase(m === "scan" ? "scanning" : "idle");
     setProduct(null);
     setSearchQuery("");
     setSearchResults([]);
