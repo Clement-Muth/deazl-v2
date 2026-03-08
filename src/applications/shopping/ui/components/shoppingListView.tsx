@@ -318,7 +318,7 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
   const [showCompletion, setShowCompletion] = useState(false);
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const { stores, activeStore, setActiveStore } = useActiveStore();
-  const activeStoreId = activeStoreId ?? null;
+  const activeStoreId = activeStore?.id ?? null;
   const [priceSheetItem, setPriceSheetItem] = useState<ShoppingItem | null>(null);
   const [priceSheetStore, setPriceSheetStore] = useState<UserStoreItem | null | undefined>(undefined);
   const [detailItem, setDetailItem] = useState<ShoppingItem | null>(null);
