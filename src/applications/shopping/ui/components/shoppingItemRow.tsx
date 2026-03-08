@@ -202,16 +202,8 @@ export function ShoppingItemRow({ item, onToggle, onDelete, onReportPrice, onDet
                 ~{displayPrice.estimatedCost.toFixed(2)} €
               </span>
             )}
-            {!item.isChecked && !activeStoreId && item.price?.storeName && (
-              <span className="text-[9px] font-medium text-muted-foreground/40">
-                {item.price.storeName}
-              </span>
-            )}
             {showPriceGap && (
               <span className="text-[10px] font-medium text-muted-foreground/40">prix ?</span>
-            )}
-            {!item.isChecked && (hasKnownPrices || showPriceGap) && onDetail && (
-              <span className="text-[9px] font-medium text-primary/40 leading-none">comparer →</span>
             )}
           </div>
           {showEuroButton && (
@@ -225,6 +217,11 @@ export function ShoppingItemRow({ item, onToggle, onDelete, onReportPrice, onDet
                 <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
               </svg>
             </button>
+          )}
+          {!item.isChecked && (hasKnownPrices || !!item.productId) && onDetail && (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
           )}
         </div>
       </div>
