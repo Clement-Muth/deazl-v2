@@ -318,6 +318,7 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
   const [showCompletion, setShowCompletion] = useState(false);
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const { stores, activeStore, setActiveStore } = useActiveStore();
+  const activeStoreId = activeStoreId ?? null;
   const [priceSheetItem, setPriceSheetItem] = useState<ShoppingItem | null>(null);
   const [priceSheetStore, setPriceSheetStore] = useState<UserStoreItem | null | undefined>(undefined);
   const [detailItem, setDetailItem] = useState<ShoppingItem | null>(null);
@@ -505,7 +506,7 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
       </div>
 
       <div className="flex flex-col gap-3 px-4 py-4 pb-44">
-        {!isStoreMode && <StoreBanner summaries={list.storeSummaries} activeStoreId={activeStore?.id} />}
+        {!isStoreMode && <StoreBanner summaries={list.storeSummaries} activeStoreId={activeStoreId} />}
 
         {unchecked.length === 0 && checked.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-12 text-center">
@@ -538,7 +539,7 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
                 onDelete={handleDelete}
                 onReportPrice={setPriceSheetItem}
                 onDetail={setDetailItem}
-                activeStoreId={activeStore?.id}
+                activeStoreId={activeStoreId}
                 isStoreMode={isStoreMode}
                 animationDelay={i * 55}
               />
@@ -629,7 +630,7 @@ export function ShoppingListView({ list }: ShoppingListViewProps) {
         <ItemDetailSheet
           item={detailItem}
           userStores={stores}
-          activeStoreId={activeStore?.id}
+          activeStoreId={activeStoreId}
           onClose={() => setDetailItem(null)}
           onAddPrice={(store) => {
             setDetailItem(null);
