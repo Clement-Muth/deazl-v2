@@ -1,5 +1,5 @@
 import { initLinguiFromCookie } from "@/lib/i18n/server";
-import { RecipeForm } from "@/applications/recipe/ui/components/recipeForm/recipeForm";
+import { NewRecipeShell } from "@/applications/recipe/ui/components/newRecipeShell";
 import { createRecipe } from "@/applications/recipe/application/useCases/createRecipe";
 
 export default async function NewRecipePage() {
@@ -7,7 +7,7 @@ export default async function NewRecipePage() {
 
   return (
     <div className="min-h-screen bg-linear-to-b from-primary-light via-background to-background">
-      <RecipeForm mode="create" action={createRecipe} backHref="/recipes" />
+      <NewRecipeShell createAction={createRecipe} />
     </div>
   );
 }

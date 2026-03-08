@@ -19,13 +19,14 @@ const DIETARY_OPTIONS = [
   { id: "no_seafood", label: "Sans fruits de mer" },
 ];
 
-type RecipeState = { error: string } | undefined;
+export type RecipeState = { error: string } | undefined;
 
 interface RecipeFormProps {
   mode: "create" | "edit";
   action: (prevState: RecipeState, formData: FormData) => Promise<RecipeState>;
   defaultValues?: Recipe;
   backHref: string;
+  onBack?: () => void;
 }
 
 interface IngredientEntry {
@@ -92,7 +93,7 @@ function Stepper({
   );
 }
 
-export function RecipeForm({ mode, action, defaultValues, backHref }: RecipeFormProps) {
+export function RecipeForm({ mode, action, defaultValues, backHref, onBack }: RecipeFormProps) {
   const { t } = useLingui();
   const [isPending, startTransition] = useTransition();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -196,14 +197,26 @@ export function RecipeForm({ mode, action, defaultValues, backHref }: RecipeForm
       <header className="sticky top-0 z-10 border-b border-border/60 bg-white/70 backdrop-blur-xl">
         <div className="flex items-center gap-3 px-4 pb-3 pt-5">
           {step === 0 ? (
-            <Link
-              href={backHref}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted text-gray-600 transition hover:bg-muted/80 active:scale-[0.94]"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="15 18 9 12 15 6" />
-              </svg>
-            </Link>
+            onBack ? (
+              <button
+                type="button"
+                onClick={onBack}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted text-gray-600 transition hover:bg-muted/80 active:scale-[0.94]"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+              </button>
+            ) : (
+              <Link
+                href={backHref}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted text-gray-600 transition hover:bg-muted/80 active:scale-[0.94]"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+              </Link>
+            )
           ) : (
             <button
               onClick={() => goToStep(step - 1)}
