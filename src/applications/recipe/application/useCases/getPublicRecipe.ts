@@ -1,55 +1,21 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Recipe, IngredientPrice } from "@/applications/recipe/domain/entities/recipe";
+import type { Recipe } from "@/applications/recipe/domain/entities/recipe";
 
-export async function getRecipe(id: string): Promise<Recipe | null> {
+export async function getPublicRecipe(id: string): Promise<Recipe | null> {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
 
   const { data, error } = await supabase
     .from("recipes")
     .select(`
       *,
-      recipe_ingredients(*, products(id, nutriscore_grade)),
+      recipe_ingredients(*),
       recipe_steps(*)
     `)
     .eq("id", id)
+    .eq("is_public", true)
     .single();
 
   if (error || !data) return null;
-
-  let isFavorite = false;
-  if (user) {
-    const { data: fav } = await supabase
-      .from("recipe_favorites")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("recipe_id", id)
-      .maybeSingle();
-    isFavorite = !!fav;
-  }
-
-  const productIds = (data.recipe_ingredients ?? [])
-    .map((i: { products: { id: string } | null }) => i.products?.id)
-    .filter(Boolean) as string[];
-
-  const pricesByProductId = new Map<string, IngredientPrice>();
-  if (productIds.length > 0) {
-    const { data: prices } = await supabase
-      .from("latest_prices")
-      .select("product_id, price, quantity, unit, store_name, store_brand")
-      .in("product_id", productIds);
-    for (const p of prices ?? []) {
-      if (!pricesByProductId.has(p.product_id)) {
-        pricesByProductId.set(p.product_id, {
-          price: p.price,
-          quantity: p.quantity,
-          unit: p.unit,
-          storeName: p.store_name,
-          storeBrand: p.store_brand,
-        });
-      }
-    }
-  }
 
   return {
     id: data.id,
@@ -61,8 +27,8 @@ export async function getRecipe(id: string): Promise<Recipe | null> {
     cookTimeMinutes: data.cook_time_minutes,
     imageUrl: data.image_url,
     dietaryTags: data.dietary_tags ?? [],
-    isPublic: data.is_public,
-    isFavorite,
+    isPublic: true,
+    isFavorite: false,
     createdAt: new Date(data.created_at),
     updatedAt: new Date(data.updated_at),
     ingredients: (data.recipe_ingredients ?? [])
@@ -75,8 +41,6 @@ export async function getRecipe(id: string): Promise<Recipe | null> {
         unit: string;
         is_optional: boolean;
         sort_order: number;
-        product_id: string | null;
-        products: { id: string; nutriscore_grade: string | null } | null;
       }) => ({
         id: ing.id,
         recipeId: ing.recipe_id,
@@ -85,9 +49,9 @@ export async function getRecipe(id: string): Promise<Recipe | null> {
         unit: ing.unit,
         isOptional: ing.is_optional,
         sortOrder: ing.sort_order,
-        productId: ing.product_id,
-        nutriscoreGrade: ing.products?.nutriscore_grade ?? null,
-        latestPrice: ing.products ? (pricesByProductId.get(ing.products.id) ?? null) : null,
+        productId: null,
+        nutriscoreGrade: null,
+        latestPrice: null,
       })),
     steps: (data.recipe_steps ?? [])
       .sort((a: { step_number: number }, b: { step_number: number }) => a.step_number - b.step_number)

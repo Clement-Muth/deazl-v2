@@ -6,17 +6,25 @@ export async function getRecipes(): Promise<Recipe[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
-  const { data, error } = await supabase
-    .from("recipes")
-    .select(`
-      *,
-      recipe_ingredients(*),
-      recipe_steps(*)
-    `)
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+  const [{ data, error }, { data: favorites }] = await Promise.all([
+    supabase
+      .from("recipes")
+      .select(`
+        *,
+        recipe_ingredients(*),
+        recipe_steps(*)
+      `)
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("recipe_favorites")
+      .select("recipe_id")
+      .eq("user_id", user.id),
+  ]);
 
   if (error || !data) return [];
+
+  const favoriteIds = new Set((favorites ?? []).map((f: { recipe_id: string }) => f.recipe_id));
 
   return data.map((row) => ({
     id: row.id,
@@ -29,6 +37,7 @@ export async function getRecipes(): Promise<Recipe[]> {
     imageUrl: row.image_url,
     dietaryTags: row.dietary_tags ?? [],
     isPublic: row.is_public,
+    isFavorite: favoriteIds.has(row.id),
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
     ingredients: (row.recipe_ingredients ?? [])
@@ -49,6 +58,9 @@ export async function getRecipes(): Promise<Recipe[]> {
         unit: ing.unit,
         isOptional: ing.is_optional,
         sortOrder: ing.sort_order,
+        productId: null,
+        nutriscoreGrade: null,
+        latestPrice: null,
       })),
     steps: (row.recipe_steps ?? [])
       .sort((a: { step_number: number }, b: { step_number: number }) => a.step_number - b.step_number)

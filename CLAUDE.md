@@ -42,6 +42,13 @@ Bounded Contexts : catalog | recipe | planning | shopping | pantry | analytics |
 - Server Actions dans `application/`
 - Build mobile : `NEXT_PUBLIC_BUILD_TARGET=mobile bun run build`
 
+## Internationalisation (i18n)
+- **Lingui.js obligatoire** : tout texte affiché à l'utilisateur doit utiliser Lingui — sans exception
+- Dans les Server Components et fichiers `.tsx` côté serveur : `import { Trans, t } from "@lingui/macro"` + `<Trans>...</Trans>` ou `` t`...` ``
+- Dans les Client Components (`"use client"`) : `import { Trans } from "@lingui/react/macro"`
+- Ne jamais écrire de texte UI en dur dans le JSX sans le wrapper `<Trans>` ou `` t`...` ``
+- Exemple : `<p><Trans>Mes recettes</Trans></p>`, `placeholder={t\`Rechercher…\`}`
+
 ## Style de code
 - **Jamais de commentaires** dans le code (ni `//`, ni `/* */`, ni JSDoc)
 

@@ -9,6 +9,7 @@ export interface Recipe {
   imageUrl: string | null;
   dietaryTags: string[];
   isPublic: boolean;
+  isFavorite: boolean;
   createdAt: Date;
   updatedAt: Date;
   ingredients: RecipeIngredient[];

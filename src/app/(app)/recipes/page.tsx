@@ -3,6 +3,7 @@ import { Trans } from "@lingui/react/macro";
 import { initLinguiFromCookie } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
 import { getRecipes } from "@/applications/recipe/application/useCases/getRecipes";
+import { getPantryItems } from "@/applications/pantry/application/useCases/getPantryItems";
 import { RecipesView } from "@/applications/recipe/ui/components/recipesView";
 
 export default async function RecipesPage() {
@@ -10,7 +11,8 @@ export default async function RecipesPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const userPreferences: string[] = user?.user_metadata?.dietary_preferences ?? [];
-  const recipes = await getRecipes();
+  const [recipes, pantryItems] = await Promise.all([getRecipes(), getPantryItems()]);
+  const pantryNames = pantryItems.map((item) => item.customName).filter(Boolean);
 
   return (
     <div className="relative min-h-screen bg-linear-to-b from-primary-light via-background to-background">
@@ -48,7 +50,7 @@ export default async function RecipesPage() {
           </Link>
         </div>
       ) : (
-        <RecipesView recipes={recipes} userPreferences={userPreferences} />
+        <RecipesView recipes={recipes} userPreferences={userPreferences} pantryNames={pantryNames} />
       )}
     </div>
   );

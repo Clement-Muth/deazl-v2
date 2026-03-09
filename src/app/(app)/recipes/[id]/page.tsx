@@ -5,6 +5,8 @@ import { getRecipe } from "@/applications/recipe/application/useCases/getRecipe"
 import { getRecipePricesByStore } from "@/applications/recipe/application/useCases/getRecipePricesByStore";
 import { RecipeDeleteButton } from "@/applications/recipe/ui/components/recipeDeleteButton";
 import { RecipeDetailView } from "@/applications/recipe/ui/components/recipeDetailView";
+import { FavoriteButton } from "@/applications/recipe/ui/components/favoriteButton";
+import { ShareRecipeButton } from "@/applications/recipe/ui/components/shareRecipeButton";
 
 interface RecipePageProps {
   params: Promise<{ id: string }>;
@@ -102,17 +104,31 @@ export default async function RecipePage({ params }: RecipePageProps) {
               <polyline points="15 18 9 12 15 6" />
             </svg>
           </Link>
-          <Link
-            href={`/recipes/${recipe.id}/edit`}
-            className="flex h-9 w-9 items-center justify-center rounded-xl backdrop-blur-sm transition active:scale-[0.94]"
-            style={{ background: heroBtnBg, color: heroText }}
-            aria-label="Modifier"
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-            </svg>
-          </Link>
+          <div className="flex items-center gap-2">
+            <FavoriteButton
+              recipeId={recipe.id}
+              initialFavorite={recipe.isFavorite}
+              heroBtnBg={heroBtnBg}
+              heroText={heroText}
+            />
+            <ShareRecipeButton
+              recipeId={recipe.id}
+              initialPublic={recipe.isPublic}
+              heroBtnBg={heroBtnBg}
+              heroText={heroText}
+            />
+            <Link
+              href={`/recipes/${recipe.id}/edit`}
+              className="flex h-9 w-9 items-center justify-center rounded-xl backdrop-blur-sm transition active:scale-[0.94]"
+              style={{ background: heroBtnBg, color: heroText }}
+              aria-label="Modifier"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+            </Link>
+          </div>
         </div>
 
         <div className="relative px-5 pb-7 pt-16">

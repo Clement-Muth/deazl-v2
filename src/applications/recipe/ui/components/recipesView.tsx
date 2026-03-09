@@ -41,10 +41,28 @@ function fmtTime(min: number) {
 }
 
 type SortOption = "recent" | "fast" | "slow";
+type QuickFilter = "favorites" | "pantry" | null;
+
+function normalize(s: string) {
+  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+}
+
+function computeMatch(recipe: Recipe, pantryNormalized: string[]): number {
+  if (recipe.ingredients.length === 0 || pantryNormalized.length === 0) return 0;
+  let matches = 0;
+  for (const ing of recipe.ingredients) {
+    const ingName = normalize(ing.customName);
+    if (pantryNormalized.some((pn) => ingName.includes(pn) || pn.includes(ingName))) {
+      matches++;
+    }
+  }
+  return matches / recipe.ingredients.length;
+}
 
 interface Props {
   recipes: Recipe[];
   userPreferences: string[];
+  pantryNames: string[];
 }
 
 function HeroCard({ recipe }: { recipe: Recipe }) {
@@ -204,7 +222,7 @@ function ThumbCard({ recipe }: { recipe: Recipe }) {
   );
 }
 
-function GridCard({ recipe }: { recipe: Recipe }) {
+function GridCard({ recipe, matchRatio }: { recipe: Recipe; matchRatio?: number }) {
   const pal = paletteFor(recipe.name);
   const totalTime = (recipe.prepTimeMinutes ?? 0) + (recipe.cookTimeMinutes ?? 0);
   const hasImg = !!recipe.imageUrl;
@@ -242,6 +260,17 @@ function GridCard({ recipe }: { recipe: Recipe }) {
             <span className="text-[10px] font-bold" style={{ color: hasImg ? "#fff" : pal.accent }}>
               {fmtTime(totalTime)}
             </span>
+          </div>
+        )}
+        {matchRatio !== undefined && (
+          <div
+            className="absolute left-2.5 top-2.5 flex items-center gap-1 rounded-full px-2 py-1"
+            style={{ background: matchRatio > 0 ? "#f59e0b" : "rgba(0,0,0,0.35)" }}
+          >
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+            </svg>
+            <span className="text-[9px] font-bold text-white">{Math.round(matchRatio * 100)}%</span>
           </div>
         )}
 
@@ -433,14 +462,17 @@ function FilterSheetContent({
   );
 }
 
-export function RecipesView({ recipes, userPreferences }: Props) {
+export function RecipesView({ recipes, userPreferences, pantryNames }: Props) {
   const [search, setSearch] = useState("");
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [timeFilter, setTimeFilter] = useState("any");
   const [sort, setSort] = useState<SortOption>("recent");
   const [filterOpen, setFilterOpen] = useState(false);
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const pantryNormalized = useMemo(() => pantryNames.map(normalize), [pantryNames]);
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
@@ -451,7 +483,7 @@ export function RecipesView({ recipes, userPreferences }: Props) {
   const activeFilterCount = activeTags.length + (timeFilter !== "any" ? 1 : 0) + (sort !== "recent" ? 1 : 0);
 
   const isSearching = search.trim() !== "";
-  const isFiltering = isSearching || activeTags.length > 0 || timeFilter !== "any" || sort !== "recent";
+  const isFiltering = isSearching || activeTags.length > 0 || timeFilter !== "any" || sort !== "recent" || quickFilter !== null;
 
   const filtered = useMemo(() => {
     let result = recipes;
@@ -475,13 +507,20 @@ export function RecipesView({ recipes, userPreferences }: Props) {
         return t > 0 && t <= 60;
       });
     }
+    if (quickFilter === "favorites") {
+      result = result.filter((r) => r.isFavorite);
+    }
+    if (quickFilter === "pantry") {
+      result = [...result].sort((a, b) => computeMatch(b, pantryNormalized) - computeMatch(a, pantryNormalized));
+      return result;
+    }
     return [...result].sort((a, b) => {
-      if (sort === "recent") return b.createdAt.getTime() - a.createdAt.getTime();
+      if (sort === "recent") return +new Date(b.createdAt) - +new Date(a.createdAt);
       const ta = (a.prepTimeMinutes ?? 0) + (a.cookTimeMinutes ?? 0);
       const tb = (b.prepTimeMinutes ?? 0) + (b.cookTimeMinutes ?? 0);
       return sort === "fast" ? ta - tb : tb - ta;
     });
-  }, [recipes, search, activeTags, timeFilter, sort]);
+  }, [recipes, search, activeTags, timeFilter, sort, quickFilter, pantryNormalized]);
 
   const sections = useMemo(() => {
     if (isFiltering) return null;
@@ -522,6 +561,7 @@ export function RecipesView({ recipes, userPreferences }: Props) {
     setActiveTags([]);
     setTimeFilter("any");
     setSort("recent");
+    setQuickFilter(null);
   }
 
   return (
@@ -572,23 +612,46 @@ export function RecipesView({ recipes, userPreferences }: Props) {
           </button>
         </div>
 
-        {activeTags.length > 0 && (
-          <div className="mt-2 flex gap-1.5 flex-wrap">
-            {activeTags.map((tag) => (
-              <button
-                key={tag}
-                type="button"
-                onClick={() => toggleTag(tag)}
-                className="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary transition active:scale-95"
-              >
-                {DIETARY_LABELS[tag] ?? tag}
-                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="mt-2 flex gap-1.5 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setQuickFilter((q) => (q === "favorites" ? null : "favorites"))}
+            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold transition active:scale-95 ${
+              quickFilter === "favorites" ? "bg-rose-500 text-white shadow-sm" : "bg-muted text-muted-foreground"
+            }`}
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill={quickFilter === "favorites" ? "white" : "none"} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+            </svg>
+            Favoris
+          </button>
+          <button
+            type="button"
+            onClick={() => setQuickFilter((q) => (q === "pantry" ? null : "pantry"))}
+            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold transition active:scale-95 ${
+              quickFilter === "pantry" ? "bg-amber-500 text-white shadow-sm" : "bg-muted text-muted-foreground"
+            }`}
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+              <path d="m3.3 7 8.7 5 8.7-5"/><line x1="12" y1="22" x2="12" y2="12"/>
+            </svg>
+            Mon stock
+          </button>
+          {activeTags.map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => toggleTag(tag)}
+              className="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1.5 text-[11px] font-bold text-primary transition active:scale-95"
+            >
+              {DIETARY_LABELS[tag] ?? tag}
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          ))}
+        </div>
       </div>
 
       {isFiltering ? (
@@ -601,7 +664,18 @@ export function RecipesView({ recipes, userPreferences }: Props) {
               Effacer tout
             </button>
           </div>
-          {filtered.length === 0 ? (
+          {quickFilter === "pantry" && pantryNames.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 py-16 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-amber-50">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+                  <path d="m3.3 7 8.7 5 8.7-5"/><line x1="12" y1="22" x2="12" y2="12"/>
+                </svg>
+              </div>
+              <p className="font-semibold text-foreground">Stock vide</p>
+              <p className="text-sm text-muted-foreground">Ajoutez des produits dans Mon stock<br/>pour voir quelles recettes vous pouvez faire.</p>
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-16 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-muted">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground/40">
@@ -625,7 +699,10 @@ export function RecipesView({ recipes, userPreferences }: Props) {
             <div className="grid grid-cols-2 gap-3">
               {filtered.map((recipe, i) => (
                 <div key={recipe.id} style={{ animation: `fadeSlideUp 0.3s ${i * 30}ms cubic-bezier(0.22,1,0.36,1) both` }}>
-                  <GridCard recipe={recipe} />
+                  <GridCard
+                    recipe={recipe}
+                    matchRatio={quickFilter === "pantry" ? computeMatch(recipe, pantryNormalized) : undefined}
+                  />
                 </div>
               ))}
             </div>
