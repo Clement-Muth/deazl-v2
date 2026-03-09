@@ -30,14 +30,17 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/register") || pathname.startsWith("/auth/callback");
   const isOnboardingRoute = pathname.startsWith("/onboarding");
+  const isPublicRoute = pathname.startsWith("/r/");
+  const isLandingPage = pathname === "/";
+  const isLegalPage = pathname.startsWith("/confidentialite") || pathname.startsWith("/conditions") || pathname.startsWith("/mentions-legales") || pathname.startsWith("/rgpd") || pathname.startsWith("/securite");
 
-  if (!user && !isAuthRoute && !isOnboardingRoute) {
+  if (!user && !isAuthRoute && !isOnboardingRoute && !isPublicRoute && !isLandingPage && !isLegalPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  if (user && !user.user_metadata?.onboarding_completed && !isOnboardingRoute && !isAuthRoute) {
+  if (user && !user.user_metadata?.onboarding_completed && !isOnboardingRoute && !isAuthRoute && !isPublicRoute && !isLandingPage && !isLegalPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/onboarding/welcome";
     return NextResponse.redirect(url);

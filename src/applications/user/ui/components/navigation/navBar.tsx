@@ -79,7 +79,7 @@ export function NavBar() {
   }
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-50 px-2 pb-safe">
+    <nav className="fixed bottom-0 inset-x-0 z-50 px-2 pb-safe md:hidden">
       <div className="mb-3 flex w-full items-center justify-around gap-1 rounded-3xl bg-white px-2 py-3 shadow-xl shadow-black/10 ring-1 ring-black/6">
         {leftItems.map((item) => <NavItem key={item.href} {...item} />)}
 
