@@ -1,0 +1,10 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@deazl/domain": ["../../packages/domain/src/index.ts"],
+      "@deazl/domain/*": ["../../packages/domain/src/*/index.ts"]
+    }
+  }
+}

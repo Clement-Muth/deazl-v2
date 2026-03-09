@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Deazl",
+    "slug": "deazl",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "deazl",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": { "supportsTablet": false, "bundleIdentifier": "fr.deazl.app" },
+    "android": {
+      "package": "fr.deazl.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#E8571C"
+      }
+    },
+    "web": { "output": "static" },
+    "plugins": ["expo-router", "expo-font"],
+    "experiments": { "typedRoutes": true }
+  }
+}

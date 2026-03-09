@@ -1,9 +1,14 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
+  outputFileTracingRoot: path.join(__dirname, "../../"),
   experimental: {
     swcPlugins: [["@lingui/swc-plugin", {}]],
+  },
+  turbopack: {
+    root: path.join(__dirname, "../../"),
   },
 };
 

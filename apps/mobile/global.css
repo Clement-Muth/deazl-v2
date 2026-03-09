@@ -1,0 +1,24 @@
+@import 'tailwindcss';
+@import 'uniwind';
+@import 'heroui-native/styles';
+
+@source './node_modules/heroui-native/lib';
+
+@layer theme {
+  :root {
+    @variant light {
+      --font-normal: 'Inter_400Regular';
+      --font-medium: 'Inter_500Medium';
+      --font-semibold: 'Inter_600SemiBold';
+      --font-bold: 'Inter_700Bold';
+      --radius: 0.75rem;
+    }
+    @variant dark {
+      --font-normal: 'Inter_400Regular';
+      --font-medium: 'Inter_500Medium';
+      --font-semibold: 'Inter_600SemiBold';
+      --font-bold: 'Inter_700Bold';
+      --radius: 0.75rem;
+    }
+  }
+}
