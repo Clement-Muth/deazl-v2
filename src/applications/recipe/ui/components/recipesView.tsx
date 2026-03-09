@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import type { Recipe } from "@/applications/recipe/domain/entities/recipe";
 import { BottomSheet, SheetHandle, useSheetDismiss } from "@/shared/components/ui/bottomSheet";
@@ -440,6 +440,7 @@ export function RecipesView({ recipes, userPreferences }: Props) {
   const [sort, setSort] = useState<SortOption>("recent");
   const [filterOpen, setFilterOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
@@ -499,6 +500,18 @@ export function RecipesView({ recipes, userPreferences }: Props) {
 
   const heroRecipe = !isFiltering ? recipes[0] : null;
   const gridRecipes = !isFiltering ? recipes.slice(1) : [];
+  const hasMore = visibleCount < gridRecipes.length;
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setVisibleCount((p) => p + PAGE_SIZE); },
+      { rootMargin: "0px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [visibleCount]);
 
   function toggleTag(tag: string) {
     setActiveTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
@@ -647,17 +660,7 @@ export function RecipesView({ recipes, userPreferences }: Props) {
                   </div>
                 ))}
               </div>
-              {visibleCount < gridRecipes.length && (
-                <div className="px-4 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
-                    className="w-full rounded-2xl border border-border bg-card py-3.5 text-sm font-semibold text-muted-foreground shadow-[0_1px_4px_rgba(28,25,23,0.06)] transition active:scale-[0.98]"
-                  >
-                    Voir {Math.min(PAGE_SIZE, gridRecipes.length - visibleCount)} recettes de plus
-                  </button>
-                </div>
-              )}
+              {hasMore && <div ref={sentinelRef} className="h-10" />}
             </div>
           )}
         </>
