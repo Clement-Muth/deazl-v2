@@ -3,6 +3,8 @@ import type { Recipe } from "@/applications/recipe/domain/entities/recipe";
 
 export async function getRecipes(): Promise<Recipe[]> {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
 
   const { data, error } = await supabase
     .from("recipes")
@@ -11,6 +13,7 @@ export async function getRecipes(): Promise<Recipe[]> {
       recipe_ingredients(*),
       recipe_steps(*)
     `)
+    .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
   if (error || !data) return [];
