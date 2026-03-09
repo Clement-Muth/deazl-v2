@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import type { Recipe } from "@/applications/recipe/domain/entities/recipe";
 import { BottomSheet, SheetHandle, useSheetDismiss } from "@/shared/components/ui/bottomSheet";
@@ -440,7 +440,6 @@ export function RecipesView({ recipes, userPreferences }: Props) {
   const [sort, setSort] = useState<SortOption>("recent");
   const [filterOpen, setFilterOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
@@ -500,24 +499,6 @@ export function RecipesView({ recipes, userPreferences }: Props) {
 
   const heroRecipe = !isFiltering ? recipes[0] : null;
   const gridRecipes = !isFiltering ? recipes.slice(1) : [];
-
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [search, activeTags, timeFilter, sort]);
-
-  const handleSentinel = useCallback((entries: IntersectionObserverEntry[]) => {
-    if (entries[0]?.isIntersecting) {
-      setVisibleCount((prev) => prev + PAGE_SIZE);
-    }
-  }, []);
-
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(handleSentinel, { rootMargin: "200px" });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [handleSentinel]);
 
   function toggleTag(tag: string) {
     setActiveTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
@@ -666,7 +647,17 @@ export function RecipesView({ recipes, userPreferences }: Props) {
                   </div>
                 ))}
               </div>
-              <div ref={sentinelRef} className="h-1" />
+              {visibleCount < gridRecipes.length && (
+                <div className="px-4 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
+                    className="w-full rounded-2xl border border-border bg-card py-3.5 text-sm font-semibold text-muted-foreground shadow-[0_1px_4px_rgba(28,25,23,0.06)] transition active:scale-[0.98]"
+                  >
+                    Voir {Math.min(PAGE_SIZE, gridRecipes.length - visibleCount)} recettes de plus
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </>
