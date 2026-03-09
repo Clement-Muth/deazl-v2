@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Trans } from "@lingui/react/macro";
-import { initLinguiFromCookie } from "@/lib/i18n/server";
+import { initLinguiFromCookie, getLocale } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserStores } from "@/applications/user/application/useCases/getUserStores";
 import { getHousehold } from "@/applications/user/application/useCases/getHousehold";
@@ -11,12 +11,13 @@ import { HouseholdSizeEditor } from "@/applications/user/ui/components/household
 import { HouseholdManager } from "@/applications/user/ui/components/householdManager";
 import { DietaryPreferencesEditor } from "@/applications/user/ui/components/dietaryPreferencesEditor";
 import { DisplayNameEditor } from "@/applications/user/ui/components/displayNameEditor";
+import { LanguagePicker } from "@/applications/user/ui/components/languagePicker";
 
 export default async function ProfilePage() {
   await initLinguiFromCookie();
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const [stores, household] = await Promise.all([getUserStores(), getHousehold()]);
+  const [stores, household, locale] = await Promise.all([getUserStores(), getHousehold(), getLocale()]);
 
   const fullName: string = user?.user_metadata?.full_name ?? "";
   const initials = fullName.trim()
@@ -87,6 +88,10 @@ export default async function ProfilePage() {
             <polyline points="9 18 15 12 9 6" />
           </svg>
         </Link>
+
+        <div className="overflow-hidden rounded-2xl bg-card shadow-[0_1px_4px_rgba(28,25,23,0.08)]">
+          <LanguagePicker currentLocale={locale} />
+        </div>
 
         <HouseholdManager initialHousehold={household} currentUserId={user?.id ?? ""} />
 

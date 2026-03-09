@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import type { Recipe } from "@/applications/recipe/domain/entities/recipe";
 import { BottomSheet, SheetHandle, useSheetDismiss } from "@/shared/components/ui/bottomSheet";
+
+const PAGE_SIZE = 12;
 
 const DIETARY_LABELS: Record<string, string> = {
   vegetarian: "Végétarien",
@@ -437,6 +439,8 @@ export function RecipesView({ recipes, userPreferences }: Props) {
   const [timeFilter, setTimeFilter] = useState("any");
   const [sort, setSort] = useState<SortOption>("recent");
   const [filterOpen, setFilterOpen] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
@@ -496,6 +500,24 @@ export function RecipesView({ recipes, userPreferences }: Props) {
 
   const heroRecipe = !isFiltering ? recipes[0] : null;
   const gridRecipes = !isFiltering ? recipes.slice(1) : [];
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [search, activeTags, timeFilter, sort]);
+
+  const handleSentinel = useCallback((entries: IntersectionObserverEntry[]) => {
+    if (entries[0]?.isIntersecting) {
+      setVisibleCount((prev) => prev + PAGE_SIZE);
+    }
+  }, []);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(handleSentinel, { rootMargin: "200px" });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [handleSentinel]);
 
   function toggleTag(tag: string) {
     setActiveTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
@@ -638,12 +660,13 @@ export function RecipesView({ recipes, userPreferences }: Props) {
                 Toutes les recettes
               </p>
               <div className="grid grid-cols-2 gap-3 px-4">
-                {gridRecipes.map((recipe, i) => (
+                {gridRecipes.slice(0, visibleCount).map((recipe, i) => (
                   <div key={recipe.id} style={{ animation: `fadeSlideUp 0.35s ${i * 35}ms cubic-bezier(0.22,1,0.36,1) both` }}>
                     <GridCard recipe={recipe} />
                   </div>
                 ))}
               </div>
+              <div ref={sentinelRef} className="h-1" />
             </div>
           )}
         </>
