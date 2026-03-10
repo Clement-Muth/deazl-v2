@@ -7,8 +7,10 @@
     "icon": "./assets/icon.png",
     "scheme": "deazl",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "ios": { "supportsTablet": false, "bundleIdentifier": "fr.deazl.app" },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "fr.deazl.app"
+    },
     "android": {
       "package": "fr.deazl.app",
       "adaptiveIcon": {
@@ -16,8 +18,24 @@
         "backgroundColor": "#E8571C"
       }
     },
-    "web": { "output": "static" },
-    "plugins": ["expo-router", "expo-font"],
-    "experiments": { "typedRoutes": true }
+    "web": {
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Deazl utilise la caméra pour scanner les codes-barres des produits.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }

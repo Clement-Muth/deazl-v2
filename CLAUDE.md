@@ -49,6 +49,11 @@ Bounded Contexts : catalog | recipe | planning | shopping | pantry | analytics |
 - Ne jamais écrire de texte UI en dur dans le JSX sans le wrapper `<Trans>` ou `` t`...` ``
 - Exemple : `<p><Trans>Mes recettes</Trans></p>`, `placeholder={t\`Rechercher…\`}`
 
+## Mode de collaboration
+- **Débattre avant d'implémenter** : ne jamais coder une solution sans qu'elle ait été discutée et validée ensemble
+- **Être critique** : contredire si la solution proposée semble mauvaise, expliquer pourquoi, proposer une alternative
+- **Pas d'implémentation unilatérale** : chaque décision technique ou UX se prend ensemble après débat
+
 ## Style de code
 - **Jamais de commentaires** dans le code (ni `//`, ni `/* */`, ni JSDoc)
 

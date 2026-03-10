@@ -12,6 +12,26 @@
       --font-semibold: 'Inter_600SemiBold';
       --font-bold: 'Inter_700Bold';
       --radius: 0.75rem;
+
+      /* Deazl web palette */
+      --background: #FAF9F6;
+      --foreground: #1C1917;
+      --accent: #E8571C;
+      --accent-foreground: #ffffff;
+      --muted: #78716C;
+      --default: #F5F3EF;
+      --default-foreground: #1C1917;
+      --border: #E8E5E0;
+      --separator: #E8E5E0;
+      --danger: #DC2626;
+      --danger-foreground: #ffffff;
+
+      /* Form fields */
+      --field-background: #F5F3EF;
+      --field-foreground: #1C1917;
+      --field-placeholder: #A8A29E;
+      --field-border: #E8E5E0;
+      --field-border-width: 1px;
     }
     @variant dark {
       --font-normal: 'Inter_400Regular';
