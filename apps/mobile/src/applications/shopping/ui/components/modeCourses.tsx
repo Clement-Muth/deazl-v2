@@ -6,6 +6,9 @@ import {
   ActivityIndicator,
   BackHandler,
   Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -16,7 +19,7 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import Svg, { Line, Path, Polyline, Rect } from "react-native-svg";
 import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Animated, { useSharedValue, useAnimatedStyle, withSequence, withTiming, withSpring } from "react-native-reanimated";
-import { BottomSheet } from "heroui-native";
+import { BottomModal } from "./bottomModal";
 import { findOrCreateProduct } from "../../application/useCases/findOrCreateProduct";
 import { getOffProductByBarcode } from "../../application/useCases/searchOffProducts";
 import type { OFFProductResult } from "../../application/useCases/searchOffProducts";
@@ -28,6 +31,8 @@ import { reportProductPrice } from "../../application/useCases/reportProductPric
 import { reportIngredientPrice } from "../../application/useCases/reportIngredientPrice";
 import { reportPriceForProduct } from "../../application/useCases/reportPriceForProduct";
 import { toggleShoppingItem } from "../../application/useCases/toggleShoppingItem";
+import { transferCheckedToPantry } from "../../application/useCases/transferCheckedToPantry";
+import { clearCheckedItems } from "../../application/useCases/clearCheckedItems";
 import {
   getSplitSettings,
   updateSplitSettings,
@@ -53,44 +58,6 @@ function budgetBarColor(total: number, cap: number, color: string): string {
   return color;
 }
 
-function NumPad({ value, onChange, keyHeight = 68 }: { value: string; onChange: (v: string) => void; keyHeight?: number }) {
-  const rows = [["1","2","3"],["4","5","6"],["7","8","9"],[".", "0","⌫"]];
-
-  function press(key: string) {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (key === "⌫") { onChange(value.slice(0, -1)); return; }
-    if (key === ".") { if (value.includes(".")) return; onChange((value || "0") + "."); return; }
-    const [, dec] = value.split(".");
-    if (dec !== undefined && dec.length >= 2) return;
-    if (value.replace(".", "").length >= 5) return;
-    onChange(value === "0" ? key : value + key);
-  }
-
-  return (
-    <View style={{ gap: 8 }}>
-      {rows.map((row, r) => (
-        <View key={r} style={{ flexDirection: "row", gap: 8 }}>
-          {row.map((key) => (
-            <Pressable
-              key={key}
-              onPress={() => press(key)}
-              style={({ pressed }) => ({
-                flex: 1, height: keyHeight, borderRadius: 16,
-                backgroundColor: key === "⌫" ? "#FEE2E280" : pressed ? "#E2DED8" : "#EDEAE4",
-                alignItems: "center", justifyContent: "center",
-                transform: [{ scale: pressed ? 0.92 : 1 }],
-              })}
-            >
-              <Text style={{ fontSize: key === "⌫" ? 18 : 24, fontWeight: "600", color: key === "⌫" ? "#DC2626" : "#1C1917" }}>
-                {key}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      ))}
-    </View>
-  );
-}
 
 function StoreSelectorModal({
   isOpen,
@@ -190,20 +157,11 @@ function SplitEditSheet({
     }));
   }
 
-  function handleClose(v: boolean) {
-    if (!v) onSave(draft);
-    onOpenChange(v);
-  }
-
   return (
-    <BottomSheet isOpen={isOpen} onOpenChange={handleClose}>
-      <BottomSheet.Portal>
-        <BottomSheet.Overlay />
-        <BottomSheet.Content snapPoints={["55%"]}>
+    <BottomModal isOpen={isOpen} onClose={() => { onSave(draft); onOpenChange(false); }}>
           <View style={{ gap: 20 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 4 }}>
+            <View style={{ paddingVertical: 4 }}>
               <Text style={{ fontSize: 17, fontWeight: "900", color: "#1C1917" }}>Partager les dépenses</Text>
-              <BottomSheet.Close />
             </View>
 
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#F9F8F6", borderRadius: 16, padding: 16 }}>
@@ -278,66 +236,80 @@ function SplitEditSheet({
               </View>
             )}
           </View>
-        </BottomSheet.Content>
-      </BottomSheet.Portal>
-    </BottomSheet>
+    </BottomModal>
   );
 }
 
-function getProjectedMemberIdx(memberTotals: number[], split: SplitSettings, lockedIdx?: number): number {
-  if (lockedIdx !== undefined) return lockedIdx;
-  if (!split.enabled || split.members.length < 2) return 0;
-  let best = 0;
-  let bestRem = split.members[0].budgetCap - (memberTotals[0] ?? 0);
-  for (let i = 1; i < split.members.length; i++) {
-    const rem = split.members[i].budgetCap - (memberTotals[i] ?? 0);
-    if (rem > bestRem) { bestRem = rem; best = i; }
-  }
-  return best;
-}
 
 interface PricePromptProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   item: ShoppingItem | null;
   prefillPrice: string;
-  confirmedTotal: number;
-  memberTotals: number[];
-  splitSettings: SplitSettings;
-  lockedMemberIdx?: number;
   hasProduct: boolean;
-  onConfirm: (actualPaid: number, mode: "total" | "kg", kgPrice?: number) => void;
+  onConfirm: (actualPaid: number, mode: "total" | "kg", kgPrice?: number, actualQty?: number, promo?: { normalUnitPrice: number; promoTriggerQty: number }) => void;
   onSkip: () => void;
   onCheckWithoutPrice: () => void;
   onRescan?: () => void;
 }
 
-function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, confirmedTotal, memberTotals, splitSettings, lockedMemberIdx, hasProduct, onConfirm, onSkip, onCheckWithoutPrice, onRescan }: PricePromptProps) {
+function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, hasProduct, onConfirm, onSkip, onCheckWithoutPrice, onRescan }: PricePromptProps) {
   const [value, setValue] = useState(prefillPrice);
   const [priceMode, setPriceMode] = useState<"total" | "kg">("total");
   const [kgStep, setKgStep] = useState<"price" | "weight">("price");
   const [kgPriceValue, setKgPriceValue] = useState("");
-  useEffect(() => { setValue(prefillPrice); setKgStep("price"); setKgPriceValue(""); }, [prefillPrice]);
+  const [actualQty, setActualQty] = useState(item?.quantity || 1);
+  const [isPromo, setIsPromo] = useState(false);
+  const [normalPriceValue, setNormalPriceValue] = useState("");
+  const [discountValue, setDiscountValue] = useState("");
+  const priceInputRef = useRef<TextInput>(null);
+  const normalPriceInputRef = useRef<TextInput>(null);
+  useEffect(() => {
+    setValue(prefillPrice);
+    setKgStep("price");
+    setKgPriceValue("");
+    setActualQty(item?.quantity || 1);
+    setIsPromo(false);
+    setNormalPriceValue("");
+    setDiscountValue("");
+  }, [prefillPrice, item?.id]);
+  useEffect(() => {
+    if (isOpen) {
+      const t = setTimeout(() => priceInputRef.current?.focus(), 200);
+      return () => clearTimeout(t);
+    }
+  }, [isOpen, kgStep]);
+  function handlePriceChange(text: string) {
+    const cleaned = text.replace(",", ".");
+    if (cleaned === "" || /^\d{0,5}(\.\d{0,2})?$/.test(cleaned)) setValue(cleaned);
+  }
+  function handleNormalPriceChange(text: string) {
+    const cleaned = text.replace(",", ".");
+    if (cleaned === "" || /^\d{0,5}(\.\d{0,2})?$/.test(cleaned)) setNormalPriceValue(cleaned);
+  }
+  function handleDiscountChange(text: string) {
+    const cleaned = text.replace(",", ".");
+    if (cleaned === "" || /^\d{0,3}(\.\d{0,1})?$/.test(cleaned)) setDiscountValue(cleaned);
+  }
 
   const parsed = parseFloat(value);
   const valid = !Number.isNaN(parsed) && parsed > 0;
   const isWeightStep = priceMode === "kg" && kgStep === "weight";
   const kgPriceNum = parseFloat(kgPriceValue);
-
-  const addedPrice = (() => {
-    if (isWeightStep) {
-      const w = valid ? parsed : 0;
-      return !Number.isNaN(kgPriceNum) ? kgPriceNum * (w / 1000) : 0;
-    }
-    return priceMode === "kg" ? 0 : (valid ? parsed : 0);
+  const normalPriceNum = parseFloat(normalPriceValue);
+  const discountNum = parseFloat(discountValue);
+  const calcSuggestion = (() => {
+    if (!isPromo) return null;
+    if (Number.isNaN(normalPriceNum) || normalPriceNum <= 0) return null;
+    if (Number.isNaN(discountNum) || discountNum < 0 || discountNum > 100) return null;
+    const total = (actualQty - 1) * normalPriceNum + normalPriceNum * (1 - discountNum / 100);
+    return total.toFixed(2);
   })();
-
-  const projectedTotal = confirmedTotal + addedPrice;
-  const projectedMemberIdx = getProjectedMemberIdx(memberTotals, splitSettings, lockedMemberIdx);
-  const projectedMemberTotals = memberTotals.map((t, i) => i === projectedMemberIdx ? t + addedPrice : t);
+  const promoValid = !isPromo || (!Number.isNaN(normalPriceNum) && normalPriceNum > 0);
+  const canConfirm = valid && promoValid;
 
   function handleConfirm() {
-    if (!valid) return;
+    if (!canConfirm) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     if (priceMode === "kg" && kgStep === "price") {
       setKgPriceValue(value);
@@ -347,161 +319,214 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, confirmedTotal,
       const actualPaid = kgPriceNum * (parsed / 1000);
       onConfirm(actualPaid, "kg", kgPriceNum);
     } else {
-      onConfirm(parsed, "total");
+      const promo = isPromo && normalPriceNum > 0
+        ? { normalUnitPrice: normalPriceNum, promoTriggerQty: actualQty }
+        : undefined;
+      const totalPaid = isPromo ? parsed : parsed * actualQty;
+      onConfirm(totalPaid, "total", undefined, actualQty, promo);
     }
   }
 
   return (
-    <BottomSheet isOpen={isOpen} onOpenChange={onOpenChange}>
-      <BottomSheet.Portal>
-        <BottomSheet.Overlay />
-        <BottomSheet.Content snapPoints={["85%"]}>
-          {item && <View style={{ gap: 12 }}>
-      <View style={{ borderRadius: 14, backgroundColor: "#FAF9F6", padding: 12, gap: 8 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <Text style={{ fontSize: 11, fontWeight: "600", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 1 }}>Panier</Text>
-          <View style={{ flexDirection: "row", alignItems: "baseline", gap: 4 }}>
-            {addedPrice > 0 ? (
-              <>
-                <Text style={{ fontSize: 12, color: "#A8A29E" }}>{confirmedTotal.toFixed(2)}</Text>
-                <Text style={{ fontSize: 11, color: "#C4B8AF" }}> +{addedPrice.toFixed(2)} =</Text>
-                <Text style={{ fontSize: 15, fontWeight: "900", color: "#1C1917" }}>{projectedTotal.toFixed(2)} €</Text>
-              </>
-            ) : (
-              <Text style={{ fontSize: 15, fontWeight: "900", color: "#1C1917" }}>{confirmedTotal.toFixed(2)} €</Text>
-            )}
-          </View>
-        </View>
-        {splitSettings.enabled && splitSettings.members.length >= 2 && (
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            {splitSettings.members.map((m, i) => {
-              const t = projectedMemberTotals[i] ?? 0;
-              const ratio = Math.min(t / m.budgetCap, 1);
-              const barColor = budgetBarColor(t, m.budgetCap, m.color);
-              const isAssigned = i === projectedMemberIdx && addedPrice > 0;
-              return (
-                <View key={i} style={{ flex: 1, gap: 3 }}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: m.color }} />
-                      <Text style={{ fontSize: 10, fontWeight: "700", color: "#44403C" }}>{m.name.slice(0, 8)}</Text>
-                      {isAssigned && <Text style={{ fontSize: 9, color: m.color, fontWeight: "700" }}>← ce</Text>}
-                    </View>
-                    <Text style={{ fontSize: 10, fontWeight: "700", color: barColor === "#DC2626" ? "#DC2626" : "#78716C" }}>
-                      {t.toFixed(2)}<Text style={{ fontWeight: "400", color: "#A8A29E" }}>/{m.budgetCap}€</Text>
-                    </Text>
-                  </View>
-                  <View style={{ height: 4, borderRadius: 99, backgroundColor: "#EDEAE4" }}>
-                    <View style={{ height: 4, borderRadius: 99, backgroundColor: barColor, width: `${ratio * 100}%` }} />
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        )}
-      </View>
+    <BottomModal isOpen={isOpen} onClose={() => onOpenChange(false)} height="auto">
+      {item && (
+        <View style={{ gap: 14 }}>
 
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <View style={{ flex: 1, marginRight: 12 }}>
-          {isWeightStep ? (
-            <Pressable onPress={() => { setKgStep("price"); setValue(kgPriceValue); setKgPriceValue(""); }} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                <Polyline points="15 18 9 12 15 6" />
-              </Svg>
-              <Text style={{ fontSize: 13, color: "#E8571C", fontWeight: "600" }}>{kgPriceValue} €/kg</Text>
-            </Pressable>
-          ) : (
-            <>
-              <Text style={{ fontSize: 11, fontWeight: "600", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 2 }}>
-                {item.quantity > 1 ? `Prix total · ${item.quantity} ${item.unit}` : "Montant payé"}
-              </Text>
-              <Text style={{ fontSize: 15, fontWeight: "800", color: "#1C1917" }} numberOfLines={1}>
+          {/* Header : nom produit + Passer */}
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            {isWeightStep ? (
+              <Pressable
+                onPress={() => { setKgStep("price"); setValue(kgPriceValue); setKgPriceValue(""); }}
+                hitSlop={8}
+                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+              >
+                <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                  <Polyline points="15 18 9 12 15 6" />
+                </Svg>
+                <Text style={{ fontSize: 13, color: "#E8571C", fontWeight: "600" }}>{kgPriceValue} €/kg</Text>
+              </Pressable>
+            ) : (
+              <Text style={{ fontSize: 17, fontWeight: "800", color: "#1C1917", flex: 1, marginRight: 12 }} numberOfLines={1}>
                 {item.customName}
               </Text>
-            </>
-          )}
-        </View>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
-          {!isWeightStep && onRescan && (
-            <Pressable onPress={onRescan} hitSlop={12}>
-              <Text style={{ fontSize: 13, color: "#E8571C", fontWeight: "600" }}>Autre produit</Text>
+            )}
+            <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onSkip(); }} hitSlop={16}>
+              <Text style={{ fontSize: 14, color: "#C4B8AF", fontWeight: "500" }}>Passer</Text>
             </Pressable>
+          </View>
+
+          {/* Mode toggle (sans produit scanné) */}
+          {!hasProduct && !isWeightStep && (
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {(["total", "kg"] as const).map((mode) => (
+                <Pressable
+                  key={mode}
+                  onPress={() => { Haptics.selectionAsync(); setPriceMode(mode); }}
+                  style={{
+                    flex: 1, paddingVertical: 9, borderRadius: 12, alignItems: "center",
+                    backgroundColor: priceMode === mode ? "#1C1917" : "#F0EDE8",
+                  }}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: priceMode === mode ? "#fff" : "#78716C" }}>
+                    {mode === "total" ? "Prix unitaire" : "Prix au kg"}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           )}
-          {!isWeightStep && (
-            <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onCheckWithoutPrice(); }} hitSlop={12}>
-              <Text style={{ fontSize: 13, color: "#78716C", fontWeight: "600" }}>✓ Sans prix</Text>
-            </Pressable>
+
+          {/* Stepper quantité */}
+          {!isWeightStep && priceMode === "total" && (
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 16 }}>
+              <Pressable
+                onPress={() => { Haptics.selectionAsync(); setActualQty((q) => Math.max(1, q - 1)); }}
+                style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: "#F0EDE8", alignItems: "center", justifyContent: "center" }}
+              >
+                <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                  <Line x1={5} y1={12} x2={19} y2={12} />
+                </Svg>
+              </Pressable>
+              <View style={{ alignItems: "center", minWidth: 52 }}>
+                <Text style={{ fontSize: 20, fontWeight: "900", color: "#1C1917" }}>{actualQty}</Text>
+                <Text style={{ fontSize: 11, color: "#A8A29E" }}>{item.unit || "pièce"}</Text>
+              </View>
+              <Pressable
+                onPress={() => { Haptics.selectionAsync(); setActualQty((q) => q + 1); }}
+                style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: "#E8571C1a", alignItems: "center", justifyContent: "center" }}
+              >
+                <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                  <Line x1={12} y1={5} x2={12} y2={19} /><Line x1={5} y1={12} x2={19} y2={12} />
+                </Svg>
+              </Pressable>
+            </View>
           )}
-          <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onSkip(); }} hitSlop={16}>
-            <Text style={{ fontSize: 13, color: "#C4B8AF", fontWeight: "500" }}>Passer</Text>
+
+          {/* Saisie prix */}
+          <View style={{
+            borderRadius: 16, backgroundColor: "#FAF9F6",
+            paddingVertical: 14, paddingHorizontal: 20,
+            flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4,
+          }}>
+            <TextInput
+              ref={priceInputRef}
+              value={value}
+              onChangeText={handlePriceChange}
+              keyboardType="decimal-pad"
+              returnKeyType="done"
+              onSubmitEditing={handleConfirm}
+              placeholder="0"
+              placeholderTextColor="#D1CCC5"
+              style={{ fontSize: 46, fontWeight: "900", color: "#1C1917", letterSpacing: -2, minWidth: 60, textAlign: "right" }}
+            />
+            <Text style={{ fontSize: 24, fontWeight: "700", color: "#A8A29E", marginBottom: 2 }}>
+              {isWeightStep ? "g" : (!hasProduct && priceMode === "kg" ? "€/kg" : "€")}
+            </Text>
+          </View>
+
+          {isWeightStep && (
+            <Text style={{ fontSize: 12, fontWeight: "600", color: "#A8A29E", textAlign: "center", textTransform: "uppercase", letterSpacing: 1 }}>
+              Poids estimé (g)
+            </Text>
+          )}
+          {!isWeightStep && priceMode === "total" && actualQty > 1 && valid && (
+            <Text style={{ fontSize: 12, fontWeight: "600", color: "#A8A29E", textAlign: "center" }}>
+              {isPromo
+                ? `${parsed.toFixed(2)} € ÷ ${actualQty} = ${(parsed / actualQty).toFixed(2)} €/unité`
+                : `${parsed.toFixed(2)} € × ${actualQty} = ${(parsed * actualQty).toFixed(2)} €`}
+            </Text>
+          )}
+
+          {/* Toggle promo */}
+          {!isWeightStep && priceMode === "total" && (
+            <View style={{ gap: 10 }}>
+              <Pressable
+                onPress={() => { Haptics.selectionAsync(); setIsPromo((v) => !v); if (!isPromo) setTimeout(() => normalPriceInputRef.current?.focus(), 100); }}
+                style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: isPromo ? "#FFF7F4" : "#FAF9F6", borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1, borderColor: isPromo ? "#F5C4B0" : "transparent" }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: "700", color: isPromo ? "#E8571C" : "#78716C" }}>🏷 C'est une promo</Text>
+                <View style={{ width: 44, height: 26, borderRadius: 13, backgroundColor: isPromo ? "#E8571C" : "#D1CCC5", justifyContent: "center", padding: 2 }}>
+                  <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: "#fff", alignSelf: isPromo ? "flex-end" : "flex-start", shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 2 }} />
+                </View>
+              </Pressable>
+
+              {isPromo && (
+                <View style={{ gap: 8 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#FAF9F6", borderRadius: 14, paddingVertical: 10, paddingHorizontal: 16, gap: 8 }}>
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: "#A8A29E", flex: 1 }}>Prix normal unitaire</Text>
+                    <TextInput
+                      ref={normalPriceInputRef}
+                      value={normalPriceValue}
+                      onChangeText={handleNormalPriceChange}
+                      keyboardType="decimal-pad"
+                      returnKeyType="done"
+                      placeholder="0.00"
+                      placeholderTextColor="#D1CCC5"
+                      style={{ fontSize: 18, fontWeight: "800", color: "#1C1917", textAlign: "right", minWidth: 60 }}
+                    />
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: "#A8A29E" }}>€</Text>
+                  </View>
+
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <View style={{ flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: "#FAF9F6", borderRadius: 14, paddingVertical: 10, paddingHorizontal: 16, gap: 8 }}>
+                      <Text style={{ fontSize: 13, fontWeight: "600", color: "#A8A29E", flex: 1 }}>
+                        {actualQty > 1 ? `Remise sur le ${actualQty}ème` : "Remise"}
+                      </Text>
+                      <TextInput
+                        value={discountValue}
+                        onChangeText={handleDiscountChange}
+                        keyboardType="decimal-pad"
+                        returnKeyType="done"
+                        placeholder="50"
+                        placeholderTextColor="#D1CCC5"
+                        style={{ fontSize: 18, fontWeight: "800", color: "#1C1917", textAlign: "right", minWidth: 40 }}
+                      />
+                      <Text style={{ fontSize: 14, fontWeight: "700", color: "#A8A29E" }}>%</Text>
+                    </View>
+                    {calcSuggestion && (
+                      <Pressable
+                        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setValue(calcSuggestion); }}
+                        style={({ pressed }) => ({ borderRadius: 14, paddingVertical: 10, paddingHorizontal: 14, backgroundColor: pressed ? "#D14A18" : "#E8571C" })}
+                      >
+                        <Text style={{ fontSize: 14, fontWeight: "800", color: "#fff" }}>{calcSuggestion} €</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Bouton principal */}
+          <Pressable
+            onPress={handleConfirm}
+            style={({ pressed }) => ({
+              borderRadius: 18, paddingVertical: 16, alignItems: "center",
+              backgroundColor: canConfirm ? (pressed ? "#C94415" : "#E8571C") : "#F0EDE8",
+              transform: [{ scale: pressed && canConfirm ? 0.97 : 1 }],
+            })}
+          >
+            <Text style={{ fontSize: 17, fontWeight: "900", color: canConfirm ? "#fff" : "#A8A29E", letterSpacing: -0.3 }}>
+              {isWeightStep ? "✓ Confirmer le poids" : (priceMode === "kg" ? "Suivant →" : "✓ Confirmer")}
+            </Text>
           </Pressable>
-        </View>
-      </View>
 
-      {!hasProduct && !isWeightStep && (
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          {(["total", "kg"] as const).map((mode) => (
-            <Pressable
-              key={mode}
-              onPress={() => { Haptics.selectionAsync(); setPriceMode(mode); }}
-              style={{
-                flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: "center",
-                backgroundColor: priceMode === mode ? "#1C1917" : "#F0EDE8",
-              }}
-            >
-              <Text style={{ fontSize: 13, fontWeight: "700", color: priceMode === mode ? "#fff" : "#78716C" }}>
-                {mode === "total" ? (item.quantity > 1 ? `Total · ${item.quantity} ${item.unit}` : "Montant payé") : "Prix au kg"}
-              </Text>
-            </Pressable>
-          ))}
+          {/* Actions secondaires */}
+          {!isWeightStep && (
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 28 }}>
+              {onRescan && (
+                <Pressable onPress={onRescan} hitSlop={12}>
+                  <Text style={{ fontSize: 13, color: "#E8571C", fontWeight: "600" }}>Autre produit</Text>
+                </Pressable>
+              )}
+              <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onCheckWithoutPrice(); }} hitSlop={12}>
+                <Text style={{ fontSize: 13, color: "#78716C", fontWeight: "600" }}>✓ Sans prix</Text>
+              </Pressable>
+            </View>
+          )}
+
         </View>
       )}
-
-      <View style={{
-        borderRadius: 16, backgroundColor: "#FAF9F6",
-        paddingVertical: 14, paddingHorizontal: 20,
-        flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4,
-      }}>
-        <Text style={{
-          fontSize: value ? 46 : 36, fontWeight: "900",
-          color: value ? "#1C1917" : "#D1CCC5", letterSpacing: -2,
-          minWidth: 60, textAlign: "right",
-        }}>
-          {value || "0"}
-        </Text>
-        <Text style={{ fontSize: 24, fontWeight: "700", color: "#A8A29E", marginBottom: 2 }}>
-          {isWeightStep ? "g" : (!hasProduct && priceMode === "kg" ? "€/kg" : "€")}
-        </Text>
-      </View>
-
-      {isWeightStep && (
-        <Text style={{ fontSize: 12, fontWeight: "600", color: "#A8A29E", textAlign: "center", textTransform: "uppercase", letterSpacing: 1 }}>
-          Poids estimé (g)
-        </Text>
-      )}
-      {!isWeightStep && priceMode === "total" && item.quantity > 1 && valid && (
-        <Text style={{ fontSize: 12, fontWeight: "600", color: "#A8A29E", textAlign: "center" }}>
-          = {(parsed / item.quantity).toFixed(2)} € / {item.unit}
-        </Text>
-      )}
-      <NumPad value={value} onChange={setValue} keyHeight={58} />
-
-      <Pressable
-        onPress={handleConfirm}
-        style={({ pressed }) => ({
-          borderRadius: 18, paddingVertical: 18, alignItems: "center",
-          backgroundColor: valid ? (pressed ? "#C94415" : "#E8571C") : "#F0EDE8",
-          transform: [{ scale: pressed && valid ? 0.97 : 1 }],
-        })}
-      >
-        <Text style={{ fontSize: 17, fontWeight: "900", color: valid ? "#fff" : "#A8A29E", letterSpacing: -0.3 }}>
-          {isWeightStep ? "✓ Confirmer le poids" : (priceMode === "kg" ? "Suivant →" : "✓ Confirmer")}
-        </Text>
-      </Pressable>
-          </View>}
-        </BottomSheet.Content>
-      </BottomSheet.Portal>
-    </BottomSheet>
+    </BottomModal>
   );
 }
 
@@ -523,6 +548,7 @@ function AddItemSheet({
   const [priceMode, setPriceMode] = useState<"total" | "kg">("total");
   const [kgPriceValue, setKgPriceValue] = useState("");
   const nameInputRef = useRef<TextInput>(null);
+  const priceInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     if (!isOpen) {
@@ -538,7 +564,16 @@ function AddItemSheet({
       const t = setTimeout(() => nameInputRef.current?.focus(), 50);
       return () => clearTimeout(t);
     }
+    if (isOpen && (step === "price" || step === "weight")) {
+      const t = setTimeout(() => priceInputRef.current?.focus(), 100);
+      return () => clearTimeout(t);
+    }
   }, [step]);
+
+  function handleChangePriceValue(text: string) {
+    const cleaned = text.replace(",", ".");
+    if (cleaned === "" || /^\d{0,5}(\.\d{0,2})?$/.test(cleaned)) setPriceValue(cleaned);
+  }
 
   const parsed = parseFloat(priceValue);
   const priceValid = !Number.isNaN(parsed) && parsed > 0;
@@ -572,11 +607,8 @@ function AddItemSheet({
   ) : null;
 
   return (
-    <BottomSheet isOpen={isOpen} onOpenChange={onOpenChange}>
-      <BottomSheet.Portal>
-        <BottomSheet.Overlay />
-        <BottomSheet.Content snapPoints={["88%"]}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 16 }}>
+    <BottomModal isOpen={isOpen} onClose={() => onOpenChange(false)} height="60%">
+          <View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 16 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
               {step !== "name" && (
                 <Pressable
@@ -595,7 +627,6 @@ function AddItemSheet({
                 {step === "name" ? "Ajouter un article" : name}
               </Text>
             </View>
-            <BottomSheet.Close />
           </View>
 
           <View style={{ gap: 14 }}>
@@ -652,17 +683,20 @@ function AddItemSheet({
                   paddingVertical: 14, paddingHorizontal: 20,
                   flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4,
                 }}>
-                  <Text style={{
-                    fontSize: priceValue ? 46 : 36, fontWeight: "900",
-                    color: priceValue ? "#1C1917" : "#D1CCC5", letterSpacing: -2, minWidth: 60, textAlign: "right",
-                  }}>
-                    {priceValue || "0"}
-                  </Text>
+                  <TextInput
+                    ref={priceInputRef}
+                    value={priceValue}
+                    onChangeText={handleChangePriceValue}
+                    keyboardType="decimal-pad"
+                    returnKeyType="done"
+                    placeholder="0"
+                    placeholderTextColor="#D1CCC5"
+                    style={{ fontSize: 46, fontWeight: "900", color: "#1C1917", letterSpacing: -2, minWidth: 60, textAlign: "right" }}
+                  />
                   <Text style={{ fontSize: 24, fontWeight: "700", color: "#A8A29E", marginBottom: 2 }}>
                     {priceMode === "kg" ? "€/kg" : "€"}
                   </Text>
                 </View>
-                <NumPad value={priceValue} onChange={setPriceValue} keyHeight={60} />
                 <Pressable
                   onPress={() => {
                     if (!priceValid) return;
@@ -699,15 +733,18 @@ function AddItemSheet({
                   paddingVertical: 14, paddingHorizontal: 20,
                   flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4,
                 }}>
-                  <Text style={{
-                    fontSize: priceValue ? 46 : 36, fontWeight: "900",
-                    color: priceValue ? "#1C1917" : "#D1CCC5", letterSpacing: -2, minWidth: 60, textAlign: "right",
-                  }}>
-                    {priceValue || "0"}
-                  </Text>
+                  <TextInput
+                    ref={priceInputRef}
+                    value={priceValue}
+                    onChangeText={handleChangePriceValue}
+                    keyboardType="decimal-pad"
+                    returnKeyType="done"
+                    placeholder="0"
+                    placeholderTextColor="#D1CCC5"
+                    style={{ fontSize: 46, fontWeight: "900", color: "#1C1917", letterSpacing: -2, minWidth: 60, textAlign: "right" }}
+                  />
                   <Text style={{ fontSize: 24, fontWeight: "700", color: "#A8A29E", marginBottom: 2 }}>g</Text>
                 </View>
-                <NumPad value={priceValue} onChange={setPriceValue} keyHeight={60} />
                 <Pressable
                   onPress={() => {
                     if (!priceValid) return;
@@ -729,9 +766,7 @@ function AddItemSheet({
               </>
             )}
           </View>
-        </BottomSheet.Content>
-      </BottomSheet.Portal>
-    </BottomSheet>
+    </BottomModal>
   );
 }
 
@@ -867,10 +902,22 @@ function EditVirtualPricePanel({ name, currentPrice, onConfirm, onClose }: {
   onClose: () => void;
 }) {
   const [value, setValue] = useState(currentPrice > 0 ? currentPrice.toFixed(2) : "");
+  const inputRef = useRef<TextInput>(null);
   const parsed = parseFloat(value);
   const valid = !Number.isNaN(parsed) && parsed > 0;
+  useEffect(() => {
+    const t = setTimeout(() => inputRef.current?.focus(), 100);
+    return () => clearTimeout(t);
+  }, []);
+  function handleChange(text: string) {
+    const cleaned = text.replace(",", ".");
+    if (cleaned === "" || /^\d{0,5}(\.\d{0,2})?$/.test(cleaned)) setValue(cleaned);
+  }
   return (
-    <View style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.4)", zIndex: 10 }}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.4)", zIndex: 10 }}
+    >
       <Pressable style={{ flex: 1 }} onPress={onClose} />
       <View style={{
         backgroundColor: "#fff", borderTopLeftRadius: 28, borderTopRightRadius: 28,
@@ -889,12 +936,19 @@ function EditVirtualPricePanel({ name, currentPrice, onConfirm, onClose }: {
           paddingVertical: 14, paddingHorizontal: 20,
           flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4,
         }}>
-          <Text style={{ fontSize: value ? 46 : 36, fontWeight: "900", color: value ? "#1C1917" : "#D1CCC5", letterSpacing: -2, minWidth: 60, textAlign: "right" }}>
-            {value || "0"}
-          </Text>
+          <TextInput
+            ref={inputRef}
+            value={value}
+            onChangeText={handleChange}
+            keyboardType="decimal-pad"
+            returnKeyType="done"
+            onSubmitEditing={() => { if (valid) { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); onConfirm(parsed); } }}
+            placeholder="0"
+            placeholderTextColor="#D1CCC5"
+            style={{ fontSize: 46, fontWeight: "900", color: "#1C1917", letterSpacing: -2, minWidth: 60, textAlign: "right" }}
+          />
           <Text style={{ fontSize: 24, fontWeight: "700", color: "#A8A29E", marginBottom: 2 }}>€</Text>
         </View>
-        <NumPad value={value} onChange={setValue} keyHeight={58} />
         <Pressable
           onPress={() => { if (valid) { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); onConfirm(parsed); } }}
           style={({ pressed }) => ({
@@ -906,7 +960,7 @@ function EditVirtualPricePanel({ name, currentPrice, onConfirm, onClose }: {
           <Text style={{ fontSize: 17, fontWeight: "900", color: valid ? "#fff" : "#A8A29E", letterSpacing: -0.3 }}>✓ Confirmer</Text>
         </Pressable>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -919,7 +973,9 @@ function CheckoutSummary({
   confirmedTotal,
   onClose,
   onFinish,
+  onFinishWithPantry,
   onEditPrice,
+  onRebalance,
 }: {
   checkedItems: ShoppingItem[];
   virtualItems: VirtualItem[];
@@ -929,7 +985,9 @@ function CheckoutSummary({
   confirmedTotal: number;
   onClose: () => void;
   onFinish: () => void;
+  onFinishWithPantry: () => void;
   onEditPrice: (item: ShoppingItem) => void;
+  onRebalance: () => void;
 }) {
   const hasSplit = splitSettings.enabled && splitSettings.members.length >= 2;
 
@@ -962,6 +1020,23 @@ function CheckoutSummary({
               {checkedItems.length + virtualItems.length} article{checkedItems.length + virtualItems.length > 1 ? "s" : ""}
             </Text>
           </View>
+
+          {hasSplit && (
+            <Pressable
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onRebalance(); }}
+              style={({ pressed }) => ({
+                flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+                borderRadius: 14, paddingVertical: 12,
+                backgroundColor: pressed ? "#EDEAE4" : "#F0EDE8",
+              })}
+            >
+              <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                <Path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <Path d="M3 3v5h5" />
+              </Svg>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: "#78716C" }}>Rééquilibrer la répartition</Text>
+            </Pressable>
+          )}
 
           {hasSplit && splitSettings.members.map((m, i) => {
             const total = memberTotals[i] ?? 0;
@@ -1058,22 +1133,59 @@ function CheckoutSummary({
             </View>
           )}
 
-          <Pressable
-            onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); onFinish(); }}
-            style={({ pressed }) => ({
-              borderRadius: 18, paddingVertical: 18, alignItems: "center",
-              backgroundColor: pressed ? "#C94415" : "#E8571C",
-              transform: [{ scale: pressed ? 0.97 : 1 }],
-            })}
-          >
-            <Text style={{ fontSize: 17, fontWeight: "900", color: "#fff", letterSpacing: -0.3 }}>
-              Terminer les courses
-            </Text>
-          </Pressable>
+          <View style={{ gap: 10 }}>
+            <Pressable
+              onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); onFinishWithPantry(); }}
+              style={({ pressed }) => ({
+                borderRadius: 18, paddingVertical: 18, alignItems: "center",
+                backgroundColor: pressed ? "#C94415" : "#E8571C",
+                transform: [{ scale: pressed ? 0.97 : 1 }],
+              })}
+            >
+              <Text style={{ fontSize: 17, fontWeight: "900", color: "#fff", letterSpacing: -0.3 }}>
+                Ajouter au stock + Terminer
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); onFinish(); }}
+              style={{ paddingVertical: 12, alignItems: "center" }}
+            >
+              <Text style={{ fontSize: 15, fontWeight: "600", color: "#A8A29E" }}>
+                Terminer sans mettre au stock
+              </Text>
+            </Pressable>
+          </View>
         </ScrollView>
       </SafeAreaView>
     </View>
   );
+}
+
+function rebalanceAssignments(
+  confirmedPrices: Map<string, number>,
+  currentAssignments: Map<string, number>,
+  lockedAssignments: Set<string>,
+  members: SplitMember[],
+): Map<string, number> {
+  const newAssignments = new Map(currentAssignments);
+  const totals = new Array(members.length).fill(0) as number[];
+  for (const [id, mIdx] of currentAssignments) {
+    if (lockedAssignments.has(id)) totals[mIdx] += confirmedPrices.get(id) ?? 0;
+  }
+  const unlocked = [...currentAssignments.keys()]
+    .filter((id) => !lockedAssignments.has(id))
+    .sort((a, b) => (confirmedPrices.get(b) ?? 0) - (confirmedPrices.get(a) ?? 0));
+  for (const id of unlocked) {
+    let best = 0;
+    let bestRem = members[0].budgetCap - totals[0];
+    for (let i = 1; i < members.length; i++) {
+      const rem = members[i].budgetCap - totals[i];
+      if (rem > bestRem) { bestRem = rem; best = i; }
+    }
+    newAssignments.set(id, best);
+    totals[best] += confirmedPrices.get(id) ?? 0;
+  }
+  return newAssignments;
 }
 
 interface VirtualItem {
@@ -1118,6 +1230,7 @@ export function ModeCourses() {
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [editVirtualId, setEditVirtualId] = useState<string | null>(null);
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const swipeableRefs = useRef<Map<string, { close: () => void }>>(new Map());
 
   useFocusEffect(useCallback(() => {
@@ -1128,39 +1241,37 @@ export function ModeCourses() {
       if (checkoutOpen) { setCheckoutOpen(false); return true; }
       if (storeSelectorOpen && selectedStore) { setStoreSelectorOpen(false); return true; }
       if (storeSelectorOpen) return true;
-      router.navigate("/(tabs)/shopping");
+      confirmLeave();
       return true;
     });
     return () => sub.remove();
   }, [editVirtualId, pricePrompt, scanOpen, checkoutOpen, storeSelectorOpen]));
 
-  useEffect(() => {
-    getSplitSettings().then(setSplitSettings);
-    getUserStores().then((s) => {
-      setStores(s);
-      if (s.length === 1) setSelectedStore(s[0]);
-      setStoresLoaded(true);
-    });
-  }, []);
+  const selectedStoreRef = useRef(selectedStore);
+  useEffect(() => { selectedStoreRef.current = selectedStore; }, [selectedStore]);
 
   const storeSelectorShownRef = useRef(false);
-  const screenFocusedRef = useRef(false);
 
-  useFocusEffect(useCallback(() => {
-    screenFocusedRef.current = true;
-    if (!storeSelectorShownRef.current && storesLoaded && stores.length > 1 && !selectedStore) {
-      storeSelectorShownRef.current = true;
-      setStoreSelectorOpen(true);
-    }
-    return () => { screenFocusedRef.current = false; };
-  }, [storesLoaded, stores.length, selectedStore]));
+  const loadStores = useCallback(async () => {
+    const s = await getUserStores();
+    setStores(s);
+    if (s.length === 1 && !selectedStoreRef.current) setSelectedStore(s[0]);
+    setStoresLoaded(true);
+  }, []);
 
   useEffect(() => {
-    if (!storeSelectorShownRef.current && screenFocusedRef.current && storesLoaded && stores.length > 1 && !selectedStore) {
+    getSplitSettings().then(setSplitSettings);
+    loadStores();
+  }, []);
+
+  useFocusEffect(useCallback(() => {
+    if (storesLoaded && stores.length === 0) loadStores();
+
+    if (!storeSelectorShownRef.current && storesLoaded && stores.length > 1 && !selectedStoreRef.current) {
       storeSelectorShownRef.current = true;
       setStoreSelectorOpen(true);
     }
-  }, [storesLoaded]);
+  }, [storesLoaded, stores.length, loadStores]));
 
   function handleToggle(id: string, isChecked: boolean) {
     setList((prev) => prev ? {
@@ -1257,53 +1368,40 @@ export function ModeCourses() {
     if (shouldReturn) setCheckoutOpen(true);
   }
 
-  async function handleConfirmPrice(actualPaid: number, mode: "total" | "kg" = "total", kgPrice?: number) {
+  async function handleConfirmPrice(actualPaid: number, mode: "total" | "kg" = "total", kgPrice?: number, actualQty?: number, promo?: { normalUnitPrice: number; promoTriggerQty: number }) {
     if (!pricePrompt) return;
     const { item, product, returnToCheckout } = pricePrompt;
+    const qty = actualQty ?? item.quantity ?? 1;
     setPricePrompt(null);
     if (returnToCheckout) setCheckoutOpen(true);
 
     setSession((prev) => {
       const newPrices = new Map(prev.confirmedPrices).set(item.id, actualPaid);
-      const newAssignments = new Map(prev.assignments);
+      let newAssignments = new Map(prev.assignments);
+      if (!newAssignments.has(item.id)) newAssignments.set(item.id, 0);
       const split = splitRef.current;
-
-      if (!prev.lockedAssignments.has(item.id)) {
-        const members = split.members;
-        if (split.enabled && members.length >= 2) {
-          const totals = new Array(members.length).fill(0) as number[];
-          newAssignments.forEach((mIdx, id) => {
-            const p = newPrices.get(id);
-            if (p !== undefined) totals[mIdx] += p;
-          });
-          let best = 0;
-          let bestRemaining = members[0].budgetCap - totals[0];
-          for (let i = 1; i < members.length; i++) {
-            const rem = members[i].budgetCap - totals[i];
-            if (rem > bestRemaining) { bestRemaining = rem; best = i; }
-          }
-          newAssignments.set(item.id, best);
-        } else {
-          newAssignments.set(item.id, 0);
-        }
+      if (split.enabled && split.members.length >= 2) {
+        newAssignments = rebalanceAssignments(newPrices, newAssignments, prev.lockedAssignments, split.members);
+      } else {
+        newAssignments.set(item.id, 0);
       }
-
       return { confirmedPrices: newPrices, assignments: newAssignments, lockedAssignments: prev.lockedAssignments, virtualItems: prev.virtualItems };
     });
 
     handleToggle(item.id, true);
 
     if (selectedStore) {
+      const unitPrice = qty > 1 ? actualPaid / qty : actualPaid;
       if (product) {
-        await reportProductPrice(product, selectedStore.id, actualPaid, item.quantity || 1, item.unit || "pièce");
+        await reportProductPrice(product, selectedStore.id, unitPrice, 1, item.unit || "pièce", promo);
         const productDbId = await findOrCreateProduct(product);
         if (productDbId && !item.productId) await linkShoppingItemProduct(item.id, productDbId);
       } else if (item.productId) {
-        await reportPriceForProduct(item.productId, selectedStore.id, actualPaid, item.quantity || 1, item.unit || "pièce");
+        await reportPriceForProduct(item.productId, selectedStore.id, unitPrice, 1, item.unit || "pièce", promo);
       } else if (mode === "kg" && kgPrice !== undefined) {
         await reportIngredientPrice(item.customName, selectedStore.id, kgPrice, 1000, "g");
       } else {
-        await reportIngredientPrice(item.customName, selectedStore.id, actualPaid, item.quantity || 1, item.unit || "pièce");
+        await reportIngredientPrice(item.customName, selectedStore.id, unitPrice, 1, item.unit || "pièce", promo);
       }
       silentReload();
     }
@@ -1313,25 +1411,13 @@ export function ModeCourses() {
     if (!pricePrompt) return;
     const { item } = pricePrompt;
     setSession((prev) => {
-      const newAssignments = new Map(prev.assignments);
-      if (!prev.lockedAssignments.has(item.id)) {
-        const split = splitRef.current;
-        if (split.enabled && split.members.length >= 2) {
-          const totals = new Array(split.members.length).fill(0) as number[];
-          prev.assignments.forEach((mIdx, id) => {
-            const p = prev.confirmedPrices.get(id);
-            if (p !== undefined) totals[mIdx] += p;
-          });
-          let best = 0;
-          let bestRem = split.members[0].budgetCap - totals[0];
-          for (let i = 1; i < split.members.length; i++) {
-            const rem = split.members[i].budgetCap - totals[i];
-            if (rem > bestRem) { bestRem = rem; best = i; }
-          }
-          newAssignments.set(item.id, best);
-        } else {
-          newAssignments.set(item.id, 0);
-        }
+      let newAssignments = new Map(prev.assignments);
+      if (!newAssignments.has(item.id)) newAssignments.set(item.id, 0);
+      const split = splitRef.current;
+      if (split.enabled && split.members.length >= 2) {
+        newAssignments = rebalanceAssignments(prev.confirmedPrices, newAssignments, prev.lockedAssignments, split.members);
+      } else {
+        newAssignments.set(item.id, 0);
       }
       return { ...prev, assignments: newAssignments };
     });
@@ -1405,6 +1491,20 @@ export function ModeCourses() {
   function handleSaveSplit(settings: SplitSettings) {
     setSplitSettings(settings);
     updateSplitSettings(settings);
+    if (settings.enabled && settings.members.length >= 2) {
+      setSession((prev) => ({
+        ...prev,
+        assignments: rebalanceAssignments(prev.confirmedPrices, prev.assignments, prev.lockedAssignments, settings.members),
+      }));
+    }
+  }
+
+  function handleRebalance() {
+    setSession((prev) => {
+      const split = splitRef.current;
+      if (!split.enabled || split.members.length < 2) return prev;
+      return { ...prev, assignments: rebalanceAssignments(prev.confirmedPrices, prev.assignments, prev.lockedAssignments, split.members) };
+    });
   }
 
   function handleAddVirtualItem(name: string, actualPaid: number, memberIdx: number, mode: "total" | "kg", kgPrice?: number) {
@@ -1423,11 +1523,15 @@ export function ModeCourses() {
     setSession((prev) => ({ ...prev, virtualItems: prev.virtualItems.filter((v) => v.id !== id) }));
   }
 
-  const lockedMemberIdx = pricePrompt
-    ? (session.lockedAssignments.has(pricePrompt.item.id) ? session.assignments.get(pricePrompt.item.id) : undefined)
-    : undefined;
-
   const hasCartItems = checked.length > 0 || session.virtualItems.length > 0;
+
+  const hasCartItemsRef = useRef(false);
+  useEffect(() => { hasCartItemsRef.current = hasCartItems; }, [hasCartItems]);
+
+  function confirmLeave() {
+    if (!hasCartItemsRef.current) { router.navigate("/(tabs)/shopping"); return; }
+    setLeaveDialogOpen(true);
+  }
 
   const totalScale = useSharedValue(1);
   const totalAnimatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: totalScale.value }] }));
@@ -1448,12 +1552,60 @@ export function ModeCourses() {
     );
   }
 
+  if (storesLoaded && stores.length === 0) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#FAF9F6" }} edges={["top"]}>
+        <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, gap: 10, borderBottomWidth: 1, borderBottomColor: "#F0EDE8" }}>
+          <Pressable
+            onPress={() => router.navigate("/(tabs)/shopping")}
+            style={({ pressed }) => ({
+              width: 38, height: 38, borderRadius: 12,
+              backgroundColor: pressed ? "#EDEAE4" : "#F0EDE8",
+              alignItems: "center", justifyContent: "center",
+            })}
+          >
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#1C1917" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+              <Line x1={18} y1={6} x2={6} y2={18} /><Line x1={6} y1={6} x2={18} y2={18} />
+            </Svg>
+          </Pressable>
+          <Text style={{ flex: 1, fontSize: 17, fontWeight: "900", color: "#1C1917", letterSpacing: -0.3 }}>Mode courses</Text>
+        </View>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 40, gap: 24 }}>
+          <View style={{ width: 72, height: 72, borderRadius: 24, backgroundColor: "#FEF0EC", alignItems: "center", justifyContent: "center" }}>
+            <Svg width={32} height={32} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+              <Path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+              <Line x1={3} y1={6} x2={21} y2={6} />
+              <Path d="M16 10a4 4 0 0 1-8 0" />
+            </Svg>
+          </View>
+          <View style={{ alignItems: "center", gap: 8 }}>
+            <Text style={{ fontSize: 20, fontWeight: "900", color: "#1C1917", letterSpacing: -0.3, textAlign: "center" }}>
+              Aucun magasin configuré
+            </Text>
+            <Text style={{ fontSize: 14, color: "#78716C", textAlign: "center", lineHeight: 22 }}>
+              Pour enregistrer les prix pendant tes courses, ajoute d'abord un magasin dans ton profil.
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => router.navigate("/(tabs)/profile")}
+            style={({ pressed }) => ({
+              borderRadius: 16, paddingVertical: 16, paddingHorizontal: 40,
+              backgroundColor: pressed ? "#D14A18" : "#E8571C",
+            })}
+          >
+            <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff" }}>Configurer mes magasins</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <>
     <SafeAreaView style={{ flex: 1, backgroundColor: "#FAF9F6" }} edges={["top"]}>
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, gap: 10, borderBottomWidth: 1, borderBottomColor: "#F0EDE8" }}>
         <Pressable
-          onPress={() => router.navigate("/(tabs)/shopping")}
+          onPress={confirmLeave}
           style={({ pressed }) => ({
             width: 38, height: 38, borderRadius: 12,
             backgroundColor: pressed ? "#EDEAE4" : "#F0EDE8",
@@ -1763,6 +1915,11 @@ export function ModeCourses() {
                               <Text style={{ fontSize: 10, fontWeight: "700", color: member.color }}>{member.name.slice(0, 3)}</Text>
                             </View>
                           )}
+                          <Pressable onPress={() => handleRemoveVirtualItem(v.id)} hitSlop={12} style={{ padding: 4 }}>
+                            <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                              <Line x1={18} y1={6} x2={6} y2={18} /><Line x1={6} y1={6} x2={18} y2={18} />
+                            </Svg>
+                          </Pressable>
                         </View>
                       </ReanimatedSwipeable>
                       {i < session.virtualItems.length - 1 && <View style={{ height: 1, backgroundColor: "#F5F3EF", marginLeft: 60 }} />}
@@ -1818,10 +1975,6 @@ export function ModeCourses() {
         item={pricePrompt?.item ?? null}
         prefillPrice={pricePrompt ? getPrefillPrice(pricePrompt.item) : ""}
         hasProduct={!!(pricePrompt?.product || pricePrompt?.item?.productId)}
-        confirmedTotal={confirmedTotal}
-        memberTotals={memberTotals}
-        splitSettings={splitSettings}
-        lockedMemberIdx={lockedMemberIdx}
         onConfirm={handleConfirmPrice}
         onSkip={closePricePrompt}
         onCheckWithoutPrice={handleCheckWithoutPrice}
@@ -1849,7 +2002,19 @@ export function ModeCourses() {
           confirmedTotal={confirmedTotal}
           onClose={() => setCheckoutOpen(false)}
           onFinish={() => { setSession(EMPTY_SESSION); router.navigate("/(tabs)/shopping"); }}
+          onFinishWithPantry={async () => {
+            try {
+              if (list?.id) {
+                const payload = checked.map((i) => ({ name: i.customName, quantity: i.quantity, unit: i.unit, productId: i.productId }));
+                await transferCheckedToPantry(payload);
+                await clearCheckedItems(list.id);
+              }
+            } catch {}
+            setSession(EMPTY_SESSION);
+            router.navigate("/(tabs)/shopping");
+          }}
           onEditPrice={(item) => { setCheckoutOpen(false); openPricePrompt(item, null, true); }}
+          onRebalance={handleRebalance}
         />
       )}
 
@@ -1876,6 +2041,37 @@ export function ModeCourses() {
       onSelect={setSelectedStore}
       canDismiss={!!selectedStore}
     />
+
+    <Modal visible={leaveDialogOpen} transparent animationType="fade" onRequestClose={() => setLeaveDialogOpen(false)}>
+      <Pressable
+        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center", padding: 32 }}
+        onPress={() => setLeaveDialogOpen(false)}
+      >
+        <Pressable
+          onPress={() => {}}
+          style={{ width: "100%", backgroundColor: "#fff", borderRadius: 24, padding: 24, gap: 16,
+            shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 24, elevation: 12 }}
+        >
+          <Text style={{ fontSize: 17, fontWeight: "900", color: "#1C1917", letterSpacing: -0.3 }}>Quitter les courses ?</Text>
+          <Text style={{ fontSize: 14, color: "#78716C", lineHeight: 20 }}>Ta session en cours sera perdue.</Text>
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <Pressable
+              onPress={() => setLeaveDialogOpen(false)}
+              style={({ pressed }) => ({ flex: 1, borderRadius: 14, paddingVertical: 14, alignItems: "center", backgroundColor: pressed ? "#E8E4DF" : "#F0EDE8" })}
+            >
+              <Text style={{ fontSize: 15, fontWeight: "700", color: "#78716C" }}>Annuler</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => { setLeaveDialogOpen(false); router.navigate("/(tabs)/shopping"); }}
+              style={({ pressed }) => ({ flex: 1, borderRadius: 14, paddingVertical: 14, alignItems: "center", backgroundColor: pressed ? "#C94415" : "#E8571C" })}
+            >
+              <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>Quitter</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+
     </>
   );
 }

@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "../../../../lib/supabase";
 
 export interface SplitMember {
   name: string;
@@ -11,8 +12,6 @@ export interface SplitSettings {
   members: SplitMember[];
 }
 
-const KEY = "shopping_split_settings";
-
 export const DEFAULT_SPLIT: SplitSettings = {
   enabled: false,
   members: [
@@ -21,9 +20,17 @@ export const DEFAULT_SPLIT: SplitSettings = {
   ],
 };
 
+async function getKey(): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  return `shopping_split_settings_${user.id}`;
+}
+
 export async function getSplitSettings(): Promise<SplitSettings> {
   try {
-    const raw = await AsyncStorage.getItem(KEY);
+    const key = await getKey();
+    if (!key) return DEFAULT_SPLIT;
+    const raw = await AsyncStorage.getItem(key);
     if (!raw) return DEFAULT_SPLIT;
     return JSON.parse(raw);
   } catch {
@@ -32,5 +39,9 @@ export async function getSplitSettings(): Promise<SplitSettings> {
 }
 
 export async function updateSplitSettings(settings: SplitSettings): Promise<void> {
-  await AsyncStorage.setItem(KEY, JSON.stringify(settings));
+  try {
+    const key = await getKey();
+    if (!key) return;
+    await AsyncStorage.setItem(key, JSON.stringify(settings));
+  } catch {}
 }

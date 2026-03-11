@@ -7,6 +7,9 @@ export interface ShoppingItemStorePrice {
   confidence: PriceConfidence;
   reportedAt: string | null;
   reporterCount: number;
+  isPromo: boolean;
+  normalUnitPrice: number | null;
+  promoTriggerQty: number | null;
 }
 
 export interface ShoppingItemPrice {

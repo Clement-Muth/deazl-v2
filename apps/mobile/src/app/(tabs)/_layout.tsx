@@ -1,9 +1,23 @@
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Tabs } from "expo-router";
-import { useRef } from "react";
-import { Animated, Pressable, Text, View } from "react-native";
+import { useEffect } from "react";
+import { Dimensions, Pressable, View } from "react-native";
+import Animated, {
+  interpolate,
+  type SharedValue,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg, { Circle, Line, Path, Rect } from "react-native-svg";
+import Svg, { Circle, Line, Path, Polyline, Rect } from "react-native-svg";
+
+const SCREEN_WIDTH = Dimensions.get("window").width;
+const H_PADDING = 16;
+const INNER_PAD = 4;
+const NUM_TABS = 5;
+const TAB_W = (SCREEN_WIDTH - H_PADDING * 2 - INNER_PAD * 2) / NUM_TABS;
+const PILL_H = 54;
 
 function CalendarIcon({ color }: { color: string }) {
   return (
@@ -19,9 +33,9 @@ function CalendarIcon({ color }: { color: string }) {
 function RecipeIcon({ color }: { color: string }) {
   return (
     <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
-      <Path d="M12 2a7 7 0 0 1 7 7c0 4-3 6-3 9H8c0-3-3-5-3-9a7 7 0 0 1 7-7z" />
-      <Path d="M8 18h8" />
-      <Path d="M9 21h6" />
+      <Path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
+      <Path d="M7 2v20" />
+      <Path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7" />
     </Svg>
   );
 }
@@ -40,7 +54,7 @@ function BoxIcon({ color }: { color: string }) {
   return (
     <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
       <Path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-      <Path d="M3.27 6.96 12 12.01l8.73-5.05" />
+      <Polyline points="3.27 6.96 12 12.01 20.73 6.96" />
       <Line x1={12} y1={22.08} x2={12} y2={12} />
     </Svg>
   );
@@ -56,70 +70,67 @@ function UserIcon({ color }: { color: string }) {
 }
 
 function TabItem({
+  index,
+  activeIndex,
   isFocused,
   label,
   icon,
   onPress,
 }: {
+  index: number;
+  activeIndex: SharedValue<number>;
   isFocused: boolean;
   label: string;
   icon: (color: string) => React.ReactNode;
   onPress: () => void;
 }) {
-  const scale = useRef(new Animated.Value(1)).current;
+  const scale = useSharedValue(1);
 
-  function onPressIn() {
-    Animated.spring(scale, {
-      toValue: 0.88,
-      useNativeDriver: true,
-      tension: 400,
-      friction: 12,
-    }).start();
-  }
+  const iconStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: scale.value },
+      { translateY: interpolate(Math.abs(activeIndex.value - index), [0, 1], [-7, 0], "clamp") },
+    ],
+  }));
 
-  function onPressOut() {
-    Animated.spring(scale, {
-      toValue: 1,
-      useNativeDriver: true,
-      tension: 200,
-      friction: 10,
-    }).start();
-  }
+  const labelStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(Math.abs(activeIndex.value - index), [0, 0.8], [1, 0], "clamp"),
+    transform: [{ translateY: interpolate(Math.abs(activeIndex.value - index), [0, 1], [0, 4], "clamp") }],
+  }));
 
   return (
     <Pressable
       onPress={onPress}
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
+      onPressIn={() => { scale.value = withSpring(0.86, { damping: 15, stiffness: 400 }); }}
+      onPressOut={() => { scale.value = withSpring(1, { damping: 15, stiffness: 300 }); }}
       accessibilityRole="button"
       accessibilityState={{ selected: isFocused }}
-      style={{ flex: isFocused ? 2 : 1, alignItems: "center", justifyContent: "center" }}
+      style={{ width: TAB_W, height: PILL_H, alignItems: "center", justifyContent: "center" }}
     >
-      <Animated.View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 6,
-          borderRadius: 999,
-          paddingHorizontal: isFocused ? 16 : 12,
-          paddingVertical: 13,
-          backgroundColor: isFocused ? "#E8571C" : "transparent",
-          transform: [{ scale }],
-        }}
-      >
+      <Animated.View style={iconStyle}>
         {icon(isFocused ? "#fff" : "#A8A29E")}
-        {isFocused && (
-          <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: "700", color: "#fff", flexShrink: 1 }}>
-            {label}
-          </Text>
-        )}
       </Animated.View>
+      <Animated.Text
+        numberOfLines={1}
+        style={[{ position: "absolute", bottom: 7, fontSize: 10, fontWeight: "700", color: "#fff", width: TAB_W, textAlign: "center" }, labelStyle]}
+      >
+        {label}
+      </Animated.Text>
     </Pressable>
   );
 }
 
 function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const activeIndex = useSharedValue(state.index);
+
+  useEffect(() => {
+    activeIndex.value = withSpring(state.index, { damping: 22, stiffness: 250, mass: 0.65 });
+  }, [state.index]);
+
+  const pillStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: activeIndex.value * TAB_W }],
+  }));
 
   return (
     <View
@@ -129,8 +140,7 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         left: 0,
         right: 0,
         paddingBottom: Math.max(insets.bottom, 16),
-        paddingHorizontal: 16,
-        zIndex: 100,
+        paddingHorizontal: H_PADDING,
       }}
     >
       <View
@@ -139,16 +149,29 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
           alignItems: "center",
           backgroundColor: "#fff",
           borderRadius: 9999,
-          paddingVertical: 6,
-          paddingHorizontal: 4,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.12,
-          shadowRadius: 24,
-          elevation: 16,
-          zIndex: 100,
+          paddingHorizontal: INNER_PAD,
+          paddingVertical: 5,
+          shadowColor: "#1C1917",
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.09,
+          shadowRadius: 20,
+          elevation: 14,
         }}
       >
+        <Animated.View
+          style={[
+            {
+              position: "absolute",
+              left: INNER_PAD,
+              width: TAB_W,
+              height: PILL_H,
+              borderRadius: 999,
+              backgroundColor: "#E8571C",
+            },
+            pillStyle,
+          ]}
+        />
+
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
           const isFocused = state.index === index;
@@ -167,11 +190,11 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
           return (
             <TabItem
               key={route.key}
+              index={index}
+              activeIndex={activeIndex}
               isFocused={isFocused}
               label={options.title ?? route.name}
-              icon={(color) =>
-                options.tabBarIcon?.({ focused: isFocused, color, size: 22 }) ?? null
-              }
+              icon={(color) => options.tabBarIcon?.({ focused: isFocused, color, size: 22 }) ?? null}
               onPress={onPress}
             />
           );

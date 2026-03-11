@@ -1,4 +1,5 @@
 import { supabase } from "../../../../lib/supabase";
+import type { PromoInfo } from "./reportProductPrice";
 
 export async function reportPriceForProduct(
   productId: string,
@@ -6,6 +7,7 @@ export async function reportPriceForProduct(
   price: number,
   quantity: number,
   unit: string,
+  promo?: PromoInfo,
 ): Promise<{ error?: string }> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthenticated" };
@@ -17,6 +19,9 @@ export async function reportPriceForProduct(
     quantity,
     unit,
     reported_by: user.id,
+    is_promo: !!promo,
+    normal_unit_price: promo?.normalUnitPrice ?? null,
+    promo_trigger_qty: promo?.promoTriggerQty ?? null,
   });
 
   if (error) return { error: error.message };

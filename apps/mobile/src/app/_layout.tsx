@@ -7,6 +7,7 @@ import {
 } from "@expo-google-fonts/inter";
 import type { Session } from "@supabase/supabase-js";
 import { Slot, useRouter, useSegments } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
 import { HeroUINativeProvider } from "heroui-native";
 import { useEffect, useState } from "react";
@@ -53,6 +54,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <StatusBar style="dark" />
       <HeroUINativeProvider>
         <AuthGate>
           <Slot />

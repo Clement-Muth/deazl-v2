@@ -43,6 +43,9 @@ interface TieredPriceRow {
   confidence: PriceConfidence;
   reported_at: string | null;
   reporter_count: number;
+  is_promo: boolean;
+  normal_unit_price: number | null;
+  promo_trigger_qty: number | null;
 }
 
 interface TieredIngredientPriceRow {
@@ -54,6 +57,9 @@ interface TieredIngredientPriceRow {
   confidence: PriceConfidence;
   reported_at: string | null;
   reporter_count: number;
+  is_promo: boolean;
+  normal_unit_price: number | null;
+  promo_trigger_qty: number | null;
 }
 
 export async function getActiveShoppingList(): Promise<ShoppingList | null> {
@@ -121,7 +127,7 @@ export async function getActiveShoppingList(): Promise<ShoppingList | null> {
 
   const items: ShoppingItem[] = rawItems
     .map((rawItem) => {
-      type Candidate = { store_id: string; price: number; quantity: number; unit: string; confidence: PriceConfidence; reported_at: string | null; reporter_count: number };
+      type Candidate = { store_id: string; price: number; quantity: number; unit: string; confidence: PriceConfidence; reported_at: string | null; reporter_count: number; is_promo: boolean; normal_unit_price: number | null; promo_trigger_qty: number | null };
       let candidates: Candidate[] = [];
 
       if (rawItem.product_id) {
@@ -138,27 +144,35 @@ export async function getActiveShoppingList(): Promise<ShoppingList | null> {
         if (!store) continue;
         const candidate = candidates.find((c) => c.store_id === storeId);
         if (candidate) {
+          const stablePrice = candidate.is_promo && candidate.normal_unit_price != null
+            ? candidate.normal_unit_price
+            : candidate.price;
           allStorePrices.push({
             storeId,
             storeName: store.name,
-            estimatedCost: estimateCost(rawItem.quantity, rawItem.unit, candidate.price, candidate.quantity, candidate.unit),
+            estimatedCost: estimateCost(rawItem.quantity, rawItem.unit, stablePrice, candidate.quantity, candidate.unit),
             confidence: candidate.confidence,
             reportedAt: candidate.reported_at,
             reporterCount: candidate.reporter_count,
+            isPromo: candidate.is_promo,
+            normalUnitPrice: candidate.normal_unit_price,
+            promoTriggerQty: candidate.promo_trigger_qty,
           });
         }
       }
 
       let price: ShoppingItemPrice | undefined;
       if (candidates.length > 0) {
+        const stablePrice = (c: typeof candidates[number]) =>
+          c.is_promo && c.normal_unit_price != null ? c.normal_unit_price : c.price;
         const cheapest = candidates.reduce((min, p) => {
-          const c = estimateCost(rawItem.quantity, rawItem.unit, p.price, p.quantity, p.unit);
-          const m = estimateCost(rawItem.quantity, rawItem.unit, min.price, min.quantity, min.unit);
+          const c = estimateCost(rawItem.quantity, rawItem.unit, stablePrice(p), p.quantity, p.unit);
+          const m = estimateCost(rawItem.quantity, rawItem.unit, stablePrice(min), min.quantity, min.unit);
           return c < m ? p : min;
         });
         const store = storeMap.get(cheapest.store_id);
         price = {
-          estimatedCost: estimateCost(rawItem.quantity, rawItem.unit, cheapest.price, cheapest.quantity, cheapest.unit),
+          estimatedCost: estimateCost(rawItem.quantity, rawItem.unit, stablePrice(cheapest), cheapest.quantity, cheapest.unit),
           storeName: store?.name ?? "",
           confidence: cheapest.confidence,
           reportedAt: cheapest.reported_at,
@@ -195,7 +209,7 @@ export async function getActiveShoppingList(): Promise<ShoppingList | null> {
     let latestReportedAt: string | null = null;
 
     for (const rawItem of uncheckedItems) {
-      let p: { price: number; quantity: number; unit: string; confidence: PriceConfidence; reported_at: string | null } | undefined;
+      let p: { price: number; quantity: number; unit: string; confidence: PriceConfidence; reported_at: string | null; is_promo: boolean; normal_unit_price: number | null } | undefined;
 
       if (rawItem.product_id) {
         p = productPriceRows.find((r) => r.product_id === rawItem.product_id && r.store_id === storeId);
@@ -207,7 +221,8 @@ export async function getActiveShoppingList(): Promise<ShoppingList | null> {
       }
 
       if (p) {
-        totalCost += estimateCost(rawItem.quantity, rawItem.unit, p.price, p.quantity, p.unit);
+        const sp = p.is_promo && p.normal_unit_price != null ? p.normal_unit_price : p.price;
+        totalCost += estimateCost(rawItem.quantity, rawItem.unit, sp, p.quantity, p.unit);
         coveredCount++;
         if (p.confidence !== "exact") hasEstimates = true;
         if (p.reported_at && (!latestReportedAt || p.reported_at > latestReportedAt)) {

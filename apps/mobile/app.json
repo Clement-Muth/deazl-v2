@@ -13,6 +13,10 @@
     },
     "android": {
       "package": "fr.deazl.app",
+      "androidStatusBar": {
+        "barStyle": "dark-content",
+        "backgroundColor": "#00000000"
+      },
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#E8571C"
