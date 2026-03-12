@@ -1,3 +1,4 @@
+/// <reference types="bun-types" />
 import { describe, it, expect } from "bun:test";
 import { rebalanceAssignments } from "./rebalanceAssignments";
 import type { SplitMember } from "./getSplitSettings";

@@ -223,7 +223,7 @@ export function ShoppingScreen() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const router = useRouter();
 
-  useFocusEffect(useCallback(() => { reload(); }, []));
+  useFocusEffect(useCallback(() => { silentReload(); }, []));
 
   useEffect(() => {
     getItemSuggestions().then(setSuggestions);
@@ -313,14 +313,25 @@ export function ShoppingScreen() {
       const newList = await createEmptyShoppingList();
       if (!newList) { setSubmitting(false); return; }
       listId = newList.id;
+      setList({ id: listId, status: "active", items: [], storeSummaries: [], estimatedTotal: 0, itemsWithoutPrice: 0 });
     }
     const qty = parseFloat(addQuantity) || 1;
     const result = await addShoppingItem(listId, addName, qty, addUnit);
     setSubmitting(false);
-    if (!result.error) {
+    if (!result.error && result.itemId) {
+      const newItem: ShoppingItem = {
+        id: result.itemId,
+        customName: addName.trim(),
+        quantity: qty,
+        unit: addUnit,
+        isChecked: false,
+        sortOrder: (list?.items.length ?? 0),
+        category: null,
+        allStorePrices: [],
+      };
+      setList((prev) => prev ? { ...prev, items: [...prev.items, newItem] } : prev);
       resetAddForm();
       setAddOpen(false);
-      await reload();
       getItemSuggestions().then(setSuggestions);
     }
   }
@@ -328,7 +339,7 @@ export function ShoppingScreen() {
   const totalItems = items.length;
   const checkedCount = checked.length;
 
-  if (loading) return <ShoppingSkeleton />;
+  if (loading && !list) return <ShoppingSkeleton />;
 
   if (error) {
     return (

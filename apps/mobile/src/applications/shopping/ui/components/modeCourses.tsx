@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Line, Path, Polyline, Rect } from "react-native-svg";
-import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
+import ReanimatedSwipeable, { type SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
 import Animated, { useSharedValue, useAnimatedStyle, withSequence, withTiming, withSpring } from "react-native-reanimated";
 import { BottomModal } from "./bottomModal";
 import { findOrCreateProduct } from "../../application/useCases/findOrCreateProduct";
@@ -1932,7 +1932,7 @@ export function ModeCourses() {
                   return (
                     <View key={item.id}>
                       <ReanimatedSwipeable
-                        ref={(r) => { if (r) swipeableRefs.current.set(item.id, r); else swipeableRefs.current.delete(item.id); }}
+                        ref={((r: SwipeableMethods | null) => { if (r) swipeableRefs.current.set(item.id, r); else swipeableRefs.current.delete(item.id); }) as unknown as React.RefObject<SwipeableMethods | null>}
                         overshootLeft={false}
                         overshootRight={false}
                         onSwipeableWillOpen={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)}
@@ -2019,7 +2019,7 @@ export function ModeCourses() {
                   return (
                     <View key={v.id}>
                       <ReanimatedSwipeable
-                        ref={(r) => { if (r) swipeableRefs.current.set(v.id, r); else swipeableRefs.current.delete(v.id); }}
+                        ref={((r: SwipeableMethods | null) => { if (r) swipeableRefs.current.set(v.id, r); else swipeableRefs.current.delete(v.id); }) as unknown as React.RefObject<SwipeableMethods | null>}
                         overshootLeft={false}
                         overshootRight={false}
                         onSwipeableWillOpen={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)}
