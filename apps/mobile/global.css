@@ -39,6 +39,24 @@
       --font-semibold: 'Inter_600SemiBold';
       --font-bold: 'Inter_700Bold';
       --radius: 0.75rem;
+
+      --background: #1C1917;
+      --foreground: #FAF9F6;
+      --accent: #E8571C;
+      --accent-foreground: #ffffff;
+      --muted: #A8A29E;
+      --default: #292524;
+      --default-foreground: #FAF9F6;
+      --border: #44403C;
+      --separator: #44403C;
+      --danger: #DC2626;
+      --danger-foreground: #ffffff;
+
+      --field-background: #292524;
+      --field-foreground: #FAF9F6;
+      --field-placeholder: #78716C;
+      --field-border: #44403C;
+      --field-border-width: 1px;
     }
   }
 }

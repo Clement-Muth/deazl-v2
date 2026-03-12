@@ -10,6 +10,7 @@ export interface SplitMember {
 export interface SplitSettings {
   enabled: boolean;
   members: SplitMember[];
+  carteRestoEnabled: boolean;
 }
 
 export const DEFAULT_SPLIT: SplitSettings = {
@@ -18,6 +19,7 @@ export const DEFAULT_SPLIT: SplitSettings = {
     { name: "Moi", budgetCap: 25, color: "#E8571C" },
     { name: "Nous·elle", budgetCap: 25, color: "#7C3AED" },
   ],
+  carteRestoEnabled: false,
 };
 
 async function getKey(): Promise<string | null> {
@@ -32,7 +34,7 @@ export async function getSplitSettings(): Promise<SplitSettings> {
     if (!key) return DEFAULT_SPLIT;
     const raw = await AsyncStorage.getItem(key);
     if (!raw) return DEFAULT_SPLIT;
-    return JSON.parse(raw);
+    return { ...DEFAULT_SPLIT, ...JSON.parse(raw) };
   } catch {
     return DEFAULT_SPLIT;
   }

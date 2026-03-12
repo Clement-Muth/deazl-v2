@@ -6,9 +6,7 @@ import {
   ActivityIndicator,
   BackHandler,
   Keyboard,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -39,6 +37,7 @@ import {
   DEFAULT_SPLIT,
 } from "../../application/useCases/getSplitSettings";
 import type { SplitSettings, SplitMember } from "../../application/useCases/getSplitSettings";
+import { rebalanceAssignments } from "../../application/useCases/rebalanceAssignments";
 import type { ShoppingItem, ShoppingList } from "../../domain/entities/shopping";
 import { useShoppingList } from "../../api/useShoppingList";
 
@@ -185,6 +184,30 @@ function SplitEditSheet({
                 }} />
               </Pressable>
             </View>
+
+            {draft.enabled && (
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#F9F8F6", borderRadius: 16, padding: 16 }}>
+                <View style={{ gap: 2, flex: 1, marginRight: 12 }}>
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: "#1C1917" }}>Carte Ticket Restaurant</Text>
+                  <Text style={{ fontSize: 12, color: "#78716C" }}>Le budget par personne s'applique uniquement aux articles alimentaires</Text>
+                </View>
+                <Pressable
+                  onPress={() => setDraft((prev) => ({ ...prev, carteRestoEnabled: !prev.carteRestoEnabled }))}
+                  style={{
+                    width: 50, height: 28, borderRadius: 14,
+                    backgroundColor: draft.carteRestoEnabled ? "#E8571C" : "#D1CCC5",
+                    justifyContent: "center", padding: 2,
+                  }}
+                >
+                  <View style={{
+                    width: 24, height: 24, borderRadius: 12, backgroundColor: "#fff",
+                    alignSelf: draft.carteRestoEnabled ? "flex-end" : "flex-start",
+                    shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 3,
+                    shadowOffset: { width: 0, height: 1 }, elevation: 2,
+                  }} />
+                </Pressable>
+              </View>
+            )}
 
             {draft.enabled && (
               <View style={{ flexDirection: "row", gap: 12 }}>
@@ -929,9 +952,10 @@ function ScanOverlay({
   );
 }
 
-function EditVirtualPricePanel({ name, currentPrice, onConfirm, onClose }: {
+function EditVirtualPricePanel({ name, currentPrice, isOpen, onConfirm, onClose }: {
   name: string;
   currentPrice: number;
+  isOpen: boolean;
   onConfirm: (price: number) => void;
   onClose: () => void;
 }) {
@@ -940,31 +964,20 @@ function EditVirtualPricePanel({ name, currentPrice, onConfirm, onClose }: {
   const parsed = parseFloat(value);
   const valid = !Number.isNaN(parsed) && parsed > 0;
   useEffect(() => {
-    const t = setTimeout(() => inputRef.current?.focus(), 100);
-    return () => clearTimeout(t);
-  }, []);
+    if (isOpen) {
+      setValue(currentPrice > 0 ? currentPrice.toFixed(2) : "");
+      const t = setTimeout(() => inputRef.current?.focus(), 200);
+      return () => clearTimeout(t);
+    }
+  }, [isOpen]);
   function handleChange(text: string) {
     const cleaned = text.replace(",", ".");
     if (cleaned === "" || /^\d{0,5}(\.\d{0,2})?$/.test(cleaned)) setValue(cleaned);
   }
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.4)", zIndex: 10 }}
-    >
-      <Pressable style={{ flex: 1 }} onPress={onClose} />
-      <View style={{
-        backgroundColor: "#fff", borderTopLeftRadius: 28, borderTopRightRadius: 28,
-        padding: 20, paddingBottom: 36, gap: 12,
-        shadowColor: "#000", shadowOffset: { width: 0, height: -4 },
-        shadowOpacity: 0.12, shadowRadius: 24, elevation: 20,
-      }}>
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <Text style={{ fontSize: 15, fontWeight: "800", color: "#1C1917" }} numberOfLines={1}>{name}</Text>
-          <Pressable onPress={onClose} hitSlop={12}>
-            <Text style={{ fontSize: 13, color: "#A8A29E", fontWeight: "500" }}>Annuler</Text>
-          </Pressable>
-        </View>
+    <BottomModal isOpen={isOpen} onClose={onClose} height="auto">
+      <View style={{ gap: 14 }}>
+        <Text style={{ fontSize: 17, fontWeight: "800", color: "#1C1917" }} numberOfLines={1}>{name}</Text>
         <View style={{
           borderRadius: 16, backgroundColor: "#FAF9F6",
           paddingVertical: 14, paddingHorizontal: 20,
@@ -986,7 +999,7 @@ function EditVirtualPricePanel({ name, currentPrice, onConfirm, onClose }: {
         <Pressable
           onPress={() => { if (valid) { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); onConfirm(parsed); } }}
           style={({ pressed }) => ({
-            borderRadius: 18, paddingVertical: 18, alignItems: "center",
+            borderRadius: 18, paddingVertical: 16, alignItems: "center",
             backgroundColor: valid ? (pressed ? "#C94415" : "#E8571C") : "#F0EDE8",
             transform: [{ scale: pressed && valid ? 0.97 : 1 }],
           })}
@@ -994,7 +1007,7 @@ function EditVirtualPricePanel({ name, currentPrice, onConfirm, onClose }: {
           <Text style={{ fontSize: 17, fontWeight: "900", color: valid ? "#fff" : "#A8A29E", letterSpacing: -0.3 }}>✓ Confirmer</Text>
         </Pressable>
       </View>
-    </KeyboardAvoidingView>
+    </BottomModal>
   );
 }
 
@@ -1004,6 +1017,8 @@ function CheckoutSummary({
   session,
   splitSettings,
   memberTotals,
+  memberCarteTotals,
+  memberHorsCarteTotals,
   confirmedTotal,
   onClose,
   onFinish,
@@ -1016,6 +1031,8 @@ function CheckoutSummary({
   session: Session;
   splitSettings: SplitSettings;
   memberTotals: number[];
+  memberCarteTotals: number[];
+  memberHorsCarteTotals: number[];
   confirmedTotal: number;
   onClose: () => void;
   onFinish: () => void;
@@ -1024,6 +1041,7 @@ function CheckoutSummary({
   onRebalance: () => void;
 }) {
   const hasSplit = splitSettings.enabled && splitSettings.members.length >= 2;
+  const hasCarteCap = hasSplit && splitSettings.carteRestoEnabled;
 
   return (
     <View style={{ position: "absolute", inset: 0, backgroundColor: "#FAF9F6", zIndex: 30 }}>
@@ -1074,9 +1092,12 @@ function CheckoutSummary({
 
           {hasSplit && splitSettings.members.map((m, i) => {
             const total = memberTotals[i] ?? 0;
-            const over = total > m.budgetCap;
-            const ratio = Math.min(total / m.budgetCap, 1);
-            const barColor = budgetBarColor(total, m.budgetCap, m.color);
+            const carteTotal = memberCarteTotals[i] ?? 0;
+            const horsCarteTotal = memberHorsCarteTotals[i] ?? 0;
+            const displayTotal = hasCarteCap ? carteTotal : total;
+            const over = displayTotal > m.budgetCap;
+            const ratio = Math.min(displayTotal / m.budgetCap, 1);
+            const barColor = budgetBarColor(displayTotal, m.budgetCap, m.color);
             const memberChecked = checkedItems.filter((it) => session.assignments.get(it.id) === i);
             const memberVirtual = virtualItems.filter((v) => v.memberIdx === i);
             const allItems = [...memberChecked, ...memberVirtual];
@@ -1095,7 +1116,7 @@ function CheckoutSummary({
                       </Text>
                       {over && (
                         <Text style={{ fontSize: 11, color: "#DC2626", fontWeight: "600" }}>
-                          +{(total - m.budgetCap).toFixed(2)} € dépassement
+                          +{(displayTotal - m.budgetCap).toFixed(2)} € dépassement carte
                         </Text>
                       )}
                     </View>
@@ -1103,19 +1124,36 @@ function CheckoutSummary({
                   <View style={{ height: 6, borderRadius: 99, backgroundColor: "#F0EDE8" }}>
                     <View style={{ height: 6, borderRadius: 99, backgroundColor: barColor, width: `${ratio * 100}%` }} />
                   </View>
-                  <Text style={{ fontSize: 11, color: "#A8A29E" }}>{total.toFixed(2)} € / {m.budgetCap} €</Text>
+                  {hasCarteCap ? (
+                    <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                      <Text style={{ fontSize: 11, color: "#A8A29E" }}>Carte : {carteTotal.toFixed(2)} € / {m.budgetCap} €</Text>
+                      {horsCarteTotal > 0 && (
+                        <Text style={{ fontSize: 11, color: "#78716C", fontWeight: "600" }}>Hors carte : {horsCarteTotal.toFixed(2)} €</Text>
+                      )}
+                    </View>
+                  ) : (
+                    <Text style={{ fontSize: 11, color: "#A8A29E" }}>{total.toFixed(2)} € / {m.budgetCap} €</Text>
+                  )}
                 </View>
 
                 {allItems.length > 0 && (
                   <View style={{ borderTopWidth: 1, borderTopColor: "#F5F3EF" }}>
                     {memberChecked.map((item, idx) => {
                       const price = session.confirmedPrices.get(item.id);
+                      const isHC = session.horsCarteIds.has(item.id);
                       return (
                         <View key={item.id} style={{
-                          flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+                          flexDirection: "row", alignItems: "center", gap: 8,
                           paddingHorizontal: 18, paddingVertical: 12,
                           borderBottomWidth: idx < allItems.length - 1 ? 1 : 0, borderBottomColor: "#F5F3EF",
                         }}>
+                          {hasCarteCap && (
+                            <View style={{ borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2, backgroundColor: isHC ? "#FEE2E2" : "#F0FDF4" }}>
+                              <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? "#DC2626" : "#16A34A", letterSpacing: 0.5 }}>
+                                {isHC ? "HC" : "CR"}
+                              </Text>
+                            </View>
+                          )}
                           <Text style={{ flex: 1, fontSize: 14, color: "#44403C" }} numberOfLines={1}>{item.customName}</Text>
                           {price !== undefined
                             ? <Text style={{ fontSize: 14, fontWeight: "700", color: "#1C1917" }}>{price.toFixed(2)} €</Text>
@@ -1125,16 +1163,26 @@ function CheckoutSummary({
                         </View>
                       );
                     })}
-                    {memberVirtual.map((v, idx) => (
-                      <View key={v.id} style={{
-                        flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-                        paddingHorizontal: 18, paddingVertical: 12,
-                        borderBottomWidth: idx < memberVirtual.length - 1 ? 1 : 0, borderBottomColor: "#F5F3EF",
-                      }}>
-                        <Text style={{ flex: 1, fontSize: 14, color: "#44403C", fontStyle: "italic" }} numberOfLines={1}>{v.customName}</Text>
-                        <Text style={{ fontSize: 14, fontWeight: "700", color: "#1C1917" }}>{v.price.toFixed(2)} €</Text>
-                      </View>
-                    ))}
+                    {memberVirtual.map((v, idx) => {
+                      const isHC = session.horsCarteIds.has(v.id);
+                      return (
+                        <View key={v.id} style={{
+                          flexDirection: "row", alignItems: "center", gap: 8,
+                          paddingHorizontal: 18, paddingVertical: 12,
+                          borderBottomWidth: idx < memberVirtual.length - 1 ? 1 : 0, borderBottomColor: "#F5F3EF",
+                        }}>
+                          {hasCarteCap && (
+                            <View style={{ borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2, backgroundColor: isHC ? "#FEE2E2" : "#F0FDF4" }}>
+                              <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? "#DC2626" : "#16A34A", letterSpacing: 0.5 }}>
+                                {isHC ? "HC" : "CR"}
+                              </Text>
+                            </View>
+                          )}
+                          <Text style={{ flex: 1, fontSize: 14, color: "#44403C", fontStyle: "italic" }} numberOfLines={1}>{v.customName}</Text>
+                          <Text style={{ fontSize: 14, fontWeight: "700", color: "#1C1917" }}>{v.price.toFixed(2)} €</Text>
+                        </View>
+                      );
+                    })}
                   </View>
                 )}
               </View>
@@ -1195,32 +1243,6 @@ function CheckoutSummary({
   );
 }
 
-function rebalanceAssignments(
-  confirmedPrices: Map<string, number>,
-  currentAssignments: Map<string, number>,
-  lockedAssignments: Set<string>,
-  members: SplitMember[],
-): Map<string, number> {
-  const newAssignments = new Map(currentAssignments);
-  const totals = new Array(members.length).fill(0) as number[];
-  for (const [id, mIdx] of currentAssignments) {
-    if (lockedAssignments.has(id)) totals[mIdx] += confirmedPrices.get(id) ?? 0;
-  }
-  const unlocked = [...currentAssignments.keys()]
-    .filter((id) => !lockedAssignments.has(id))
-    .sort((a, b) => (confirmedPrices.get(b) ?? 0) - (confirmedPrices.get(a) ?? 0));
-  for (const id of unlocked) {
-    let best = 0;
-    let bestRem = members[0].budgetCap - totals[0];
-    for (let i = 1; i < members.length; i++) {
-      const rem = members[i].budgetCap - totals[i];
-      if (rem > bestRem) { bestRem = rem; best = i; }
-    }
-    newAssignments.set(id, best);
-    totals[best] += confirmedPrices.get(id) ?? 0;
-  }
-  return newAssignments;
-}
 
 interface VirtualItem {
   id: string;
@@ -1244,6 +1266,7 @@ interface Session {
   assignments: Map<string, number>;
   lockedAssignments: Set<string>;
   virtualItems: VirtualItem[];
+  horsCarteIds: Set<string>;
 }
 
 const EMPTY_SESSION: Session = {
@@ -1252,6 +1275,7 @@ const EMPTY_SESSION: Session = {
   assignments: new Map(),
   lockedAssignments: new Set(),
   virtualItems: [],
+  horsCarteIds: new Set(),
 };
 
 export function ModeCourses() {
@@ -1357,31 +1381,42 @@ export function ModeCourses() {
     return total;
   }, [session, checkedIds]);
 
-  const memberTotals = useMemo(() => {
+  const { memberTotals, memberCarteTotals, memberHorsCarteTotals } = useMemo(() => {
     const totals = new Array(splitSettings.members.length).fill(0) as number[];
+    const carteTotals = new Array(splitSettings.members.length).fill(0) as number[];
+    const horsCarteTotals = new Array(splitSettings.members.length).fill(0) as number[];
     session.assignments.forEach((mIdx, itemId) => {
       if (!checkedIds.has(itemId)) return;
       const p = session.confirmedPrices.get(itemId);
-      if (p !== undefined) totals[mIdx] += p;
+      if (p !== undefined) {
+        totals[mIdx] += p;
+        if (session.horsCarteIds.has(itemId)) horsCarteTotals[mIdx] += p;
+        else carteTotals[mIdx] += p;
+      }
     });
     session.virtualItems.forEach((v) => {
-      if (v.memberIdx < totals.length) totals[v.memberIdx] += v.price;
+      if (v.memberIdx < totals.length) {
+        totals[v.memberIdx] += v.price;
+        if (session.horsCarteIds.has(v.id)) horsCarteTotals[v.memberIdx] += v.price;
+        else carteTotals[v.memberIdx] += v.price;
+      }
     });
-    return totals;
+    return { memberTotals: totals, memberCarteTotals: carteTotals, memberHorsCarteTotals: horsCarteTotals };
   }, [session, splitSettings, checkedIds]);
 
   const prevMemberTotalsRef = useRef<number[]>([]);
   useEffect(() => {
     if (!splitSettings.enabled) return;
+    const capTotals = splitSettings.carteRestoEnabled ? memberCarteTotals : memberTotals;
     splitSettings.members.forEach((m, i) => {
       const prev = prevMemberTotalsRef.current[i] ?? 0;
-      const curr = memberTotals[i] ?? 0;
+      const curr = capTotals[i] ?? 0;
       if (prev < m.budgetCap && curr >= m.budgetCap) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       }
     });
-    prevMemberTotalsRef.current = [...memberTotals];
-  }, [memberTotals, splitSettings]);
+    prevMemberTotalsRef.current = [...capTotals];
+  }, [memberTotals, memberCarteTotals, splitSettings]);
 
   const estimatedRemainingTotal = useMemo(() => {
     return unchecked.reduce((sum, item) => {
@@ -1426,14 +1461,14 @@ export function ModeCourses() {
       if (!newAssignments.has(item.id)) newAssignments.set(item.id, 0);
       const split = splitRef.current;
       if (split.enabled && split.members.length >= 2) {
-        newAssignments = rebalanceAssignments(newPrices, newAssignments, prev.lockedAssignments, split.members);
+        newAssignments = rebalanceAssignments(newPrices, newAssignments, prev.lockedAssignments, split.members, prev.horsCarteIds);
       } else {
         newAssignments.set(item.id, 0);
       }
       const newContexts = context
         ? new Map(prev.confirmedContexts).set(item.id, context)
         : prev.confirmedContexts;
-      return { confirmedPrices: newPrices, confirmedContexts: newContexts, assignments: newAssignments, lockedAssignments: prev.lockedAssignments, virtualItems: prev.virtualItems };
+      return { confirmedPrices: newPrices, confirmedContexts: newContexts, assignments: newAssignments, lockedAssignments: prev.lockedAssignments, virtualItems: prev.virtualItems, horsCarteIds: prev.horsCarteIds };
     });
 
     handleToggle(item.id, true);
@@ -1463,7 +1498,7 @@ export function ModeCourses() {
       if (!newAssignments.has(item.id)) newAssignments.set(item.id, 0);
       const split = splitRef.current;
       if (split.enabled && split.members.length >= 2) {
-        newAssignments = rebalanceAssignments(prev.confirmedPrices, newAssignments, prev.lockedAssignments, split.members);
+        newAssignments = rebalanceAssignments(prev.confirmedPrices, newAssignments, prev.lockedAssignments, split.members, prev.horsCarteIds);
       } else {
         newAssignments.set(item.id, 0);
       }
@@ -1536,14 +1571,28 @@ export function ModeCourses() {
     }
   }
 
+  function rebalanceWithVirtuals(prev: Session, members: SplitMember[], horsCarteIds: Set<string>) {
+    const combinedPrices = new Map(prev.confirmedPrices);
+    const combinedAssignments = new Map(prev.assignments);
+    for (const v of prev.virtualItems) {
+      combinedPrices.set(v.id, v.price);
+      combinedAssignments.set(v.id, v.memberIdx);
+    }
+    const rebalanced = rebalanceAssignments(combinedPrices, combinedAssignments, prev.lockedAssignments, members, horsCarteIds);
+    const newAssignments = new Map(prev.assignments);
+    for (const [id] of prev.assignments) newAssignments.set(id, rebalanced.get(id) ?? 0);
+    const newVirtualItems = prev.virtualItems.map((v) => ({ ...v, memberIdx: rebalanced.get(v.id) ?? v.memberIdx }));
+    return { assignments: newAssignments, virtualItems: newVirtualItems };
+  }
+
   function handleSaveSplit(settings: SplitSettings) {
     setSplitSettings(settings);
     updateSplitSettings(settings);
     if (settings.enabled && settings.members.length >= 2) {
-      setSession((prev) => ({
-        ...prev,
-        assignments: rebalanceAssignments(prev.confirmedPrices, prev.assignments, prev.lockedAssignments, settings.members),
-      }));
+      setSession((prev) => {
+        const { assignments, virtualItems } = rebalanceWithVirtuals(prev, settings.members, prev.horsCarteIds);
+        return { ...prev, assignments, virtualItems };
+      });
     }
   }
 
@@ -1551,13 +1600,34 @@ export function ModeCourses() {
     setSession((prev) => {
       const split = splitRef.current;
       if (!split.enabled || split.members.length < 2) return prev;
-      return { ...prev, assignments: rebalanceAssignments(prev.confirmedPrices, prev.assignments, prev.lockedAssignments, split.members) };
+      const { assignments, virtualItems } = rebalanceWithVirtuals(prev, split.members, prev.horsCarteIds);
+      return { ...prev, assignments, virtualItems };
+    });
+  }
+
+  function toggleHorsCarte(itemId: string) {
+    Haptics.selectionAsync();
+    setSession((prev) => {
+      const newSet = new Set(prev.horsCarteIds);
+      if (newSet.has(itemId)) newSet.delete(itemId);
+      else newSet.add(itemId);
+      const split = splitRef.current;
+      if (!split.enabled || split.members.length < 2) return { ...prev, horsCarteIds: newSet };
+      const { assignments, virtualItems } = rebalanceWithVirtuals(prev, split.members, newSet);
+      return { ...prev, horsCarteIds: newSet, assignments, virtualItems };
     });
   }
 
   function handleAddVirtualItem(name: string, actualPaid: number, memberIdx: number, mode: "total" | "kg", kgPrice?: number) {
     const id = `virtual_${Date.now()}`;
-    setSession((prev) => ({ ...prev, virtualItems: [...prev.virtualItems, { id, customName: name, memberIdx, price: actualPaid }] }));
+    setSession((prev) => {
+      const split = splitRef.current;
+      const newVirtualItems = [...prev.virtualItems, { id, customName: name, memberIdx, price: actualPaid }];
+      if (!split.enabled || split.members.length < 2) return { ...prev, virtualItems: newVirtualItems };
+      const withNew = { ...prev, virtualItems: newVirtualItems };
+      const { assignments, virtualItems } = rebalanceWithVirtuals(withNew, split.members, prev.horsCarteIds);
+      return { ...prev, assignments, virtualItems };
+    });
     if (selectedStore) {
       if (mode === "kg" && kgPrice !== undefined) {
         reportIngredientPrice(name, selectedStore.id, kgPrice, 1000, "g");
@@ -1730,7 +1800,9 @@ export function ModeCourses() {
               <View style={{ flexDirection: "row", gap: 8 }}>
                 {splitSettings.members.map((m, i) => {
                   const total = memberTotals[i] ?? 0;
-                  const over = total > m.budgetCap;
+                  const carteTotal = memberCarteTotals[i] ?? 0;
+                  const capTotal = splitSettings.carteRestoEnabled ? carteTotal : total;
+                  const over = capTotal > m.budgetCap;
                   return (
                     <View key={i} style={{
                       flexDirection: "row", alignItems: "center", gap: 6,
@@ -1740,8 +1812,13 @@ export function ModeCourses() {
                       <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: m.color }} />
                       <Text style={{ fontSize: 12, fontWeight: "700", color: "#44403C" }}>{m.name}</Text>
                       <Text style={{ fontSize: 12, fontWeight: "900", color: over ? "#DC2626" : "#1C1917" }}>
-                        {total.toFixed(2)} €
+                        {splitSettings.carteRestoEnabled ? carteTotal.toFixed(2) : total.toFixed(2)} €
                       </Text>
+                      {splitSettings.carteRestoEnabled && memberHorsCarteTotals[i] > 0 && (
+                        <Text style={{ fontSize: 10, color: "#78716C", fontWeight: "600" }}>
+                          +{(memberHorsCarteTotals[i] ?? 0).toFixed(2)} HC
+                        </Text>
+                      )}
                     </View>
                   );
                 })}
@@ -1896,6 +1973,20 @@ export function ModeCourses() {
                           {price !== undefined && (
                             <Text style={{ fontSize: 13, fontWeight: "700", color: "#1C1917" }}>{price.toFixed(2)} €</Text>
                           )}
+                          {splitSettings.carteRestoEnabled && splitSettings.enabled && (() => {
+                            const isHC = session.horsCarteIds.has(item.id);
+                            return (
+                              <Pressable
+                                onPress={() => toggleHorsCarte(item.id)}
+                                hitSlop={8}
+                                style={{ borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, backgroundColor: isHC ? "#FEE2E2" : "#F0FDF4" }}
+                              >
+                                <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? "#DC2626" : "#16A34A", letterSpacing: 0.5 }}>
+                                  {isHC ? "HC" : "CR"}
+                                </Text>
+                              </Pressable>
+                            );
+                          })()}
                           {member && (
                             <Pressable
                               onPress={() => {
@@ -1958,10 +2049,35 @@ export function ModeCourses() {
                             {v.customName}
                           </Text>
                           <Text style={{ fontSize: 13, fontWeight: "700", color: "#1C1917" }}>{v.price.toFixed(2)} €</Text>
+                          {splitSettings.carteRestoEnabled && splitSettings.enabled && (() => {
+                            const isHC = session.horsCarteIds.has(v.id);
+                            return (
+                              <Pressable
+                                onPress={() => toggleHorsCarte(v.id)}
+                                hitSlop={8}
+                                style={{ borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, backgroundColor: isHC ? "#FEE2E2" : "#F0FDF4" }}
+                              >
+                                <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? "#DC2626" : "#16A34A", letterSpacing: 0.5 }}>
+                                  {isHC ? "HC" : "CR"}
+                                </Text>
+                              </Pressable>
+                            );
+                          })()}
                           {member && (
-                            <View style={{ borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, backgroundColor: `${member.color}20` }}>
+                            <Pressable
+                              onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                setSession((prev) => {
+                                  const members = splitRef.current.members;
+                                  const next = (v.memberIdx + 1) % members.length;
+                                  return { ...prev, virtualItems: prev.virtualItems.map((vi) => vi.id === v.id ? { ...vi, memberIdx: next } : vi) };
+                                });
+                              }}
+                              hitSlop={8}
+                              style={{ borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, backgroundColor: `${member.color}20` }}
+                            >
                               <Text style={{ fontSize: 10, fontWeight: "700", color: member.color }}>{member.name.slice(0, 3)}</Text>
-                            </View>
+                            </Pressable>
                           )}
                           <Pressable onPress={() => handleRemoveVirtualItem(v.id)} hitSlop={12} style={{ padding: 4 }}>
                             <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -1998,13 +2114,13 @@ export function ModeCourses() {
           </Pressable>
         </>
 
-      {editVirtualId && (() => {
-        const v = session.virtualItems.find((vi) => vi.id === editVirtualId);
-        if (!v) return null;
+      {(() => {
+        const v = editVirtualId ? session.virtualItems.find((vi) => vi.id === editVirtualId) : null;
         return (
           <EditVirtualPricePanel
-            name={v.customName}
-            currentPrice={v.price}
+            isOpen={!!editVirtualId}
+            name={v?.customName ?? ""}
+            currentPrice={v?.price ?? 0}
             onConfirm={(newPrice) => {
               setSession((prev) => ({
                 ...prev,
@@ -2048,6 +2164,8 @@ export function ModeCourses() {
           session={session}
           splitSettings={splitSettings}
           memberTotals={memberTotals}
+          memberCarteTotals={memberCarteTotals}
+          memberHorsCarteTotals={memberHorsCarteTotals}
           confirmedTotal={confirmedTotal}
           onClose={() => setCheckoutOpen(false)}
           onFinish={() => { setSession(EMPTY_SESSION); router.navigate("/(tabs)/shopping"); }}
