@@ -260,7 +260,9 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, hasProduct, onC
   const [kgPriceValue, setKgPriceValue] = useState("");
   const [actualQty, setActualQty] = useState(item?.quantity || 1);
   const [isPromo, setIsPromo] = useState(false);
+  const [promoMode, setPromoMode] = useState<"discount" | "lot">("discount");
   const [discountValue, setDiscountValue] = useState("");
+  const [lotPriceValue, setLotPriceValue] = useState("");
   const priceInputRef = useRef<TextInput>(null);
   useEffect(() => {
     setValue(prefillPrice);
@@ -268,7 +270,9 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, hasProduct, onC
     setKgPriceValue("");
     setActualQty(item?.quantity || 1);
     setIsPromo(false);
+    setPromoMode("discount");
     setDiscountValue("");
+    setLotPriceValue("");
   }, [prefillPrice, item?.id]);
   useEffect(() => {
     if (isOpen) {
@@ -284,19 +288,26 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, hasProduct, onC
     const cleaned = text.replace(",", ".");
     if (cleaned === "" || /^\d{0,3}(\.\d{0,1})?$/.test(cleaned)) setDiscountValue(cleaned);
   }
+  function handleLotPriceChange(text: string) {
+    const cleaned = text.replace(",", ".");
+    if (cleaned === "" || /^\d{0,5}(\.\d{0,2})?$/.test(cleaned)) setLotPriceValue(cleaned);
+  }
 
   const parsed = parseFloat(value);
   const valid = !Number.isNaN(parsed) && parsed > 0;
   const isWeightStep = priceMode === "kg" && kgStep === "weight";
   const kgPriceNum = parseFloat(kgPriceValue);
   const discountNum = parseFloat(discountValue);
+  const lotPrice = parseFloat(lotPriceValue);
   const hasDiscount = !Number.isNaN(discountNum) && discountNum > 0 && discountNum <= 100;
-  const computedTotal = valid
-    ? isPromo && hasDiscount
-      ? (actualQty - 1) * parsed + parsed * (1 - discountNum / 100)
-      : parsed * actualQty
-    : null;
-  const canConfirm = valid;
+  const hasLotPrice = !Number.isNaN(lotPrice) && lotPrice > 0;
+  const computedTotal = (() => {
+    if (!valid) return null;
+    if (isPromo && promoMode === "lot" && hasLotPrice) return lotPrice;
+    if (isPromo && promoMode === "discount" && hasDiscount) return (actualQty - 1) * parsed + parsed * (1 - discountNum / 100);
+    return parsed * actualQty;
+  })();
+  const canConfirm = valid && (!isPromo || promoMode !== "lot" || hasLotPrice);
 
   function handleConfirm() {
     if (!canConfirm) return;
@@ -310,7 +321,8 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, hasProduct, onC
       onConfirm(actualPaid, "kg", kgPriceNum);
     } else {
       const promo = isPromo ? { normalUnitPrice: parsed, promoTriggerQty: actualQty } : undefined;
-      onConfirm(computedTotal ?? parsed * actualQty, "total", undefined, actualQty, promo);
+      const totalPaid = computedTotal ?? parsed * actualQty;
+      onConfirm(totalPaid, "total", undefined, actualQty, promo);
     }
   }
 
@@ -417,17 +429,22 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, hasProduct, onC
           )}
 
           {/* Total payé — read-only */}
-          {!isWeightStep && priceMode === "total" && computedTotal !== null && (actualQty > 1 || (isPromo && hasDiscount)) && (
+          {!isWeightStep && priceMode === "total" && computedTotal !== null && (actualQty > 1 || (isPromo && (hasDiscount || hasLotPrice))) && (
             <View style={{ alignItems: "center", gap: 2 }}>
               <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 1 }}>Total payé</Text>
               <Text style={{ fontSize: 26, fontWeight: "900", color: "#1C1917", letterSpacing: -0.5 }}>
                 {computedTotal.toFixed(2)} €
               </Text>
-              {isPromo && hasDiscount && actualQty > 1 && (
+              {isPromo && promoMode === "discount" && hasDiscount && actualQty > 1 && (
                 <Text style={{ fontSize: 12, color: "#A8A29E", fontWeight: "500" }}>
                   {actualQty === 2
                     ? `${parsed.toFixed(2)} + ${(parsed * (1 - discountNum / 100)).toFixed(2)}`
                     : `${actualQty - 1} × ${parsed.toFixed(2)} + ${(parsed * (1 - discountNum / 100)).toFixed(2)}`}
+                </Text>
+              )}
+              {isPromo && promoMode === "lot" && hasLotPrice && (
+                <Text style={{ fontSize: 12, color: "#A8A29E", fontWeight: "500" }}>
+                  {`${lotPrice.toFixed(2)} ÷ ${actualQty} = ${(lotPrice / actualQty).toFixed(2)} €/unité`}
                 </Text>
               )}
             </View>
@@ -437,7 +454,7 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, hasProduct, onC
           {!isWeightStep && priceMode === "total" && (
             <View style={{ gap: 10 }}>
               <Pressable
-                onPress={() => { Haptics.selectionAsync(); setIsPromo((v) => !v); setDiscountValue(""); }}
+                onPress={() => { Haptics.selectionAsync(); setIsPromo((v) => !v); setDiscountValue(""); setLotPriceValue(""); setPromoMode("discount"); }}
                 style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: isPromo ? "#FFF7F4" : "#FAF9F6", borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1, borderColor: isPromo ? "#F5C4B0" : "transparent" }}
               >
                 <Text style={{ fontSize: 14, fontWeight: "700", color: isPromo ? "#E8571C" : "#78716C" }}>🏷 C'est une promo</Text>
@@ -447,20 +464,56 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, hasProduct, onC
               </Pressable>
 
               {isPromo && (
-                <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#FAF9F6", borderRadius: 14, paddingVertical: 10, paddingHorizontal: 16, gap: 8 }}>
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: "#A8A29E", flex: 1 }}>
-                    {actualQty > 1 ? `Remise sur le ${actualQty}ème` : "Remise"}
-                  </Text>
-                  <TextInput
-                    value={discountValue}
-                    onChangeText={handleDiscountChange}
-                    keyboardType="decimal-pad"
-                    returnKeyType="done"
-                    placeholder="50"
-                    placeholderTextColor="#D1CCC5"
-                    style={{ fontSize: 18, fontWeight: "800", color: "#1C1917", textAlign: "right", minWidth: 40 }}
-                  />
-                  <Text style={{ fontSize: 14, fontWeight: "700", color: "#A8A29E" }}>%</Text>
+                <View style={{ gap: 8 }}>
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    {(["discount", "lot"] as const).map((mode) => (
+                      <Pressable
+                        key={mode}
+                        onPress={() => { Haptics.selectionAsync(); setPromoMode(mode); setDiscountValue(""); setLotPriceValue(""); }}
+                        style={{ flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center", backgroundColor: promoMode === mode ? "#1C1917" : "#F0EDE8" }}
+                      >
+                        <Text style={{ fontSize: 12, fontWeight: "700", color: promoMode === mode ? "#fff" : "#78716C" }}>
+                          {mode === "discount" ? "% de remise" : "Prix du lot"}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+
+                  {promoMode === "discount" && (
+                    <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#FAF9F6", borderRadius: 14, paddingVertical: 10, paddingHorizontal: 16, gap: 8 }}>
+                      <Text style={{ fontSize: 13, fontWeight: "600", color: "#A8A29E", flex: 1 }}>
+                        {actualQty > 1 ? `Remise sur le ${actualQty}ème` : "Remise"}
+                      </Text>
+                      <TextInput
+                        value={discountValue}
+                        onChangeText={handleDiscountChange}
+                        keyboardType="decimal-pad"
+                        returnKeyType="done"
+                        placeholder="50"
+                        placeholderTextColor="#D1CCC5"
+                        style={{ fontSize: 18, fontWeight: "800", color: "#1C1917", textAlign: "right", minWidth: 40 }}
+                      />
+                      <Text style={{ fontSize: 14, fontWeight: "700", color: "#A8A29E" }}>%</Text>
+                    </View>
+                  )}
+
+                  {promoMode === "lot" && (
+                    <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#FAF9F6", borderRadius: 14, paddingVertical: 10, paddingHorizontal: 16, gap: 8 }}>
+                      <Text style={{ fontSize: 13, fontWeight: "600", color: "#A8A29E", flex: 1 }}>
+                        {`Prix pour ${actualQty}`}
+                      </Text>
+                      <TextInput
+                        value={lotPriceValue}
+                        onChangeText={handleLotPriceChange}
+                        keyboardType="decimal-pad"
+                        returnKeyType="done"
+                        placeholder="5.00"
+                        placeholderTextColor="#D1CCC5"
+                        style={{ fontSize: 18, fontWeight: "800", color: "#1C1917", textAlign: "right", minWidth: 60 }}
+                      />
+                      <Text style={{ fontSize: 14, fontWeight: "700", color: "#A8A29E" }}>€</Text>
+                    </View>
+                  )}
                 </View>
               )}
             </View>
