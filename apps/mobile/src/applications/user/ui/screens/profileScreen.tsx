@@ -1,6 +1,6 @@
-import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { useRouter } from "expo-router";
-import { BottomSheet, Button, Card, PressableFeedback, Separator } from "heroui-native";
+import { Card, PressableFeedback, Separator } from "heroui-native";
+import { BottomModal, BottomModalScrollView } from "../../../shopping/ui/components/bottomModal";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Image, Pressable, ScrollView, Share, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -476,275 +476,248 @@ export function ProfileScreen() {
         </View>
       </ScrollView>
 
-      <BottomSheet isOpen={editSheet === "name"} onOpenChange={(v) => !v && setEditSheet(null)}>
-        <BottomSheet.Portal>
-          <BottomSheet.Overlay />
-          <BottomSheet.Content snapPoints={["35%"]}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 16 }}>
-              <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Nom affiché</Text>
-              <BottomSheet.Close />
-            </View>
-            <View style={{ gap: 12 }}>
-              <TextInput
-                value={nameInput}
-                onChangeText={setNameInput}
-                placeholder="Votre prénom ou pseudo"
-                placeholderTextColor="#A8A29E"
-                returnKeyType="done"
-                onSubmitEditing={handleSaveName}
-                style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#1C1917" }}
-              />
-              <Button variant="primary" className="w-full rounded-2xl" onPress={handleSaveName} isDisabled={saving || !nameInput.trim()}>
-                <Button.Label>{saving ? "Enregistrement…" : "Enregistrer"}</Button.Label>
-              </Button>
-            </View>
-          </BottomSheet.Content>
-        </BottomSheet.Portal>
-      </BottomSheet>
+      <BottomModal isOpen={editSheet === "name"} onClose={() => setEditSheet(null)} height="35%">
+        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Nom affiché</Text>
+        <View style={{ gap: 12 }}>
+          <TextInput
+            value={nameInput}
+            onChangeText={setNameInput}
+            placeholder="Votre prénom ou pseudo"
+            placeholderTextColor="#A8A29E"
+            returnKeyType="done"
+            onSubmitEditing={handleSaveName}
+            style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#1C1917" }}
+          />
+          <Pressable
+            onPress={handleSaveName}
+            disabled={saving || !nameInput.trim()}
+            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: saving || !nameInput.trim() ? "#F5F3EF" : "#E8571C", paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1 })}
+          >
+            <Text style={{ fontSize: 15, fontWeight: "700", color: saving || !nameInput.trim() ? "#A8A29E" : "#fff" }}>{saving ? "Enregistrement…" : "Enregistrer"}</Text>
+          </Pressable>
+        </View>
+      </BottomModal>
 
-      <BottomSheet isOpen={editSheet === "size"} onOpenChange={(v) => !v && setEditSheet(null)}>
-        <BottomSheet.Portal>
-          <BottomSheet.Overlay />
-          <BottomSheet.Content snapPoints={["35%"]}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 16 }}>
-              <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Taille du foyer</Text>
-              <BottomSheet.Close />
+      <BottomModal isOpen={editSheet === "size"} onClose={() => setEditSheet(null)} height="35%">
+        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Taille du foyer</Text>
+        <View style={{ gap: 20 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 24 }}>
+            <Pressable
+              onPress={() => setSizeInput((s) => Math.max(1, s - 1))}
+              style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: "#F5F3EF", alignItems: "center", justifyContent: "center" }}
+            >
+              <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <Line x1={5} y1={12} x2={19} y2={12} />
+              </Svg>
+            </Pressable>
+            <View style={{ alignItems: "center" }}>
+              <Text style={{ fontSize: 48, fontWeight: "900", color: "#1C1917", lineHeight: 56 }}>{sizeInput}</Text>
+              <Text style={{ fontSize: 13, color: "#78716C" }}>personne{sizeInput > 1 ? "s" : ""}</Text>
             </View>
-            <View style={{ gap: 20 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 24 }}>
-                <Pressable
-                  onPress={() => setSizeInput((s) => Math.max(1, s - 1))}
-                  style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: "#F5F3EF", alignItems: "center", justifyContent: "center" }}
-                >
-                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                    <Line x1={5} y1={12} x2={19} y2={12} />
-                  </Svg>
-                </Pressable>
-                <View style={{ alignItems: "center" }}>
-                  <Text style={{ fontSize: 48, fontWeight: "900", color: "#1C1917", lineHeight: 56 }}>{sizeInput}</Text>
-                  <Text style={{ fontSize: 13, color: "#78716C" }}>personne{sizeInput > 1 ? "s" : ""}</Text>
-                </View>
-                <Pressable
-                  onPress={() => setSizeInput((s) => s + 1)}
-                  style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: "#E8571C1a", alignItems: "center", justifyContent: "center" }}
-                >
-                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                    <Line x1={12} y1={5} x2={12} y2={19} />
-                    <Line x1={5} y1={12} x2={19} y2={12} />
-                  </Svg>
-                </Pressable>
-              </View>
-              <Button variant="primary" className="w-full rounded-2xl" onPress={handleSaveSize} isDisabled={saving}>
-                <Button.Label>{saving ? "Enregistrement…" : "Enregistrer"}</Button.Label>
-              </Button>
-            </View>
-          </BottomSheet.Content>
-        </BottomSheet.Portal>
-      </BottomSheet>
+            <Pressable
+              onPress={() => setSizeInput((s) => s + 1)}
+              style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: "#E8571C1a", alignItems: "center", justifyContent: "center" }}
+            >
+              <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <Line x1={12} y1={5} x2={12} y2={19} />
+                <Line x1={5} y1={12} x2={19} y2={12} />
+              </Svg>
+            </Pressable>
+          </View>
+          <Pressable
+            onPress={handleSaveSize}
+            disabled={saving}
+            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: saving ? "#F5F3EF" : "#E8571C", paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1 })}
+          >
+            <Text style={{ fontSize: 15, fontWeight: "700", color: saving ? "#A8A29E" : "#fff" }}>{saving ? "Enregistrement…" : "Enregistrer"}</Text>
+          </Pressable>
+        </View>
+      </BottomModal>
 
-      <BottomSheet isOpen={editSheet === "dietary"} onOpenChange={(v) => !v && setEditSheet(null)}>
-        <BottomSheet.Portal>
-          <BottomSheet.Overlay />
-          <BottomSheet.Content snapPoints={["65%"]}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 16 }}>
-              <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Régime alimentaire</Text>
-              <BottomSheet.Close />
-            </View>
-            <BottomSheetScrollView contentContainerStyle={{ paddingBottom: 40, gap: 8 }}>
-              {DIETARY_OPTIONS.map((opt) => {
-                const active = dietaryInput.includes(opt.key);
-                return (
-                  <PressableFeedback
-                    key={opt.key}
-                    onPress={() => toggleDietary(opt.key)}
-                    style={{
-                      flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-                      borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14,
-                      backgroundColor: active ? "#FFF7ED" : "#F5F3EF",
-                      borderWidth: active ? 1.5 : 0, borderColor: active ? "#E8571C40" : "transparent",
-                    }}
-                  >
-                    <Text style={{ fontSize: 14, fontWeight: active ? "700" : "500", color: active ? "#E8571C" : "#1C1917" }}>
-                      {opt.label}
-                    </Text>
-                    {active && (
-                      <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                        <Path d="M20 6 9 17l-5-5" />
-                      </Svg>
-                    )}
-                  </PressableFeedback>
-                );
-              })}
-              <Button variant="primary" className="w-full rounded-2xl mt-4" onPress={handleSaveDietary} isDisabled={saving}>
-                <Button.Label>{saving ? "Enregistrement…" : "Enregistrer"}</Button.Label>
-              </Button>
-            </BottomSheetScrollView>
-          </BottomSheet.Content>
-        </BottomSheet.Portal>
-      </BottomSheet>
-
-      <BottomSheet isOpen={editSheet === "household"} onOpenChange={(v) => !v && setEditSheet(null)}>
-        <BottomSheet.Portal>
-          <BottomSheet.Overlay />
-          <BottomSheet.Content snapPoints={["40%"]}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 16 }}>
-              <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Rejoindre un foyer</Text>
-              <BottomSheet.Close />
-            </View>
-            <View style={{ gap: 12 }}>
-              <TextInput
-                value={joinCodeInput}
-                onChangeText={(v) => { setJoinCodeInput(v.toUpperCase()); setJoinError(null); }}
-                placeholder="Code d'invitation (ex: A3B4C5)"
-                placeholderTextColor="#A8A29E"
-                autoCapitalize="characters"
+      <BottomModal isOpen={editSheet === "dietary"} onClose={() => setEditSheet(null)} height="65%">
+        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Régime alimentaire</Text>
+        <BottomModalScrollView contentContainerStyle={{ paddingBottom: 40, gap: 8 }}>
+          {DIETARY_OPTIONS.map((opt) => {
+            const active = dietaryInput.includes(opt.key);
+            return (
+              <PressableFeedback
+                key={opt.key}
+                onPress={() => toggleDietary(opt.key)}
                 style={{
-                  borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 14,
-                  fontSize: 18, fontWeight: "700", color: "#1C1917", letterSpacing: 3, textAlign: "center",
-                  borderWidth: joinError ? 1.5 : 0, borderColor: "#DC2626",
+                  flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+                  borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14,
+                  backgroundColor: active ? "#FFF7ED" : "#F5F3EF",
+                  borderWidth: active ? 1.5 : 0, borderColor: active ? "#E8571C40" : "transparent",
                 }}
-              />
-              {joinError && <Text style={{ fontSize: 12, color: "#DC2626", fontWeight: "600", textAlign: "center" }}>{joinError}</Text>}
-              <Button variant="primary" className="w-full rounded-2xl" onPress={handleJoinHousehold} isDisabled={saving || !joinCodeInput.trim()}>
-                <Button.Label>{saving ? "Rejoindre…" : "Rejoindre"}</Button.Label>
-              </Button>
-            </View>
-          </BottomSheet.Content>
-        </BottomSheet.Portal>
-      </BottomSheet>
+              >
+                <Text style={{ fontSize: 14, fontWeight: active ? "700" : "500", color: active ? "#E8571C" : "#1C1917" }}>
+                  {opt.label}
+                </Text>
+                {active && (
+                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M20 6 9 17l-5-5" />
+                  </Svg>
+                )}
+              </PressableFeedback>
+            );
+          })}
+          <Pressable
+            onPress={handleSaveDietary}
+            disabled={saving}
+            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: saving ? "#F5F3EF" : "#E8571C", paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1, marginTop: 4 })}
+          >
+            <Text style={{ fontSize: 15, fontWeight: "700", color: saving ? "#A8A29E" : "#fff" }}>{saving ? "Enregistrement…" : "Enregistrer"}</Text>
+          </Pressable>
+        </BottomModalScrollView>
+      </BottomModal>
 
-      <BottomSheet isOpen={editSheet === "stores"} onOpenChange={(v) => { if (!v) { setEditSheet(null); setStoreQuery(""); setStoreResults([]); } }}>
-        <BottomSheet.Portal>
-          <BottomSheet.Overlay />
-          <BottomSheet.Content snapPoints={["75%"]}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 16 }}>
-              <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Mes magasins</Text>
-              <BottomSheet.Close />
-            </View>
-            <View style={{ flex: 1 }}>
-              <TextInput
-                value={storeQuery}
-                onChangeText={handleStoreQueryChange}
-                placeholder="Rechercher un magasin…"
-                placeholderTextColor="#A8A29E"
-                style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 13, fontSize: 14, color: "#1C1917", marginBottom: 12 }}
-              />
-              {storeSearching && <ActivityIndicator color="#E8571C" style={{ marginBottom: 12 }} />}
-              {storeQuery.trim().length > 0 && !storeSearching && storeResults.length === 0 && (
-                <Pressable onPress={() => { setCreateBrand(storeQuery.trim()); setCreateStoreSheet(true); }} style={{ flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 14, backgroundColor: "#FFF7ED", padding: 12, marginBottom: 12 }}>
-                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+      <BottomModal isOpen={editSheet === "household"} onClose={() => setEditSheet(null)} height="40%">
+        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Rejoindre un foyer</Text>
+        <View style={{ gap: 12 }}>
+          <TextInput
+            value={joinCodeInput}
+            onChangeText={(v) => { setJoinCodeInput(v.toUpperCase()); setJoinError(null); }}
+            placeholder="Code d'invitation (ex: A3B4C5)"
+            placeholderTextColor="#A8A29E"
+            autoCapitalize="characters"
+            style={{
+              borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 14,
+              fontSize: 18, fontWeight: "700", color: "#1C1917", letterSpacing: 3, textAlign: "center",
+              borderWidth: joinError ? 1.5 : 0, borderColor: "#DC2626",
+            }}
+          />
+          {joinError && <Text style={{ fontSize: 12, color: "#DC2626", fontWeight: "600", textAlign: "center" }}>{joinError}</Text>}
+          <Pressable
+            onPress={handleJoinHousehold}
+            disabled={saving || !joinCodeInput.trim()}
+            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: saving || !joinCodeInput.trim() ? "#F5F3EF" : "#E8571C", paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1 })}
+          >
+            <Text style={{ fontSize: 15, fontWeight: "700", color: saving || !joinCodeInput.trim() ? "#A8A29E" : "#fff" }}>{saving ? "Rejoindre…" : "Rejoindre"}</Text>
+          </Pressable>
+        </View>
+      </BottomModal>
+
+      <BottomModal isOpen={editSheet === "stores"} onClose={() => { setEditSheet(null); setStoreQuery(""); setStoreResults([]); }} height="75%">
+        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Mes magasins</Text>
+        <TextInput
+          value={storeQuery}
+          onChangeText={handleStoreQueryChange}
+          placeholder="Rechercher un magasin…"
+          placeholderTextColor="#A8A29E"
+          style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 13, fontSize: 14, color: "#1C1917", marginBottom: 12 }}
+        />
+        {storeSearching && <ActivityIndicator color="#E8571C" style={{ marginBottom: 12 }} />}
+        {storeQuery.trim().length > 0 && !storeSearching && storeResults.length === 0 && (
+          <Pressable onPress={() => { setCreateBrand(storeQuery.trim()); setCreateStoreSheet(true); }} style={{ flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 14, backgroundColor: "#FFF7ED", padding: 12, marginBottom: 12 }}>
+            <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+              <Line x1={12} y1={5} x2={12} y2={19} />
+              <Line x1={5} y1={12} x2={19} y2={12} />
+            </Svg>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: "#E8571C" }}>Créer « {storeQuery.trim()} »</Text>
+          </Pressable>
+        )}
+        {storeResults.length > 0 && (
+          <View style={{ borderRadius: 16, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E7E5E4", overflow: "hidden", marginBottom: 16 }}>
+            {storeResults.map((s, i) => (
+              <View key={s.id}>
+                <Pressable
+                  onPress={() => handleAddStore(s)}
+                  style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: "#1C1917" }}>{s.brand ? `${s.brand} ${s.name}` : s.name}</Text>
+                    <Text style={{ fontSize: 11, color: "#78716C" }}>{s.city}{s.address ? ` · ${s.address}` : ""}</Text>
+                  </View>
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                     <Line x1={12} y1={5} x2={12} y2={19} />
                     <Line x1={5} y1={12} x2={19} y2={12} />
                   </Svg>
-                  <Text style={{ fontSize: 13, fontWeight: "700", color: "#E8571C" }}>Créer « {storeQuery.trim()} »</Text>
                 </Pressable>
-              )}
-              {storeResults.length > 0 && (
-                <View style={{ borderRadius: 16, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E7E5E4", overflow: "hidden", marginBottom: 16 }}>
-                  {storeResults.map((s, i) => (
-                    <View key={s.id}>
-                      <Pressable
-                        onPress={() => handleAddStore(s)}
-                        style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}
-                      >
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ fontSize: 13, fontWeight: "600", color: "#1C1917" }}>{s.brand ? `${s.brand} ${s.name}` : s.name}</Text>
-                          <Text style={{ fontSize: 11, color: "#78716C" }}>{s.city}{s.address ? ` · ${s.address}` : ""}</Text>
-                        </View>
-                        <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                          <Line x1={12} y1={5} x2={12} y2={19} />
-                          <Line x1={5} y1={12} x2={19} y2={12} />
-                        </Svg>
-                      </Pressable>
-                      {i < storeResults.length - 1 && <Separator />}
-                    </View>
-                  ))}
-                </View>
-              )}
-              <BottomSheetScrollView contentContainerStyle={{ paddingBottom: 32, gap: 8 }}>
-                {userStores.length === 0 && !storeQuery && (
-                  <Text style={{ fontSize: 13, color: "#A8A29E", textAlign: "center", marginTop: 12 }}>Aucun magasin sélectionné</Text>
-                )}
-                {userStores.map((s) => (
-                  <View key={s.id} style={{ flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 14, paddingVertical: 12 }}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 13, fontWeight: "600", color: "#1C1917" }}>{s.brand ? `${s.brand} ${s.name}` : s.name}</Text>
-                      <Text style={{ fontSize: 11, color: "#78716C" }}>{s.city}</Text>
-                    </View>
-                    <Pressable onPress={() => handleRemoveStore(s.id)} hitSlop={12} style={{ padding: 4 }}>
-                      <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                        <Line x1={18} y1={6} x2={6} y2={18} />
-                        <Line x1={6} y1={6} x2={18} y2={18} />
-                      </Svg>
-                    </Pressable>
-                  </View>
-                ))}
-              </BottomSheetScrollView>
+                {i < storeResults.length - 1 && <Separator />}
+              </View>
+            ))}
+          </View>
+        )}
+        <BottomModalScrollView contentContainerStyle={{ paddingBottom: 32, gap: 8 }}>
+          {userStores.length === 0 && !storeQuery && (
+            <Text style={{ fontSize: 13, color: "#A8A29E", textAlign: "center", marginTop: 12 }}>Aucun magasin sélectionné</Text>
+          )}
+          {userStores.map((s) => (
+            <View key={s.id} style={{ flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 14, paddingVertical: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: "600", color: "#1C1917" }}>{s.brand ? `${s.brand} ${s.name}` : s.name}</Text>
+                <Text style={{ fontSize: 11, color: "#78716C" }}>{s.city}</Text>
+              </View>
+              <Pressable onPress={() => handleRemoveStore(s.id)} hitSlop={12} style={{ padding: 4 }}>
+                <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <Line x1={18} y1={6} x2={6} y2={18} />
+                  <Line x1={6} y1={6} x2={18} y2={18} />
+                </Svg>
+              </Pressable>
             </View>
-          </BottomSheet.Content>
-        </BottomSheet.Portal>
-      </BottomSheet>
+          ))}
+        </BottomModalScrollView>
+      </BottomModal>
 
-      <BottomSheet isOpen={createStoreSheet} onOpenChange={(v) => { if (!v) { setCreateStoreSheet(false); setCreateStoreError(null); } }}>
-        <BottomSheet.Portal>
-          <BottomSheet.Overlay />
-          <BottomSheet.Content snapPoints={["55%"]}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 16 }}>
-              <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Créer un magasin</Text>
-              <BottomSheet.Close />
-            </View>
-            <View style={{ gap: 10 }}>
-              <TextInput value={createBrand} onChangeText={setCreateBrand} placeholder="Enseigne (ex: Carrefour, Lidl…)" placeholderTextColor="#A8A29E" style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 13, fontSize: 14, color: "#1C1917" }} />
-              <TextInput value={createCity} onChangeText={setCreateCity} placeholder="Ville *" placeholderTextColor="#A8A29E" style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 13, fontSize: 14, color: "#1C1917" }} />
-              <TextInput value={createAddress} onChangeText={setCreateAddress} placeholder="Adresse (optionnel)" placeholderTextColor="#A8A29E" style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 13, fontSize: 14, color: "#1C1917" }} />
-              {createStoreError && <Text style={{ fontSize: 12, color: "#DC2626" }}>{createStoreError}</Text>}
-              <Button variant="primary" className="w-full rounded-2xl mt-2" onPress={handleCreateStore} isDisabled={creatingStore || !createBrand.trim() || !createCity.trim()}>
-                <Button.Label>{creatingStore ? "Création…" : "Créer et ajouter"}</Button.Label>
-              </Button>
-            </View>
-          </BottomSheet.Content>
-        </BottomSheet.Portal>
-      </BottomSheet>
+      <BottomModal isOpen={createStoreSheet} onClose={() => { setCreateStoreSheet(false); setCreateStoreError(null); }} height="55%">
+        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Créer un magasin</Text>
+        <View style={{ gap: 10 }}>
+          <TextInput value={createBrand} onChangeText={setCreateBrand} placeholder="Enseigne (ex: Carrefour, Lidl…)" placeholderTextColor="#A8A29E" style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 13, fontSize: 14, color: "#1C1917" }} />
+          <TextInput value={createCity} onChangeText={setCreateCity} placeholder="Ville *" placeholderTextColor="#A8A29E" style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 13, fontSize: 14, color: "#1C1917" }} />
+          <TextInput value={createAddress} onChangeText={setCreateAddress} placeholder="Adresse (optionnel)" placeholderTextColor="#A8A29E" style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 13, fontSize: 14, color: "#1C1917" }} />
+          {createStoreError && <Text style={{ fontSize: 12, color: "#DC2626" }}>{createStoreError}</Text>}
+          <Pressable
+            onPress={handleCreateStore}
+            disabled={creatingStore || !createBrand.trim() || !createCity.trim()}
+            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: creatingStore || !createBrand.trim() || !createCity.trim() ? "#F5F3EF" : "#E8571C", paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1, marginTop: 2 })}
+          >
+            <Text style={{ fontSize: 15, fontWeight: "700", color: creatingStore || !createBrand.trim() || !createCity.trim() ? "#A8A29E" : "#fff" }}>{creatingStore ? "Création…" : "Créer et ajouter"}</Text>
+          </Pressable>
+        </View>
+      </BottomModal>
 
-      <BottomSheet isOpen={confirmLeave} onOpenChange={(v) => !v && setConfirmLeave(false)}>
-        <BottomSheet.Portal>
-          <BottomSheet.Overlay />
-          <BottomSheet.Content snapPoints={["32%"]}>
-            <View style={{ alignItems: "center", paddingVertical: 16, gap: 6 }}>
-              <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Quitter le foyer ?</Text>
-              <Text style={{ fontSize: 13, color: "#78716C", textAlign: "center" }}>Vous perdrez l'accès aux listes partagées.</Text>
-            </View>
-            <View style={{ gap: 8 }}>
-              <Button variant="ghost" onPress={handleLeaveHousehold} isDisabled={leaving} className="w-full rounded-2xl">
-                <Button.Label style={{ color: "#DC2626" }}>{leaving ? "Départ…" : "Quitter le foyer"}</Button.Label>
-              </Button>
-              <Button variant="secondary" onPress={() => setConfirmLeave(false)} className="w-full rounded-2xl">
-                <Button.Label>Annuler</Button.Label>
-              </Button>
-            </View>
-          </BottomSheet.Content>
-        </BottomSheet.Portal>
-      </BottomSheet>
+      <BottomModal isOpen={confirmLeave} onClose={() => setConfirmLeave(false)} height="32%">
+        <View style={{ alignItems: "center", marginBottom: 20, gap: 6 }}>
+          <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Quitter le foyer ?</Text>
+          <Text style={{ fontSize: 13, color: "#78716C", textAlign: "center" }}>Vous perdrez l'accès aux listes partagées.</Text>
+        </View>
+        <View style={{ gap: 8 }}>
+          <Pressable
+            onPress={handleLeaveHousehold}
+            disabled={leaving}
+            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: "#FEE2E2", paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1 })}
+          >
+            <Text style={{ fontSize: 15, fontWeight: "700", color: "#DC2626" }}>{leaving ? "Départ…" : "Quitter le foyer"}</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setConfirmLeave(false)}
+            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: "#F5F3EF", paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1 })}
+          >
+            <Text style={{ fontSize: 15, fontWeight: "600", color: "#1C1917" }}>Annuler</Text>
+          </Pressable>
+        </View>
+      </BottomModal>
 
-      <BottomSheet isOpen={confirmSignOut} onOpenChange={(v) => !v && setConfirmSignOut(false)}>
-        <BottomSheet.Portal>
-          <BottomSheet.Overlay />
-          <BottomSheet.Content snapPoints={["30%"]}>
-            <View style={{ alignItems: "center", paddingVertical: 16, gap: 4 }}>
-              <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Déconnexion</Text>
-              <Text style={{ fontSize: 13, color: "#78716C" }}>Es-tu sûr de vouloir te déconnecter ?</Text>
-            </View>
-            <View style={{ gap: 8 }}>
-              <Button variant="ghost" onPress={doSignOut} className="w-full rounded-2xl">
-                <Button.Label style={{ color: "#DC2626" }}>Se déconnecter</Button.Label>
-              </Button>
-              <Button variant="secondary" onPress={() => setConfirmSignOut(false)} className="w-full rounded-2xl">
-                <Button.Label>Annuler</Button.Label>
-              </Button>
-            </View>
-          </BottomSheet.Content>
-        </BottomSheet.Portal>
-      </BottomSheet>
+      <BottomModal isOpen={confirmSignOut} onClose={() => setConfirmSignOut(false)} height="30%">
+        <View style={{ alignItems: "center", marginBottom: 20, gap: 4 }}>
+          <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Déconnexion</Text>
+          <Text style={{ fontSize: 13, color: "#78716C" }}>Es-tu sûr de vouloir te déconnecter ?</Text>
+        </View>
+        <View style={{ gap: 8 }}>
+          <Pressable
+            onPress={doSignOut}
+            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: "#FEE2E2", paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1 })}
+          >
+            <Text style={{ fontSize: 15, fontWeight: "700", color: "#DC2626" }}>Se déconnecter</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setConfirmSignOut(false)}
+            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: "#F5F3EF", paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1 })}
+          >
+            <Text style={{ fontSize: 15, fontWeight: "600", color: "#1C1917" }}>Annuler</Text>
+          </Pressable>
+        </View>
+      </BottomModal>
     </SafeAreaView>
   );
 }

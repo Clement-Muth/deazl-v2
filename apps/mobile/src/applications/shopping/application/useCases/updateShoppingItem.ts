@@ -1,4 +1,5 @@
 import { supabase } from "../../../../lib/supabase";
+import { categorizeItem } from "../../domain/categorizeItem";
 
 export async function updateShoppingItem(
   id: string,
@@ -8,6 +9,6 @@ export async function updateShoppingItem(
 ): Promise<void> {
   await supabase
     .from("shopping_items")
-    .update({ custom_name: name, quantity, unit })
+    .update({ custom_name: name, quantity, unit, category: categorizeItem(name) })
     .eq("id", id);
 }

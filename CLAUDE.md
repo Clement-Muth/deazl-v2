@@ -13,6 +13,7 @@ Toujours utiliser **Bun**.
 - Supabase (PostgreSQL + Auth) — `@supabase/supabase-js` + `@supabase/ssr`
 - Capacitor v8 (mobile iOS/Android)
 - Open Food Facts API
+- **HeroUI Native** (`heroui-native`) — bibliothèque de composants UI mobile. **TOUJOURS utiliser HeroUI pour les composants UI natifs** (Button, etc.). Ne jamais remplacer par des `Pressable` custom ce qui peut être fait avec HeroUI. Exception unique : `BottomSheet` de HeroUI est remplacé par le composant custom `BottomModal` (`bottomModal.tsx`).
 
 ## Architecture
 DDD pragmatique + Vertical Slice. Chaque Bounded Context dans `src/applications/[bc-name]/` avec les couches :

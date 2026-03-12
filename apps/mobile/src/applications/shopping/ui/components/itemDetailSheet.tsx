@@ -1,9 +1,9 @@
-import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { useCameraPermissions, CameraView } from "expo-camera";
 import * as Haptics from "expo-haptics";
-import { BottomSheet } from "heroui-native";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Image, Pressable, Text, TextInput, View } from "react-native";
+import { Button } from "heroui-native";
+import { BottomModal, BottomModalScrollView } from "./bottomModal";
 import Svg, { Circle, Line, Path, Polyline } from "react-native-svg";
 import { getAdditiveRisk, parseAdditiveTag } from "../../domain/additiveRisks";
 import type { AlternativeProduct } from "../../application/useCases/getProductAlternatives";
@@ -17,6 +17,8 @@ import type { OFFProductResult } from "../../application/useCases/searchOffProdu
 import { getOffProductByBarcode, searchOffProducts } from "../../application/useCases/searchOffProducts";
 import type { ShoppingItem } from "../../domain/entities/shopping";
 import { PriceReportSheet } from "./priceReportSheet";
+
+const UNITS = ["pièce", "kg", "g", "L", "cL", "mL"];
 
 const NUTRI_SCORE_MAP: Record<string, number> = { a: 100, b: 75, c: 50, d: 25, e: 0 };
 const NOVA_SCORE_MAP: Record<number, number> = { 1: 100, 2: 75, 3: 25, 4: 0 };
@@ -145,73 +147,69 @@ export function ItemDetailSheet({ item, isOpen, onClose, onReload }: ItemDetailS
     : parseFloat(item.quantity.toFixed(2).replace(/\.?0+$/, ""));
 
   return (
-    <BottomSheet isOpen={isOpen} onOpenChange={(v) => !v && onClose()}>
-      <BottomSheet.Portal>
-        <BottomSheet.Overlay />
-        <BottomSheet.Content snapPoints={["92%"]}>
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: 12 }}>
-              <View style={{ flex: 1, marginRight: 12 }}>
-                <Text style={{ fontSize: 17, fontWeight: "800", color: "#1C1917" }} numberOfLines={2}>
-                  {item.customName}
-                </Text>
-                <Text style={{ fontSize: 12, color: "#A8A29E", marginTop: 2 }}>
-                  {qty} {item.unit}
-                </Text>
-              </View>
-              <Pressable
-                onPress={() => setEditOpen(true)}
-                style={({ pressed }) => ({
-                  width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center",
-                  backgroundColor: pressed ? "#F5F3EF" : "#FAF9F6", marginRight: 6,
-                })}
-              >
-                <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <Path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                  <Path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                </Svg>
-              </Pressable>
-              <BottomSheet.Close />
+    <>
+      <BottomModal isOpen={isOpen} onClose={onClose} height="92%">
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: 12 }}>
+            <View style={{ flex: 1, marginRight: 12 }}>
+              <Text style={{ fontSize: 17, fontWeight: "800", color: "#1C1917" }} numberOfLines={2}>
+                {item.customName}
+              </Text>
+              <Text style={{ fontSize: 12, color: "#A8A29E", marginTop: 2 }}>
+                {qty} {item.unit}
+              </Text>
             </View>
-
-            <View style={{ flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#F5F3EF", marginBottom: 0 }}>
-              {tabs.map(({ key, label }) => (
-                <Pressable
-                  key={key}
-                  onPress={() => setTab(key)}
-                  style={{ paddingBottom: 10, paddingRight: 20, position: "relative" }}
-                >
-                  <Text style={{ fontSize: 14, fontWeight: "600", color: tab === key ? "#1C1917" : "#A8A29E" }}>
-                    {label}
-                  </Text>
-                  {tab === key && (
-                    <View style={{ position: "absolute", bottom: 0, left: 0, right: 20, height: 2, borderRadius: 2, backgroundColor: "#E8571C" }} />
-                  )}
-                </Pressable>
-              ))}
-            </View>
-
-            <BottomSheetScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingTop: 16, paddingBottom: 40 }}>
-              {tab === "details" && (
-                <DetailsTab
-                  item={item}
-                  product={product}
-                  loadingProduct={loadingProduct}
-                  onGoToPrix={() => setTab("prix")}
-                  onAddPrice={() => setPriceReportOpen(true)}
-                  onLinkProduct={() => setLinkOpen(true)}
-                />
-              )}
-              {tab === "prix" && (
-                <PrixTab item={item} cheapest={cheapest} qty={qty} onAddPrice={() => setPriceReportOpen(true)} />
-              )}
-              {tab === "alternatives" && (
-                <AlternativesTab alternatives={alternatives} loadingAlts={loadingAlts} />
-              )}
-            </BottomSheetScrollView>
+            <Pressable
+              onPress={() => setEditOpen(true)}
+              style={({ pressed }) => ({
+                width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center",
+                backgroundColor: pressed ? "#F5F3EF" : "#FAF9F6",
+              })}
+            >
+              <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <Path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <Path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </Svg>
+            </Pressable>
           </View>
-        </BottomSheet.Content>
-      </BottomSheet.Portal>
+
+          <View style={{ flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#F5F3EF", marginBottom: 0 }}>
+            {tabs.map(({ key, label }) => (
+              <Pressable
+                key={key}
+                onPress={() => setTab(key)}
+                style={{ paddingBottom: 10, paddingRight: 20, position: "relative" }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: "600", color: tab === key ? "#1C1917" : "#A8A29E" }}>
+                  {label}
+                </Text>
+                {tab === key && (
+                  <View style={{ position: "absolute", bottom: 0, left: 0, right: 20, height: 2, borderRadius: 2, backgroundColor: "#E8571C" }} />
+                )}
+              </Pressable>
+            ))}
+          </View>
+
+          <BottomModalScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingTop: 16, paddingBottom: 40 }}>
+            {tab === "details" && (
+              <DetailsTab
+                item={item}
+                product={product}
+                loadingProduct={loadingProduct}
+                onGoToPrix={() => setTab("prix")}
+                onAddPrice={() => setPriceReportOpen(true)}
+                onLinkProduct={() => setLinkOpen(true)}
+              />
+            )}
+            {tab === "prix" && (
+              <PrixTab item={item} cheapest={cheapest} qty={qty} onAddPrice={() => setPriceReportOpen(true)} />
+            )}
+            {tab === "alternatives" && (
+              <AlternativesTab alternatives={alternatives} loadingAlts={loadingAlts} />
+            )}
+          </BottomModalScrollView>
+        </View>
+      </BottomModal>
       <PriceReportSheet
         item={item}
         isOpen={priceReportOpen}
@@ -230,7 +228,7 @@ export function ItemDetailSheet({ item, isOpen, onClose, onReload }: ItemDetailS
         onClose={() => setEditOpen(false)}
         onSuccess={() => { setEditOpen(false); onReload?.(); }}
       />
-    </BottomSheet>
+    </>
   );
 }
 
@@ -642,149 +640,142 @@ function LinkProductSheet({ item, isOpen, onClose, onSuccess }: {
   if (!item) return null;
 
   return (
-    <BottomSheet isOpen={isOpen} onOpenChange={(v) => !v && onClose()}>
-      <BottomSheet.Portal>
-        <BottomSheet.Overlay />
-        <BottomSheet.Content snapPoints={["92%"]}>
+    <BottomModal isOpen={isOpen} onClose={onClose} height="92%">
+      <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: 14 }}>
           <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: 14 }}>
-              <View style={{ flex: 1, marginRight: 12 }}>
-                <Text style={{ fontSize: 17, fontWeight: "800", color: "#1C1917" }}>Associer un produit</Text>
-                <Text style={{ fontSize: 12, color: "#A8A29E", marginTop: 2 }}>{item.customName}</Text>
-              </View>
-              <BottomSheet.Close />
+            <Text style={{ fontSize: 17, fontWeight: "800", color: "#1C1917" }}>Associer un produit</Text>
+            <Text style={{ fontSize: 12, color: "#A8A29E", marginTop: 2 }}>{item.customName}</Text>
+          </View>
+        </View>
+
+        <View style={{ flexDirection: "row", backgroundColor: "#F5F3EF", borderRadius: 14, padding: 4, marginBottom: 14, gap: 4 }}>
+          <Pressable
+            onPress={() => { setMode("search"); setScanned(false); setScanError(null); }}
+            style={{ flex: 1, paddingVertical: 9, borderRadius: 11, alignItems: "center", backgroundColor: mode === "search" ? "#fff" : "transparent", shadowColor: mode === "search" ? "#1C1917" : "transparent", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: mode === "search" ? 2 : 0 }}
+          >
+            <Text style={{ fontSize: 13, fontWeight: "700", color: mode === "search" ? "#1C1917" : "#A8A29E" }}>Rechercher</Text>
+          </Pressable>
+          <Pressable
+            onPress={handleSwitchToScan}
+            style={{ flex: 1, paddingVertical: 9, borderRadius: 11, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6, backgroundColor: mode === "scan" ? "#fff" : "transparent", shadowColor: mode === "scan" ? "#1C1917" : "transparent", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: mode === "scan" ? 2 : 0 }}
+          >
+            <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={mode === "scan" ? "#1C1917" : "#A8A29E"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <Path d="M3 9V6a2 2 0 0 1 2-2h3" /><Path d="M15 4h3a2 2 0 0 1 2 2v3" /><Path d="M21 15v3a2 2 0 0 1-2 2h-3" /><Path d="M9 20H6a2 2 0 0 1-2-2v-3" /><Line x1={7} y1={12} x2={17} y2={12} />
+            </Svg>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: mode === "scan" ? "#1C1917" : "#A8A29E" }}>Scanner</Text>
+          </Pressable>
+        </View>
+
+        {linkError && (
+          <View style={{ backgroundColor: "#FEF2F2", borderRadius: 12, padding: 12, marginBottom: 10 }}>
+            <Text style={{ fontSize: 13, color: "#DC2626" }}>{linkError}</Text>
+          </View>
+        )}
+
+        {mode === "search" ? (
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#F5F3EF", borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 12 }}>
+              <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <Circle cx={11} cy={11} r={8} /><Line x1={21} y1={21} x2={16.65} y2={16.65} />
+              </Svg>
+              <TextInput
+                value={query}
+                onChangeText={handleSearch}
+                placeholder="Nom du produit…"
+                placeholderTextColor="#A8A29E"
+                style={{ flex: 1, fontSize: 15, color: "#1C1917" }}
+                returnKeyType="search"
+              />
+              {searching && <ActivityIndicator size="small" color="#E8571C" />}
             </View>
-
-            <View style={{ flexDirection: "row", backgroundColor: "#F5F3EF", borderRadius: 14, padding: 4, marginBottom: 14, gap: 4 }}>
-              <Pressable
-                onPress={() => { setMode("search"); setScanned(false); setScanError(null); }}
-                style={{ flex: 1, paddingVertical: 9, borderRadius: 11, alignItems: "center", backgroundColor: mode === "search" ? "#fff" : "transparent", shadowColor: mode === "search" ? "#1C1917" : "transparent", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: mode === "search" ? 2 : 0 }}
-              >
-                <Text style={{ fontSize: 13, fontWeight: "700", color: mode === "search" ? "#1C1917" : "#A8A29E" }}>Rechercher</Text>
-              </Pressable>
-              <Pressable
-                onPress={handleSwitchToScan}
-                style={{ flex: 1, paddingVertical: 9, borderRadius: 11, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6, backgroundColor: mode === "scan" ? "#fff" : "transparent", shadowColor: mode === "scan" ? "#1C1917" : "transparent", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: mode === "scan" ? 2 : 0 }}
-              >
-                <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={mode === "scan" ? "#1C1917" : "#A8A29E"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <Path d="M3 9V6a2 2 0 0 1 2-2h3" /><Path d="M15 4h3a2 2 0 0 1 2 2v3" /><Path d="M21 15v3a2 2 0 0 1-2 2h-3" /><Path d="M9 20H6a2 2 0 0 1-2-2v-3" /><Line x1={7} y1={12} x2={17} y2={12} />
-                </Svg>
-                <Text style={{ fontSize: 13, fontWeight: "700", color: mode === "scan" ? "#1C1917" : "#A8A29E" }}>Scanner</Text>
-              </Pressable>
-            </View>
-
-            {linkError && (
-              <View style={{ backgroundColor: "#FEF2F2", borderRadius: 12, padding: 12, marginBottom: 10 }}>
-                <Text style={{ fontSize: 13, color: "#DC2626" }}>{linkError}</Text>
-              </View>
-            )}
-
-            {mode === "search" ? (
-              <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#F5F3EF", borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 12 }}>
-                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <Circle cx={11} cy={11} r={8} /><Line x1={21} y1={21} x2={16.65} y2={16.65} />
-                  </Svg>
-                  <TextInput
-                    value={query}
-                    onChangeText={handleSearch}
-                    placeholder="Nom du produit…"
-                    placeholderTextColor="#A8A29E"
-                    style={{ flex: 1, fontSize: 15, color: "#1C1917" }}
-                    returnKeyType="search"
-                    autoFocus
-                  />
-                  {searching && <ActivityIndicator size="small" color="#E8571C" />}
+            <BottomModalScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40, gap: 8 }}>
+              {results.length === 0 && !searching && query.trim() ? (
+                <View style={{ alignItems: "center", paddingTop: 32 }}>
+                  <Text style={{ fontSize: 14, color: "#A8A29E" }}>Aucun résultat pour «{query}»</Text>
                 </View>
-                <BottomSheetScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40, gap: 8 }}>
-                  {results.length === 0 && !searching && query.trim() ? (
-                    <View style={{ alignItems: "center", paddingTop: 32 }}>
-                      <Text style={{ fontSize: 14, color: "#A8A29E" }}>Aucun résultat pour «{query}»</Text>
+              ) : results.map((product) => (
+                <Pressable
+                  key={product.offId}
+                  onPress={() => linkProduct(product)}
+                  disabled={linking}
+                  style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: pressed ? "#FFF7ED" : "#F5F3EF", borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10 })}
+                >
+                  {product.imageUrl ? (
+                    <Image source={{ uri: product.imageUrl }} style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: "#E8E5E1" }} resizeMode="contain" />
+                  ) : (
+                    <View style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: "#E8E5E1" }} />
+                  )}
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={{ fontSize: 14, fontWeight: "600", color: "#1C1917" }} numberOfLines={1}>{product.name}</Text>
+                    {product.brand && <Text style={{ fontSize: 12, color: "#A8A29E" }} numberOfLines={1}>{product.brand}</Text>}
+                  </View>
+                  {product.nutriscoreGrade && (
+                    <View style={{ width: 28, height: 28, borderRadius: 7, backgroundColor: NUTRISCORE_COLORS[product.nutriscoreGrade] ?? "#9CA3AF", alignItems: "center", justifyContent: "center" }}>
+                      <Text style={{ fontSize: 12, fontWeight: "900", color: "#fff" }}>{product.nutriscoreGrade.toUpperCase()}</Text>
                     </View>
-                  ) : results.map((product) => (
-                    <Pressable
-                      key={product.offId}
-                      onPress={() => linkProduct(product)}
-                      disabled={linking}
-                      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: pressed ? "#FFF7ED" : "#F5F3EF", borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10 })}
-                    >
-                      {product.imageUrl ? (
-                        <Image source={{ uri: product.imageUrl }} style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: "#E8E5E1" }} resizeMode="contain" />
-                      ) : (
-                        <View style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: "#E8E5E1" }} />
-                      )}
-                      <View style={{ flex: 1, gap: 2 }}>
-                        <Text style={{ fontSize: 14, fontWeight: "600", color: "#1C1917" }} numberOfLines={1}>{product.name}</Text>
-                        {product.brand && <Text style={{ fontSize: 12, color: "#A8A29E" }} numberOfLines={1}>{product.brand}</Text>}
-                      </View>
-                      {product.nutriscoreGrade && (
-                        <View style={{ width: 28, height: 28, borderRadius: 7, backgroundColor: NUTRISCORE_COLORS[product.nutriscoreGrade] ?? "#9CA3AF", alignItems: "center", justifyContent: "center" }}>
-                          <Text style={{ fontSize: 12, fontWeight: "900", color: "#fff" }}>{product.nutriscoreGrade.toUpperCase()}</Text>
-                        </View>
-                      )}
-                      {linking ? (
-                        <ActivityIndicator size="small" color="#E8571C" />
-                      ) : (
-                        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                          <Path d="M9 18l6-6-6-6" />
-                        </Svg>
-                      )}
-                    </Pressable>
-                  ))}
-                </BottomSheetScrollView>
+                  )}
+                  {linking ? (
+                    <ActivityIndicator size="small" color="#E8571C" />
+                  ) : (
+                    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <Path d="M9 18l6-6-6-6" />
+                    </Svg>
+                  )}
+                </Pressable>
+              ))}
+            </BottomModalScrollView>
+          </View>
+        ) : (
+          <View style={{ flex: 1, gap: 12 }}>
+            {!permission ? (
+              <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color="#E8571C" /></View>
+            ) : !permission.granted ? (
+              <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 32 }}>
+                <Text style={{ fontSize: 14, fontWeight: "700", color: "#1C1917", textAlign: "center" }}>Accès à la caméra requis</Text>
+                <Text style={{ fontSize: 13, color: "#78716C", textAlign: "center" }}>Pour scanner des codes-barres, autorisez Deazl à accéder à votre caméra.</Text>
               </View>
             ) : (
-              <View style={{ flex: 1, gap: 12 }}>
-                {!permission ? (
-                  <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color="#E8571C" /></View>
-                ) : !permission.granted ? (
-                  <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 32 }}>
-                    <Text style={{ fontSize: 14, fontWeight: "700", color: "#1C1917", textAlign: "center" }}>Accès à la caméra requis</Text>
-                    <Text style={{ fontSize: 13, color: "#78716C", textAlign: "center" }}>Pour scanner des codes-barres, autorisez Deazl à accéder à votre caméra.</Text>
-                  </View>
-                ) : (
-                  <>
-                    <View style={{ flex: 1, borderRadius: 20, overflow: "hidden", backgroundColor: "#000", minHeight: 300 }}>
-                      <CameraView
-                        style={{ flex: 1 }}
-                        facing="back"
-                        barcodeScannerSettings={{ barcodeTypes: ["ean13", "ean8", "code128", "upc_a", "upc_e"] }}
-                        onBarcodeScanned={scanned ? undefined : handleBarcode}
-                      />
-                      {!scanned && (
-                        <View style={{ position: "absolute", inset: 0, alignItems: "center", justifyContent: "center" }}>
-                          <View style={{ width: 220, height: 140, borderRadius: 16, borderWidth: 2, borderColor: "rgba(255,255,255,0.6)" }}>
-                            <View style={{ position: "absolute", top: -1, left: -1, width: 24, height: 24, borderTopWidth: 3, borderLeftWidth: 3, borderColor: "#E8571C", borderTopLeftRadius: 16 }} />
-                            <View style={{ position: "absolute", top: -1, right: -1, width: 24, height: 24, borderTopWidth: 3, borderRightWidth: 3, borderColor: "#E8571C", borderTopRightRadius: 16 }} />
-                            <View style={{ position: "absolute", bottom: -1, left: -1, width: 24, height: 24, borderBottomWidth: 3, borderLeftWidth: 3, borderColor: "#E8571C", borderBottomLeftRadius: 16 }} />
-                            <View style={{ position: "absolute", bottom: -1, right: -1, width: 24, height: 24, borderBottomWidth: 3, borderRightWidth: 3, borderColor: "#E8571C", borderBottomRightRadius: 16 }} />
-                          </View>
-                          <Text style={{ marginTop: 16, fontSize: 12, color: "rgba(255,255,255,0.7)", fontWeight: "500" }}>Centrez le code-barres</Text>
-                        </View>
-                      )}
-                      {(scanLoading || linking) && (
-                        <View style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", gap: 10 }}>
-                          <ActivityIndicator color="#fff" size="large" />
-                          <Text style={{ color: "#fff", fontSize: 14, fontWeight: "600" }}>{scanLoading ? "Recherche du produit…" : "Association en cours…"}</Text>
-                        </View>
-                      )}
-                    </View>
-                    {scanError && (
-                      <View style={{ backgroundColor: "#FEF2F2", borderRadius: 14, padding: 14, gap: 8 }}>
-                        <Text style={{ fontSize: 13, color: "#DC2626", fontWeight: "600" }}>{scanError}</Text>
-                        <Pressable onPress={() => { setScanned(false); setScanError(null); }} style={({ pressed }) => ({ alignSelf: "flex-start", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, backgroundColor: pressed ? "#FEE2E2" : "#F5F3EF" })}>
-                          <Text style={{ fontSize: 13, fontWeight: "700", color: "#1C1917" }}>Réessayer</Text>
-                        </Pressable>
+              <>
+                <View style={{ flex: 1, borderRadius: 20, overflow: "hidden", backgroundColor: "#000", minHeight: 300 }}>
+                  <CameraView
+                    style={{ flex: 1 }}
+                    facing="back"
+                    barcodeScannerSettings={{ barcodeTypes: ["ean13", "ean8", "code128", "upc_a", "upc_e"] }}
+                    onBarcodeScanned={scanned ? undefined : handleBarcode}
+                  />
+                  {!scanned && (
+                    <View style={{ position: "absolute", inset: 0, alignItems: "center", justifyContent: "center" }}>
+                      <View style={{ width: 220, height: 140, borderRadius: 16, borderWidth: 2, borderColor: "rgba(255,255,255,0.6)" }}>
+                        <View style={{ position: "absolute", top: -1, left: -1, width: 24, height: 24, borderTopWidth: 3, borderLeftWidth: 3, borderColor: "#E8571C", borderTopLeftRadius: 16 }} />
+                        <View style={{ position: "absolute", top: -1, right: -1, width: 24, height: 24, borderTopWidth: 3, borderRightWidth: 3, borderColor: "#E8571C", borderTopRightRadius: 16 }} />
+                        <View style={{ position: "absolute", bottom: -1, left: -1, width: 24, height: 24, borderBottomWidth: 3, borderLeftWidth: 3, borderColor: "#E8571C", borderBottomLeftRadius: 16 }} />
+                        <View style={{ position: "absolute", bottom: -1, right: -1, width: 24, height: 24, borderBottomWidth: 3, borderRightWidth: 3, borderColor: "#E8571C", borderBottomRightRadius: 16 }} />
                       </View>
-                    )}
-                  </>
+                      <Text style={{ marginTop: 16, fontSize: 12, color: "rgba(255,255,255,0.7)", fontWeight: "500" }}>Centrez le code-barres</Text>
+                    </View>
+                  )}
+                  {(scanLoading || linking) && (
+                    <View style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                      <ActivityIndicator color="#fff" size="large" />
+                      <Text style={{ color: "#fff", fontSize: 14, fontWeight: "600" }}>{scanLoading ? "Recherche du produit…" : "Association en cours…"}</Text>
+                    </View>
+                  )}
+                </View>
+                {scanError && (
+                  <View style={{ backgroundColor: "#FEF2F2", borderRadius: 14, padding: 14, gap: 8 }}>
+                    <Text style={{ fontSize: 13, color: "#DC2626", fontWeight: "600" }}>{scanError}</Text>
+                    <Pressable onPress={() => { setScanned(false); setScanError(null); }} style={({ pressed }) => ({ alignSelf: "flex-start", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, backgroundColor: pressed ? "#FEE2E2" : "#F5F3EF" })}>
+                      <Text style={{ fontSize: 13, fontWeight: "700", color: "#1C1917" }}>Réessayer</Text>
+                    </Pressable>
+                  </View>
                 )}
-              </View>
+              </>
             )}
           </View>
-        </BottomSheet.Content>
-      </BottomSheet.Portal>
-    </BottomSheet>
+        )}
+      </View>
+    </BottomModal>
   );
 }
 
@@ -867,7 +858,7 @@ function EditItemSheet({ item, isOpen, onClose, onSuccess }: {
         ? String(item.quantity)
         : String(parseFloat(item.quantity.toFixed(2).replace(/\.?0+$/, ""))),
     );
-    setUnit(item.unit ?? "");
+    setUnit(item.unit || "pièce");
   }, [isOpen, item?.id]);
 
   async function handleSave() {
@@ -881,56 +872,51 @@ function EditItemSheet({ item, isOpen, onClose, onSuccess }: {
   if (!item) return null;
 
   return (
-    <BottomSheet isOpen={isOpen} onOpenChange={(v) => !v && onClose()}>
-      <BottomSheet.Portal>
-        <BottomSheet.Overlay />
-        <BottomSheet.Content snapPoints={["45%"]}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 16 }}>
-            <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Modifier l'article</Text>
-            <BottomSheet.Close />
-          </View>
-          <View style={{ gap: 12 }}>
+    <BottomModal isOpen={isOpen} onClose={onClose} height="48%">
+      <View style={{ paddingBottom: 16 }}>
+        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Modifier l'article</Text>
+      </View>
+      <View style={{ gap: 12 }}>
+        <TextInput
+          value={name}
+          onChangeText={setName}
+          placeholder="Nom de l'article…"
+          placeholderTextColor="#A8A29E"
+          style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#1C1917" }}
+          returnKeyType="next"
+        />
+        <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+          <View style={{ gap: 6 }}>
+            <Text style={{ fontSize: 11, fontWeight: "600", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 0.8 }}>Qté</Text>
             <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder="Nom de l'article…"
+              value={quantity}
+              onChangeText={setQuantity}
+              placeholder="1"
+              keyboardType="numeric"
               placeholderTextColor="#A8A29E"
-              autoFocus
-              style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#1C1917" }}
-              returnKeyType="next"
+              style={{ width: 72, borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 12, paddingVertical: 12, fontSize: 16, fontWeight: "700", color: "#1C1917", textAlign: "center" }}
             />
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              <TextInput
-                value={quantity}
-                onChangeText={setQuantity}
-                placeholder="1"
-                keyboardType="numeric"
-                placeholderTextColor="#A8A29E"
-                style={{ flex: 1, borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#1C1917" }}
-              />
-              <TextInput
-                value={unit}
-                onChangeText={setUnit}
-                placeholder="pièce, kg, L…"
-                placeholderTextColor="#A8A29E"
-                style={{ flex: 2, borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#1C1917" }}
-              />
-            </View>
-            <Pressable
-              onPress={handleSave}
-              disabled={saving || !name.trim()}
-              style={({ pressed }) => ({
-                borderRadius: 16, paddingVertical: 16, alignItems: "center",
-                backgroundColor: (!name.trim() || saving) ? "#F5F3EF" : pressed ? "#D14A18" : "#E8571C",
-              })}
-            >
-              <Text style={{ fontSize: 16, fontWeight: "800", color: (!name.trim() || saving) ? "#A8A29E" : "#fff" }}>
-                {saving ? "Enregistrement…" : "Enregistrer"}
-              </Text>
-            </Pressable>
           </View>
-        </BottomSheet.Content>
-      </BottomSheet.Portal>
-    </BottomSheet>
+          <View style={{ flex: 1, gap: 6 }}>
+            <Text style={{ fontSize: 11, fontWeight: "600", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 0.8 }}>Unité</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+              {UNITS.map((u) => (
+                <Pressable key={u} onPress={() => setUnit(u)}
+                  style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 99, backgroundColor: unit === u ? "#E8571C" : "#F5F3EF" }}>
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: unit === u ? "#fff" : "#78716C" }}>{u}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        </View>
+        <Button
+          onPress={handleSave}
+          isDisabled={saving || !name.trim()}
+          style={{ borderRadius: 16, paddingVertical: 16 }}
+        >
+          {saving ? "Enregistrement…" : "Enregistrer"}
+        </Button>
+      </View>
+    </BottomModal>
   );
 }

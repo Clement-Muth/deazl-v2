@@ -9,7 +9,6 @@ export async function fetchRecipes(): Promise<Recipe[]> {
     supabase
       .from("recipes")
       .select("*, recipe_ingredients(*, products(id, name)), recipe_steps(*)")
-      .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
     supabase
       .from("recipe_favorites")

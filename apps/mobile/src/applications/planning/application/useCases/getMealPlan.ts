@@ -24,25 +24,72 @@ export async function getMealPlan(weekStart: Date): Promise<MealPlanData> {
 
   const weekParam = formatWeekParam(getMondayOf(weekStart));
 
-  const { data: existingPlan } = await supabase
-    .from("meal_plans")
-    .select("id")
+  const { data: householdMember } = await supabase
+    .from("household_members")
+    .select("household_id")
     .eq("user_id", user.id)
-    .eq("week_start", weekParam)
     .maybeSingle();
+
+  const householdId = householdMember?.household_id ?? null;
 
   let planId: string;
 
-  if (existingPlan) {
-    planId = existingPlan.id;
-  } else {
-    const { data: newPlan, error } = await supabase
+  if (householdId) {
+    const { data: householdPlan } = await supabase
       .from("meal_plans")
-      .insert({ user_id: user.id, week_start: weekParam })
+      .select("id, household_id")
+      .eq("household_id", householdId)
+      .eq("week_start", weekParam)
+      .maybeSingle();
+
+    if (householdPlan) {
+      planId = householdPlan.id;
+    } else {
+      const { data: anyPlan } = await supabase
+        .from("meal_plans")
+        .select("id, household_id")
+        .eq("week_start", weekParam)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (anyPlan) {
+        if (!anyPlan.household_id) {
+          await supabase
+            .from("meal_plans")
+            .update({ household_id: householdId })
+            .eq("id", anyPlan.id);
+        }
+        planId = anyPlan.id;
+      } else {
+        const { data: newPlan, error } = await supabase
+          .from("meal_plans")
+          .insert({ user_id: user.id, week_start: weekParam, household_id: householdId })
+          .select("id")
+          .single();
+        if (error || !newPlan) throw new Error(error?.message ?? "Failed to create meal plan");
+        planId = newPlan.id;
+      }
+    }
+  } else {
+    const { data: personalPlan } = await supabase
+      .from("meal_plans")
       .select("id")
-      .single();
-    if (error || !newPlan) throw new Error(error?.message ?? "Failed to create meal plan");
-    planId = newPlan.id;
+      .eq("user_id", user.id)
+      .eq("week_start", weekParam)
+      .maybeSingle();
+
+    if (personalPlan) {
+      planId = personalPlan.id;
+    } else {
+      const { data: newPlan, error } = await supabase
+        .from("meal_plans")
+        .insert({ user_id: user.id, week_start: weekParam })
+        .select("id")
+        .single();
+      if (error || !newPlan) throw new Error(error?.message ?? "Failed to create meal plan");
+      planId = newPlan.id;
+    }
   }
 
   type RawSlot = {

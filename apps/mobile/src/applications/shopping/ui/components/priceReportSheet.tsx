@@ -1,7 +1,5 @@
 import * as Haptics from "expo-haptics";
-import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { useCameraPermissions, CameraView } from "expo-camera";
-import { BottomSheet } from "heroui-native";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -12,6 +10,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { BottomModal, BottomModalScrollView } from "./bottomModal";
 import Svg, { Path, Polyline, Line, Circle } from "react-native-svg";
 import type { OFFProductResult } from "../../application/useCases/searchOffProducts";
 import { getOffProductByBarcode, searchOffProducts } from "../../application/useCases/searchOffProducts";
@@ -159,62 +158,56 @@ export function PriceReportSheet({ item, isOpen, onClose, onSuccess }: PriceRepo
   if (!item) return null;
 
   return (
-    <BottomSheet isOpen={isOpen} onOpenChange={(v) => !v && onClose()}>
-      <BottomSheet.Portal>
-        <BottomSheet.Overlay />
-        <BottomSheet.Content snapPoints={["95%"]}>
+    <BottomModal isOpen={isOpen} onClose={onClose} height="95%">
+      <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingBottom: 14 }}>
           <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingBottom: 14 }}>
-              <View style={{ flex: 1, marginRight: 12 }}>
-                <Text style={{ fontSize: 17, fontWeight: "800", color: "#1C1917" }}>
-                  {step === "find" ? "Trouver le produit" : "Ajouter un prix"}
-                </Text>
-                <Text style={{ fontSize: 12, color: "#A8A29E", marginTop: 2 }}>
-                  {item.customName}
-                </Text>
-              </View>
-              <BottomSheet.Close />
-            </View>
-
-            {step === "find" ? (
-              <FindStep
-                findMode={findMode}
-                searchQuery={searchQuery}
-                searchResults={searchResults}
-                searching={searching}
-                scanned={scanned}
-                scanLoading={scanLoading}
-                scanError={scanError}
-                permission={permission}
-                onSearch={handleSearch}
-                onSwitchToScan={handleSwitchToScan}
-                onSwitchToSearch={() => { setFindMode("search"); setScanned(false); setScanError(null); }}
-                onBarcode={handleBarcode}
-                onRetryScam={() => { setScanned(false); setScanError(null); }}
-                onSelectProduct={selectProduct}
-              />
-            ) : (
-              <PriceStep
-                product={selectedProduct!}
-                stores={stores}
-                selectedStoreId={selectedStoreId}
-                priceInput={priceInput}
-                qtyInput={qtyInput}
-                unit={unit}
-                submitting={submitting}
-                submitError={submitError}
-                onBack={() => setStep("find")}
-                onSelectStore={setSelectedStoreId}
-                onPriceChange={setPriceInput}
-                onQtyChange={setQtyInput}
-                onUnitChange={setUnit}
-                onSubmit={handleSubmit}
-              />
-            )}
+            <Text style={{ fontSize: 17, fontWeight: "800", color: "#1C1917" }}>
+              {step === "find" ? "Trouver le produit" : "Ajouter un prix"}
+            </Text>
+            <Text style={{ fontSize: 12, color: "#A8A29E", marginTop: 2 }}>
+              {item.customName}
+            </Text>
           </View>
-        </BottomSheet.Content>
-      </BottomSheet.Portal>
-    </BottomSheet>
+        </View>
+
+        {step === "find" ? (
+          <FindStep
+            findMode={findMode}
+            searchQuery={searchQuery}
+            searchResults={searchResults}
+            searching={searching}
+            scanned={scanned}
+            scanLoading={scanLoading}
+            scanError={scanError}
+            permission={permission}
+            onSearch={handleSearch}
+            onSwitchToScan={handleSwitchToScan}
+            onSwitchToSearch={() => { setFindMode("search"); setScanned(false); setScanError(null); }}
+            onBarcode={handleBarcode}
+            onRetryScan={() => { setScanned(false); setScanError(null); }}
+            onSelectProduct={selectProduct}
+          />
+        ) : (
+          <PriceStep
+            product={selectedProduct!}
+            stores={stores}
+            selectedStoreId={selectedStoreId}
+            priceInput={priceInput}
+            qtyInput={qtyInput}
+            unit={unit}
+            submitting={submitting}
+            submitError={submitError}
+            onBack={() => setStep("find")}
+            onSelectStore={setSelectedStoreId}
+            onPriceChange={setPriceInput}
+            onQtyChange={setQtyInput}
+            onUnitChange={setUnit}
+            onSubmit={handleSubmit}
+          />
+        )}
+      </View>
+    </BottomModal>
   );
 }
 
@@ -222,7 +215,7 @@ function FindStep({
   findMode, searchQuery, searchResults, searching,
   scanned, scanLoading, scanError, permission,
   onSearch, onSwitchToScan, onSwitchToSearch,
-  onBarcode, onRetryScam, onSelectProduct,
+  onBarcode, onRetryScan, onSelectProduct,
 }: {
   findMode: FindMode;
   searchQuery: string;
@@ -236,7 +229,7 @@ function FindStep({
   onSwitchToScan: () => void;
   onSwitchToSearch: () => void;
   onBarcode: (e: { data: string }) => void;
-  onRetryScam: () => void;
+  onRetryScan: () => void;
   onSelectProduct: (p: OFFProductResult) => void;
 }) {
   return (
@@ -291,12 +284,11 @@ function FindStep({
               placeholderTextColor="#A8A29E"
               style={{ flex: 1, fontSize: 15, color: "#1C1917" }}
               returnKeyType="search"
-              autoFocus
             />
             {searching && <ActivityIndicator size="small" color="#E8571C" />}
           </View>
 
-          <BottomSheetScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
+          <BottomModalScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
             {searchResults.length === 0 && !searching && searchQuery.trim() ? (
               <View style={{ alignItems: "center", paddingTop: 32, gap: 8 }}>
                 <Text style={{ fontSize: 14, color: "#A8A29E" }}>Aucun résultat pour «{searchQuery}»</Text>
@@ -308,7 +300,7 @@ function FindStep({
                 ))}
               </View>
             )}
-          </BottomSheetScrollView>
+          </BottomModalScrollView>
         </View>
       ) : (
         <ScanStep
@@ -317,7 +309,7 @@ function FindStep({
           scanError={scanError}
           permission={permission}
           onBarcode={onBarcode}
-          onRetry={onRetryScam}
+          onRetry={onRetryScan}
         />
       )}
     </View>
@@ -459,7 +451,7 @@ function PriceStep({
   onSubmit: () => void;
 }) {
   return (
-    <BottomSheetScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40, gap: 16 }}>
+    <BottomModalScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40, gap: 16 }}>
       <Pressable
         onPress={onBack}
         style={({ pressed }) => ({
@@ -554,7 +546,6 @@ function PriceStep({
             keyboardType="decimal-pad"
             placeholderTextColor="#A8A29E"
             style={{ flex: 1, fontSize: 24, fontWeight: "800", color: "#1C1917" }}
-            autoFocus
           />
           <Text style={{ fontSize: 20, fontWeight: "700", color: "#A8A29E" }}>€</Text>
         </View>
@@ -621,6 +612,6 @@ function PriceStep({
           </Text>
         )}
       </Pressable>
-    </BottomSheetScrollView>
+    </BottomModalScrollView>
   );
 }
