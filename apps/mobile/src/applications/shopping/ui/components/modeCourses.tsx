@@ -260,17 +260,14 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, hasProduct, onC
   const [kgPriceValue, setKgPriceValue] = useState("");
   const [actualQty, setActualQty] = useState(item?.quantity || 1);
   const [isPromo, setIsPromo] = useState(false);
-  const [normalPriceValue, setNormalPriceValue] = useState("");
   const [discountValue, setDiscountValue] = useState("");
   const priceInputRef = useRef<TextInput>(null);
-  const normalPriceInputRef = useRef<TextInput>(null);
   useEffect(() => {
     setValue(prefillPrice);
     setKgStep("price");
     setKgPriceValue("");
     setActualQty(item?.quantity || 1);
     setIsPromo(false);
-    setNormalPriceValue("");
     setDiscountValue("");
   }, [prefillPrice, item?.id]);
   useEffect(() => {
@@ -283,10 +280,6 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, hasProduct, onC
     const cleaned = text.replace(",", ".");
     if (cleaned === "" || /^\d{0,5}(\.\d{0,2})?$/.test(cleaned)) setValue(cleaned);
   }
-  function handleNormalPriceChange(text: string) {
-    const cleaned = text.replace(",", ".");
-    if (cleaned === "" || /^\d{0,5}(\.\d{0,2})?$/.test(cleaned)) setNormalPriceValue(cleaned);
-  }
   function handleDiscountChange(text: string) {
     const cleaned = text.replace(",", ".");
     if (cleaned === "" || /^\d{0,3}(\.\d{0,1})?$/.test(cleaned)) setDiscountValue(cleaned);
@@ -296,17 +289,14 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, hasProduct, onC
   const valid = !Number.isNaN(parsed) && parsed > 0;
   const isWeightStep = priceMode === "kg" && kgStep === "weight";
   const kgPriceNum = parseFloat(kgPriceValue);
-  const normalPriceNum = parseFloat(normalPriceValue);
   const discountNum = parseFloat(discountValue);
-  const calcSuggestion = (() => {
-    if (!isPromo) return null;
-    if (Number.isNaN(normalPriceNum) || normalPriceNum <= 0) return null;
-    if (Number.isNaN(discountNum) || discountNum < 0 || discountNum > 100) return null;
-    const total = (actualQty - 1) * normalPriceNum + normalPriceNum * (1 - discountNum / 100);
-    return total.toFixed(2);
-  })();
-  const promoValid = !isPromo || (!Number.isNaN(normalPriceNum) && normalPriceNum > 0);
-  const canConfirm = valid && promoValid;
+  const hasDiscount = !Number.isNaN(discountNum) && discountNum > 0 && discountNum <= 100;
+  const computedTotal = valid
+    ? isPromo && hasDiscount
+      ? (actualQty - 1) * parsed + parsed * (1 - discountNum / 100)
+      : parsed * actualQty
+    : null;
+  const canConfirm = valid;
 
   function handleConfirm() {
     if (!canConfirm) return;
@@ -319,11 +309,8 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, hasProduct, onC
       const actualPaid = kgPriceNum * (parsed / 1000);
       onConfirm(actualPaid, "kg", kgPriceNum);
     } else {
-      const promo = isPromo && normalPriceNum > 0
-        ? { normalUnitPrice: normalPriceNum, promoTriggerQty: actualQty }
-        : undefined;
-      const totalPaid = isPromo ? parsed : parsed * actualQty;
-      onConfirm(totalPaid, "total", undefined, actualQty, promo);
+      const promo = isPromo ? { normalUnitPrice: parsed, promoTriggerQty: actualQty } : undefined;
+      onConfirm(computedTotal ?? parsed * actualQty, "total", undefined, actualQty, promo);
     }
   }
 
@@ -428,19 +415,29 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, hasProduct, onC
               Poids estimé (g)
             </Text>
           )}
-          {!isWeightStep && priceMode === "total" && actualQty > 1 && valid && (
-            <Text style={{ fontSize: 12, fontWeight: "600", color: "#A8A29E", textAlign: "center" }}>
-              {isPromo
-                ? `${parsed.toFixed(2)} € ÷ ${actualQty} = ${(parsed / actualQty).toFixed(2)} €/unité`
-                : `${parsed.toFixed(2)} € × ${actualQty} = ${(parsed * actualQty).toFixed(2)} €`}
-            </Text>
+
+          {/* Total payé — read-only */}
+          {!isWeightStep && priceMode === "total" && computedTotal !== null && (actualQty > 1 || (isPromo && hasDiscount)) && (
+            <View style={{ alignItems: "center", gap: 2 }}>
+              <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 1 }}>Total payé</Text>
+              <Text style={{ fontSize: 26, fontWeight: "900", color: "#1C1917", letterSpacing: -0.5 }}>
+                {computedTotal.toFixed(2)} €
+              </Text>
+              {isPromo && hasDiscount && actualQty > 1 && (
+                <Text style={{ fontSize: 12, color: "#A8A29E", fontWeight: "500" }}>
+                  {actualQty === 2
+                    ? `${parsed.toFixed(2)} + ${(parsed * (1 - discountNum / 100)).toFixed(2)}`
+                    : `${actualQty - 1} × ${parsed.toFixed(2)} + ${(parsed * (1 - discountNum / 100)).toFixed(2)}`}
+                </Text>
+              )}
+            </View>
           )}
 
           {/* Toggle promo */}
           {!isWeightStep && priceMode === "total" && (
             <View style={{ gap: 10 }}>
               <Pressable
-                onPress={() => { Haptics.selectionAsync(); setIsPromo((v) => !v); if (!isPromo) setTimeout(() => normalPriceInputRef.current?.focus(), 100); }}
+                onPress={() => { Haptics.selectionAsync(); setIsPromo((v) => !v); setDiscountValue(""); }}
                 style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: isPromo ? "#FFF7F4" : "#FAF9F6", borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1, borderColor: isPromo ? "#F5C4B0" : "transparent" }}
               >
                 <Text style={{ fontSize: 14, fontWeight: "700", color: isPromo ? "#E8571C" : "#78716C" }}>🏷 C'est une promo</Text>
@@ -450,47 +447,20 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, hasProduct, onC
               </Pressable>
 
               {isPromo && (
-                <View style={{ gap: 8 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#FAF9F6", borderRadius: 14, paddingVertical: 10, paddingHorizontal: 16, gap: 8 }}>
-                    <Text style={{ fontSize: 13, fontWeight: "600", color: "#A8A29E", flex: 1 }}>Prix normal unitaire</Text>
-                    <TextInput
-                      ref={normalPriceInputRef}
-                      value={normalPriceValue}
-                      onChangeText={handleNormalPriceChange}
-                      keyboardType="decimal-pad"
-                      returnKeyType="done"
-                      placeholder="0.00"
-                      placeholderTextColor="#D1CCC5"
-                      style={{ fontSize: 18, fontWeight: "800", color: "#1C1917", textAlign: "right", minWidth: 60 }}
-                    />
-                    <Text style={{ fontSize: 14, fontWeight: "700", color: "#A8A29E" }}>€</Text>
-                  </View>
-
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <View style={{ flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: "#FAF9F6", borderRadius: 14, paddingVertical: 10, paddingHorizontal: 16, gap: 8 }}>
-                      <Text style={{ fontSize: 13, fontWeight: "600", color: "#A8A29E", flex: 1 }}>
-                        {actualQty > 1 ? `Remise sur le ${actualQty}ème` : "Remise"}
-                      </Text>
-                      <TextInput
-                        value={discountValue}
-                        onChangeText={handleDiscountChange}
-                        keyboardType="decimal-pad"
-                        returnKeyType="done"
-                        placeholder="50"
-                        placeholderTextColor="#D1CCC5"
-                        style={{ fontSize: 18, fontWeight: "800", color: "#1C1917", textAlign: "right", minWidth: 40 }}
-                      />
-                      <Text style={{ fontSize: 14, fontWeight: "700", color: "#A8A29E" }}>%</Text>
-                    </View>
-                    {calcSuggestion && (
-                      <Pressable
-                        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setValue(calcSuggestion); }}
-                        style={({ pressed }) => ({ borderRadius: 14, paddingVertical: 10, paddingHorizontal: 14, backgroundColor: pressed ? "#D14A18" : "#E8571C" })}
-                      >
-                        <Text style={{ fontSize: 14, fontWeight: "800", color: "#fff" }}>{calcSuggestion} €</Text>
-                      </Pressable>
-                    )}
-                  </View>
+                <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#FAF9F6", borderRadius: 14, paddingVertical: 10, paddingHorizontal: 16, gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: "#A8A29E", flex: 1 }}>
+                    {actualQty > 1 ? `Remise sur le ${actualQty}ème` : "Remise"}
+                  </Text>
+                  <TextInput
+                    value={discountValue}
+                    onChangeText={handleDiscountChange}
+                    keyboardType="decimal-pad"
+                    returnKeyType="done"
+                    placeholder="50"
+                    placeholderTextColor="#D1CCC5"
+                    style={{ fontSize: 18, fontWeight: "800", color: "#1C1917", textAlign: "right", minWidth: 40 }}
+                  />
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: "#A8A29E" }}>%</Text>
                 </View>
               )}
             </View>
