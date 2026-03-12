@@ -93,7 +93,7 @@ export default async function LandingPage() {
           </div>
 
           <div className="lp-nav-links" style={{ alignItems: "center", gap: "2rem" }}>
-            {[["#features", "Fonctionnalités"], ["#how", "Comment ça marche"], ["#faq", "FAQ"]].map(([href, label]) => (
+            {[["#features", "Fonctionnalités"], ["#how", "Comment ça marche"], ["#faq", "FAQ"], ["/roadmap", "Roadmap"]].map(([href, label]) => (
               <a key={href} href={href} style={{ fontSize: 14, fontWeight: 500, color: "#78716C", textDecoration: "none" }}>{label}</a>
             ))}
           </div>
@@ -280,17 +280,17 @@ export default async function LandingPage() {
               {
                 icon: <FaGlobe size={24} />,
                 color: "#0284C7", bg: "#EFF6FF",
-                title: "Application web", desc: "Accessible depuis n'importe quel navigateur. Aucune installation requise.", badge: "deazl.fr",
+                title: "Application web", desc: "Accessible depuis n'importe quel navigateur, sans installation. Toujours synchronisé avec vos appareils.", badge: "deazl.fr",
               },
               {
                 icon: <FaApple size={26} />,
                 color: "#1C1917", bg: "#F5F3EF",
-                title: "iPhone / iPad", desc: "Installez Deazl sur votre écran d'accueil en quelques secondes via Safari.", badge: "PWA — iOS 16.4+",
+                title: "iPhone / iPad", desc: "L'app native iOS arrive bientôt sur l'App Store. En attendant, accédez à Deazl via votre navigateur.", badge: "App Store — bientôt",
               },
               {
                 icon: <FaAndroid size={26} />,
                 color: "#3DDC84", bg: "#F0FDF4",
-                title: "Android", desc: "Installez depuis Chrome en appuyant sur « Ajouter à l'écran d'accueil ».", badge: "PWA — Chrome",
+                title: "Android", desc: "Application native disponible dès maintenant. Téléchargez l'APK ou attendez la publication sur le Play Store.", badge: "App native Android",
               },
             ] as { icon: React.ReactNode; color: string; bg: string; title: string; desc: string; badge: string }[]).map((p) => (
               <div key={p.title} style={{ background: "#FAF9F6", border: "1px solid #E8E5E0", borderRadius: 20, padding: "1.75rem", textAlign: "center" }}>
@@ -321,6 +321,8 @@ export default async function LandingPage() {
               { icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>, color:"#C94811", bg:"#FFF4EF", title:"Comparaison de prix", desc:"Comparez le coût total de votre semaine entre vos magasins. Deazl vous dit où acheter au meilleur prix, article par article." },
               { icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><line x1="12" y1="22" x2="12" y2="12"/></svg>, color:"#D97706", bg:"#FEF3C7", title:"Gestion du stock", desc:"Scannez les codes-barres, suivez les dates d'expiration et recevez des alertes avant que ça tourne. Fini le gaspillage alimentaire." },
               { icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, color:"#C026D3", bg:"#FDF2F8", title:"Partage en famille", desc:"Invitez votre foyer et synchronisez la liste en temps réel. Quand quelqu'un coche un article, tout le monde le voit instantanément." },
+              { icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-8 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>, color:"#059669", bg:"#ECFDF5", title:"Mode courses en temps réel", desc:"Scannez ou cherchez vos articles en magasin, saisissez le prix au rayon, visualisez le total à la caisse. Fini les mauvaises surprises." },
+              { icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/></svg>, color:"#7C3AED", bg:"#EDE9FE", title:"Split de courses", desc:"Répartissez automatiquement les articles entre les membres du foyer selon les budgets. Gestion des tickets restaurant incluse." },
             ] as { icon: React.ReactNode; color: string; bg: string; title: string; desc: string }[]).map((f) => (
               <div key={f.title} className="lp-feature-card" style={{ background: "#fff", border: "1px solid #E8E5E0", borderRadius: 24, padding: "1.75rem" }}>
                 <div style={{ width: 44, height: 44, borderRadius: 14, background: f.bg, color: f.color, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1.25rem" }}>{f.icon}</div>
@@ -511,10 +513,10 @@ export default async function LandingPage() {
           <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.15em", color: "#E8571C", flexShrink: 0 }}>Récemment ajouté</span>
           <div style={{ display: "flex", gap: "0.625rem", flexWrap: "wrap" }}>
             {[
+              ["🛒 Mode courses en temps réel","mars 2026"],
+              ["💳 Split & ticket restaurant","mars 2026"],
               ["✨ Favoris & filtres intelligents","mars 2026"],
               ["🔗 Partage public de recettes","mars 2026"],
-              ["📦 Filtrage par stock disponible","mars 2026"],
-              ["🌐 Import Marmiton (Jina.ai fallback)","fév. 2026"],
             ].map(([feat, date]) => (
               <div key={String(feat)} style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "#FAF9F6", border: "1px solid #E8E5E0", borderRadius: 999, padding: "5px 12px" }}>
                 <span style={{ fontSize: 13, color: "#1C1917", fontWeight: 500 }}>{feat as string}</span>
@@ -554,7 +556,7 @@ export default async function LandingPage() {
                   "Gestion du stock & alertes expiration",
                   "Scan de codes-barres",
                   "Partage avec la famille en temps réel",
-                  "Accès web + PWA iOS & Android",
+                  "App native Android · Web · iOS bientôt",
                 ].map((f) => (
                   <div key={f} style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                     <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#FFF4EF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -627,7 +629,7 @@ export default async function LandingPage() {
             <div>
               <p style={{ fontSize: 11, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.12em", color: "#44403C", marginBottom: "1rem" }}><Trans>Produit</Trans></p>
               <ul style={{ display: "flex", flexDirection: "column", gap: "0.625rem", listStyle: "none", padding: 0 }}>
-                {[["#features","Fonctionnalités"],["#how","Comment ça marche"],["#faq","FAQ"],["/register","Créer un compte"]].map(([href,label]) => (
+                {[["#features","Fonctionnalités"],["#how","Comment ça marche"],["#faq","FAQ"],["/roadmap","Roadmap"],["/register","Créer un compte"]].map(([href,label]) => (
                   <li key={href}><a href={href} style={{ fontSize: 14, color: "#57534E", textDecoration: "none" }}>{label}</a></li>
                 ))}
               </ul>
