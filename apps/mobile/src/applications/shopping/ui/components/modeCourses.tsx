@@ -246,14 +246,15 @@ interface PricePromptProps {
   onOpenChange: (open: boolean) => void;
   item: ShoppingItem | null;
   prefillPrice: string;
+  prefillContext?: PriceContext;
   hasProduct: boolean;
-  onConfirm: (actualPaid: number, mode: "total" | "kg", kgPrice?: number, actualQty?: number, promo?: { normalUnitPrice: number; promoTriggerQty: number }) => void;
+  onConfirm: (actualPaid: number, mode: "total" | "kg", kgPrice?: number, actualQty?: number, promo?: { normalUnitPrice: number; promoTriggerQty: number }, context?: PriceContext) => void;
   onSkip: () => void;
   onCheckWithoutPrice: () => void;
   onRescan?: () => void;
 }
 
-function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, hasProduct, onConfirm, onSkip, onCheckWithoutPrice, onRescan }: PricePromptProps) {
+function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, prefillContext, hasProduct, onConfirm, onSkip, onCheckWithoutPrice, onRescan }: PricePromptProps) {
   const [value, setValue] = useState(prefillPrice);
   const [priceMode, setPriceMode] = useState<"total" | "kg">("total");
   const [kgStep, setKgStep] = useState<"price" | "weight">("price");
@@ -265,14 +266,23 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, hasProduct, onC
   const [lotPriceValue, setLotPriceValue] = useState("");
   const priceInputRef = useRef<TextInput>(null);
   useEffect(() => {
-    setValue(prefillPrice);
     setKgStep("price");
     setKgPriceValue("");
-    setActualQty(item?.quantity || 1);
-    setIsPromo(false);
-    setPromoMode("discount");
-    setDiscountValue("");
-    setLotPriceValue("");
+    if (prefillContext) {
+      setValue(prefillContext.shelfUnitPrice.toFixed(2));
+      setActualQty(prefillContext.confirmedQty);
+      setIsPromo(prefillContext.isPromo);
+      setPromoMode(prefillContext.promoMode);
+      setDiscountValue(prefillContext.discountValue);
+      setLotPriceValue(prefillContext.lotPriceValue);
+    } else {
+      setValue(prefillPrice);
+      setActualQty(item?.quantity || 1);
+      setIsPromo(false);
+      setPromoMode("discount");
+      setDiscountValue("");
+      setLotPriceValue("");
+    }
   }, [prefillPrice, item?.id]);
   useEffect(() => {
     if (isOpen) {
@@ -322,7 +332,8 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, hasProduct, onC
     } else {
       const promo = isPromo ? { normalUnitPrice: parsed, promoTriggerQty: actualQty } : undefined;
       const totalPaid = computedTotal ?? parsed * actualQty;
-      onConfirm(totalPaid, "total", undefined, actualQty, promo);
+      const context: PriceContext = { shelfUnitPrice: parsed, confirmedQty: actualQty, isPromo, promoMode, discountValue, lotPriceValue };
+      onConfirm(totalPaid, "total", undefined, actualQty, promo, context);
     }
   }
 
@@ -1218,8 +1229,18 @@ interface VirtualItem {
   price: number;
 }
 
+interface PriceContext {
+  shelfUnitPrice: number;
+  confirmedQty: number;
+  isPromo: boolean;
+  promoMode: "discount" | "lot";
+  discountValue: string;
+  lotPriceValue: string;
+}
+
 interface Session {
   confirmedPrices: Map<string, number>;
+  confirmedContexts: Map<string, PriceContext>;
   assignments: Map<string, number>;
   lockedAssignments: Set<string>;
   virtualItems: VirtualItem[];
@@ -1227,6 +1248,7 @@ interface Session {
 
 const EMPTY_SESSION: Session = {
   confirmedPrices: new Map(),
+  confirmedContexts: new Map(),
   assignments: new Map(),
   lockedAssignments: new Set(),
   virtualItems: [],
@@ -1391,7 +1413,7 @@ export function ModeCourses() {
     if (shouldReturn) setCheckoutOpen(true);
   }
 
-  async function handleConfirmPrice(actualPaid: number, mode: "total" | "kg" = "total", kgPrice?: number, actualQty?: number, promo?: { normalUnitPrice: number; promoTriggerQty: number }) {
+  async function handleConfirmPrice(actualPaid: number, mode: "total" | "kg" = "total", kgPrice?: number, actualQty?: number, promo?: { normalUnitPrice: number; promoTriggerQty: number }, context?: PriceContext) {
     if (!pricePrompt) return;
     const { item, product, returnToCheckout } = pricePrompt;
     const qty = actualQty ?? item.quantity ?? 1;
@@ -1408,7 +1430,10 @@ export function ModeCourses() {
       } else {
         newAssignments.set(item.id, 0);
       }
-      return { confirmedPrices: newPrices, assignments: newAssignments, lockedAssignments: prev.lockedAssignments, virtualItems: prev.virtualItems };
+      const newContexts = context
+        ? new Map(prev.confirmedContexts).set(item.id, context)
+        : prev.confirmedContexts;
+      return { confirmedPrices: newPrices, confirmedContexts: newContexts, assignments: newAssignments, lockedAssignments: prev.lockedAssignments, virtualItems: prev.virtualItems };
     });
 
     handleToggle(item.id, true);
@@ -1997,6 +2022,7 @@ export function ModeCourses() {
         onOpenChange={(open) => { if (!open) closePricePrompt(); }}
         item={pricePrompt?.item ?? null}
         prefillPrice={pricePrompt ? getPrefillPrice(pricePrompt.item) : ""}
+        prefillContext={pricePrompt ? session.confirmedContexts.get(pricePrompt.item.id) : undefined}
         hasProduct={!!(pricePrompt?.product || pricePrompt?.item?.productId)}
         onConfirm={handleConfirmPrice}
         onSkip={closePricePrompt}
