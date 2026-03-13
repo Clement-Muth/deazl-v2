@@ -6,27 +6,14 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import type { Session } from "@supabase/supabase-js";
-import * as Notifications from "expo-notifications";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
 import { HeroUINativeProvider } from "heroui-native";
 import { useEffect, useState } from "react";
-import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { registerPushToken } from "../applications/user/application/useCases/registerPushToken";
 import { supabase } from "../lib/supabase";
 import "../../global.css";
-
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
 
 SplashScreen.preventAutoHideAsync();
 
@@ -42,23 +29,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         setSession(null);
       } else {
         setSession(session);
-        if (session) registerPushTokenIfPermitted();
       }
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setSession(session);
-      if (session) registerPushTokenIfPermitted();
-    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => setSession(session));
     return () => subscription.unsubscribe();
   }, []);
-
-  async function registerPushTokenIfPermitted() {
-    if (Platform.OS === "web") return;
-    const { status } = await Notifications.getPermissionsAsync();
-    if (status !== "granted") return;
-    const token = await Notifications.getExpoPushTokenAsync();
-    registerPushToken(token.data);
-  }
 
   useEffect(() => {
     if (session === undefined) return;

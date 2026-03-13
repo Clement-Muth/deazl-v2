@@ -1,11 +1,10 @@
 import Constants from "expo-constants";
 import * as ImagePicker from "expo-image-picker";
 import * as Linking from "expo-linking";
-import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
 import { BottomModal, BottomModalScrollView } from "../../../shopping/ui/components/bottomModal";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Image, Pressable, ScrollView, Share, Switch, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, ScrollView, Share, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Line, Path, Polyline } from "react-native-svg";
 import { addUserStore } from "../../application/useCases/addUserStore";
@@ -27,8 +26,6 @@ import type { StoreResult } from "../../application/useCases/searchStores";
 import { signOut } from "../../application/useCases/signOut";
 import { updateDisplayName } from "../../application/useCases/updateDisplayName";
 import { updateHouseholdSize } from "../../application/useCases/updateHouseholdSize";
-import { updateNotificationSettings } from "../../application/useCases/updateNotificationSettings";
-import type { NotificationSettings } from "../../application/useCases/updateNotificationSettings";
 import { uploadAvatar } from "../../application/useCases/uploadAvatar";
 import { getUserStores } from "../../../shopping/application/useCases/getUserStores";
 import type { UserStore } from "../../../shopping/application/useCases/getUserStores";
@@ -128,7 +125,7 @@ export function ProfileScreen() {
   const [userStores, setUserStores] = useState<UserStore[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [editSheet, setEditSheet] = useState<"name" | "size" | "dietary" | "household" | "stores" | "password" | "email" | "notifications" | null>(null);
+  const [editSheet, setEditSheet] = useState<"name" | "size" | "dietary" | "household" | "stores" | "password" | "email" | null>(null);
   const [nameInput, setNameInput] = useState("");
   const [sizeInput, setSizeInput] = useState(2);
   const [dietaryInput, setDietaryInput] = useState<string[]>([]);
@@ -143,7 +140,6 @@ export function ProfileScreen() {
   const [emailInput, setEmailInput] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
-  const [notifInput, setNotifInput] = useState<NotificationSettings>({ shoppingList: true, household: true, planning: true });
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -332,19 +328,6 @@ export function ProfileScreen() {
     }
   }
 
-  async function handleSaveNotifications() {
-    setSaving(true);
-    await updateNotificationSettings(notifInput);
-    setProfile((prev) => prev ? { ...prev, notificationSettings: notifInput } : prev);
-    setSaving(false);
-    setEditSheet(null);
-  }
-
-  async function requestNotificationPermission() {
-    const { status } = await Notifications.requestPermissionsAsync();
-    return status === "granted";
-  }
-
   async function handleChangePassword() {
     if (passwordInput.length < 8) {
       setPasswordError("Le mot de passe doit contenir au moins 8 caractères.");
@@ -444,12 +427,6 @@ export function ProfileScreen() {
               label="Adresse email"
               value={profile?.email ?? ""}
               onPress={() => { setEmailInput(""); setEmailError(null); setEmailSent(false); setEditSheet("email"); }}
-            />
-            <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
-            <SettingRow
-              label="Notifications"
-              value={Object.values(profile?.notificationSettings ?? {}).some(Boolean) ? "Activées" : "Désactivées"}
-              onPress={() => { setNotifInput(profile?.notificationSettings ?? { shoppingList: true, household: true, planning: true }); setEditSheet("notifications"); }}
             />
             <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
             <Pressable
@@ -935,46 +912,6 @@ export function ProfileScreen() {
             </Pressable>
           </View>
         )}
-      </BottomModal>
-
-      <BottomModal isOpen={editSheet === "notifications"} onClose={() => setEditSheet(null)} height="auto">
-        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Notifications</Text>
-        <View style={{ gap: 8, marginBottom: 16 }}>
-          {([
-            { key: "shoppingList" as const, label: "Modifications de la liste", description: "Quand un membre du foyer modifie la liste" },
-            { key: "household" as const, label: "Foyer", description: "Nouveaux membres, invitations" },
-            { key: "planning" as const, label: "Planning", description: "Rappels de repas et modifications" },
-          ]).map(({ key, label, description }, i, arr) => (
-            <View key={key} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: i < arr.length - 1 ? 1 : 0, borderBottomColor: "#F5F3EF" }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, fontWeight: "600", color: "#1C1917" }}>{label}</Text>
-                <Text style={{ fontSize: 12, color: "#78716C", marginTop: 2 }}>{description}</Text>
-              </View>
-              <Switch
-                value={notifInput[key]}
-                onValueChange={(v) => setNotifInput((prev) => ({ ...prev, [key]: v }))}
-                trackColor={{ false: "#E0DDD7", true: "#E8571C" }}
-                thumbColor="#fff"
-              />
-            </View>
-          ))}
-        </View>
-        <Pressable
-          onPress={async () => {
-            const granted = await requestNotificationPermission();
-            if (!granted) return;
-            handleSaveNotifications();
-          }}
-          disabled={saving}
-          style={({ pressed }) => ({
-            borderRadius: 16, paddingVertical: 16, alignItems: "center",
-            backgroundColor: saving ? "#F5F3EF" : pressed ? "#D14A18" : "#E8571C",
-          })}
-        >
-          <Text style={{ fontSize: 15, fontWeight: "700", color: saving ? "#A8A29E" : "#fff" }}>
-            {saving ? "Enregistrement…" : "Enregistrer"}
-          </Text>
-        </Pressable>
       </BottomModal>
 
       <BottomModal isOpen={editSheet === "password"} onClose={() => setEditSheet(null)} height="auto">
