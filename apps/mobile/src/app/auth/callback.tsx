@@ -1,14 +1,8 @@
-import { useLocalSearchParams } from "expo-router";
-import { useEffect } from "react";
+import * as WebBrowser from "expo-web-browser";
 import { View } from "react-native";
-import { supabase } from "../../lib/supabase";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function AuthCallbackScreen() {
-  const { code } = useLocalSearchParams<{ code?: string }>();
-
-  useEffect(() => {
-    if (code) supabase.auth.exchangeCodeForSession(code);
-  }, [code]);
-
   return <View style={{ flex: 1 }} />;
 }
