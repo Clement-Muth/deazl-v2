@@ -3,17 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "apps/*"
   ],
   "scripts": {
     "dev": "bun run --cwd apps/web dev",
     "build": "bun run --cwd apps/web build",
     "mobile": "bun run --cwd apps/mobile start",
-    "typecheck": "bun run --cwd apps/web typecheck && bun run --cwd packages/domain typecheck && bun run --cwd packages/supabase typecheck",
+    "typecheck": "bun run --cwd apps/web typecheck",
     "supabase:start": "bunx supabase start",
     "supabase:stop": "bunx supabase stop",
     "supabase:status": "bunx supabase status",
-    "supabase:types": "bunx supabase gen types typescript --local > packages/supabase/src/database.types.ts"
+    "supabase:types": "bunx supabase gen types typescript --local > apps/web/src/lib/supabase/database.types.ts"
   }
 }

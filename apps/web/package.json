@@ -16,8 +16,6 @@
     "i18n:update": "lingui extract && lingui compile --namespace es"
   },
   "dependencies": {
-    "@deazl/domain": "workspace:*",
-    "@deazl/supabase": "workspace:*",
     "@lingui/conf": "^5.9.2",
     "@lingui/core": "^5.9.2",
     "@lingui/react": "^5.9.2",
