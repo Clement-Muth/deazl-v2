@@ -452,15 +452,27 @@ export function ProfileScreen() {
               onPress={() => { setEmailInput(""); setEmailError(null); setEmailSent(false); setEditSheet("email"); }}
             />
             {profile?.pendingEmail && (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: "#FFFBEB" }}>
-                <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <Circle cx={12} cy={12} r={10} />
-                  <Line x1={12} y1={8} x2={12} y2={12} />
-                  <Line x1={12} y1={16} x2={12.01} y2={16} />
-                </Svg>
-                <Text style={{ flex: 1, fontSize: 12, color: "#D97706", fontWeight: "500" }}>
-                  En attente de confirmation : {profile.pendingEmail}
-                </Text>
+              <View style={{ paddingHorizontal: 16, paddingVertical: 10, backgroundColor: "#FFFBEB", gap: 6 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <Circle cx={12} cy={12} r={10} />
+                    <Line x1={12} y1={8} x2={12} y2={12} />
+                    <Line x1={12} y1={16} x2={12.01} y2={16} />
+                  </Svg>
+                  <Text style={{ flex: 1, fontSize: 12, color: "#D97706", fontWeight: "500" }}>
+                    En attente de confirmation : {profile.pendingEmail}
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={async () => {
+                    await changeEmail(profile.pendingEmail!);
+                  }}
+                  style={({ pressed }) => ({ alignSelf: "flex-start", opacity: pressed ? 0.6 : 1 })}
+                >
+                  <Text style={{ fontSize: 12, color: "#D97706", fontWeight: "600", textDecorationLine: "underline" }}>
+                    Renvoyer l'email
+                  </Text>
+                </Pressable>
               </View>
             )}
             <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
