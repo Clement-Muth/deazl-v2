@@ -160,6 +160,9 @@ export function ProfileScreen() {
   const [createStoreError, setCreateStoreError] = useState<string | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
+  const [resendError, setResendError] = useState<string | null>(null);
 
   async function reload() {
     const [p, h, s] = await Promise.all([getProfile(), getHousehold(), getUserStores()]);
@@ -463,16 +466,35 @@ export function ProfileScreen() {
                     En attente de confirmation : {profile.pendingEmail}
                   </Text>
                 </View>
-                <Pressable
-                  onPress={async () => {
-                    await changeEmail(profile.pendingEmail!);
-                  }}
-                  style={({ pressed }) => ({ alignSelf: "flex-start", opacity: pressed ? 0.6 : 1 })}
-                >
-                  <Text style={{ fontSize: 12, color: "#D97706", fontWeight: "600", textDecorationLine: "underline" }}>
-                    Renvoyer l'email
-                  </Text>
-                </Pressable>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Pressable
+                    disabled={resending || resent}
+                    onPress={async () => {
+                      setResending(true);
+                      setResendError(null);
+                      const result = await changeEmail(profile.pendingEmail!);
+                      setResending(false);
+                      if (result.error) {
+                        setResendError(result.error);
+                      } else {
+                        setResent(true);
+                        setTimeout(() => setResent(false), 3000);
+                      }
+                    }}
+                    style={({ pressed }) => ({ alignSelf: "flex-start", opacity: pressed || resending || resent ? 0.6 : 1 })}
+                  >
+                    {resending ? (
+                      <ActivityIndicator size="small" color="#D97706" />
+                    ) : (
+                      <Text style={{ fontSize: 12, color: "#D97706", fontWeight: "600", textDecorationLine: resent ? "none" : "underline" }}>
+                        {resent ? "Email renvoyé ✓" : "Renvoyer l'email"}
+                      </Text>
+                    )}
+                  </Pressable>
+                </View>
+                {resendError && (
+                  <Text style={{ fontSize: 11, color: "#DC2626" }}>{resendError}</Text>
+                )}
               </View>
             )}
             <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
