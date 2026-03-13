@@ -1,45 +1,45 @@
+---
+description: Deazl sait ce que tu as déjà chez toi. Ta liste ne contient que ce qu'il te manque vraiment.
+---
+
 # Garde-manger
 
-Le garde-manger, c'est l'inventaire de ce que tu as déjà chez toi. Deazl l'utilise pour éviter de racheter ce dont tu disposes déjà.
+Combien de fois as-tu racheté du sel, des pâtes ou de l'huile d'olive sans avoir vérifié que tu en avais encore ? Le garde-manger Deazl règle ça.
 
 ---
 
-## Comment ça fonctionne
+## Le principe
 
-Quand tu termines tes courses, Deazl transfère les articles achetés dans ton garde-manger. Lors de la prochaine génération de liste, les ingrédients déjà présents sont automatiquement déduits.
-
-Exemple : si tu as un litre de lait dans ton garde-manger et qu'une recette en demande 500 ml, cet article n'apparaîtra pas dans ta liste.
+Deazl maintient un inventaire de ce que tu as chez toi. Quand il génère ta liste de courses, il compare les ingrédients nécessaires avec ce que tu possèdes déjà — et ne te fait acheter que ce qu'il te manque.
 
 ---
 
-## Gérer le garde-manger
+## Comment le garde-manger se remplit
 
-### Ajouter un article
+### Automatiquement, après les courses
 
-Tu peux ajouter manuellement un article que tu as chez toi — utile quand tu fais l'inventaire de ton frigo ou tes placards.
+C'est le chemin le plus simple. En fin de courses, quand tu transfères tes articles cochés vers le garde-manger, Deazl met à jour ton inventaire sans effort de ta part.
 
-### Modifier une quantité
+### Manuellement
 
-Appuie sur un article pour modifier la quantité disponible. Si tu as utilisé la moitié de quelque chose, mets à jour la quantité pour que Deazl calcule correctement.
-
-### Supprimer un article
-
-Appuie longuement sur un article pour le supprimer du garde-manger.
+Tu peux aussi ajouter des articles à la main — utile quand tu fais l'inventaire de ton frigo ou de tes placards pour la première fois.
 
 ---
 
-## Activer/désactiver la déduction
+## Gérer son inventaire
 
-Tu peux activer ou désactiver la prise en compte du garde-manger lors de la génération de ta liste, depuis les réglages.
+**Modifier une quantité** — Tu as utilisé la moitié de quelque chose ? Appuie sur l'article et ajuste la quantité. Deazl recalculera en conséquence.
+
+**Supprimer un article** — Appuie longuement pour supprimer un article que tu as terminé ou que tu n'as plus.
 
 {% hint style="info" %}
-Si tu désactives cette option, Deazl génère la liste complète sans tenir compte de ce que tu as déjà.
+Le garde-manger est optionnel. Si tu préfères gérer ça à l'œil, tu peux désactiver la déduction dans les réglages — Deazl génèrera ta liste complète sans tenir compte de l'inventaire.
 {% endhint %}
 
 ---
 
 ## Ce qui arrive bientôt
 
-- Scan de code-barres pour ajouter des articles
+- Scan de code-barres pour ajouter des articles directement
 - Alertes de péremption
-- Suggestions de recettes basées sur ce que tu as
+- "Tu as ces ingrédients — voici des recettes à cuisiner ce soir"

@@ -1,47 +1,67 @@
+---
+description: Organise tes repas à la semaine. Ta liste de courses suit automatiquement.
+---
+
 # Planification des repas
 
-La planification, c'est le point de départ de tout dans Deazl. Tu organises tes repas à l'avance, et tout le reste suit automatiquement.
+C'est le cœur de Deazl. Tu décides ce que tu manges chaque jour de la semaine, et tout le reste — la liste, les quantités, les prix — se calcule tout seul.
 
 ---
 
-## Comment ça fonctionne
+## Comment ça marche
 
-Tu assignes des recettes à chaque repas de la semaine — petit-déjeuner, déjeuner, dîner. Deazl génère ensuite ta liste de courses en calculant exactement ce dont tu as besoin, en tenant compte du nombre de personnes dans ton foyer.
+Tu assigns des recettes à chaque moment de la journée : matin, midi, soir. Deazl agrège ensuite tous les ingrédients nécessaires pour toute la semaine et génère ta liste d'un coup.
+
+Pas besoin de tout planifier. Laisse les cases vides pour les jours où tu improvises ou manges à l'extérieur.
 
 ---
 
 ## Planifier un repas
 
 1. Ouvre l'onglet **Planification**
-2. Sélectionne le jour et le moment du repas (matin / midi / soir)
+2. Appuie sur un créneau — le jour et le moment qui t'intéresse
 3. Choisis une recette depuis ta bibliothèque
 
-Répète pour chaque repas que tu veux préparer cette semaine. Tu n'as pas besoin de tout planifier — laisse les cases vides pour les jours où tu improvises.
+Répète pour les repas que tu veux préparer. Cinq minutes suffisent pour planifier toute une semaine.
+
+{% hint style="success" %}
+**Astuce** — Planifie le dimanche soir pour la semaine à venir. Ta liste est prête, tu fais tes courses le lundi sans y repenser.
+{% endhint %}
 
 ---
 
 ## Générer la liste de courses
 
-Une fois tes repas planifiés, appuie sur **Générer la liste de courses**. Deazl calcule automatiquement :
+Une fois tes repas placés, appuie sur **Générer la liste de courses**.
 
-- Tous les ingrédients nécessaires
-- Les bonnes quantités selon ton nombre de personnes
-- Les articles que tu as peut-être déjà dans ton garde-manger
+Deazl fait le calcul :
+- Il regroupe tous les ingrédients de toutes tes recettes
+- Il ajuste les quantités pour ton nombre de personnes
+- Il soustrait ce que tu as déjà dans ton garde-manger (si activé)
 
-{% hint style="info" %}
-Si tu as activé le garde-manger, Deazl déduit ce que tu possèdes déjà et ne l'ajoute pas à ta liste.
-{% endhint %}
+Le résultat : une liste propre, sans doublons, prête à l'emploi.
 
 ---
 
 ## Modifier ou supprimer un repas
 
-Appuie longuement sur un repas planifié pour le modifier ou le supprimer. Tu peux aussi changer une recette en cours de semaine sans impact sur le reste.
+Appuie longuement sur un repas planifié pour le remplacer ou le supprimer. Tu peux modifier le planning en cours de semaine — la liste se régénère à la demande.
+
+---
+
+{% hint style="info" %}
+**Et si je n'ai pas encore de recettes ?**\
+Tu peux commencer par en ajouter quelques-unes — même les plus simples. Une fois que tu en as 5 ou 6, la planification devient vraiment fluide.
+{% endhint %}
+
+{% content-ref url="recipes.md" %}
+Ajouter mes premières recettes →
+{% endcontent-ref %}
 
 ---
 
 ## Ce qui arrive bientôt
 
+- Suggestions basées sur ton garde-manger ("tu as des pâtes, essaie cette recette")
 - Planification sur plusieurs semaines
-- Suggestions basées sur ton garde-manger
-- Partage du planning avec le foyer
+- Partage du planning avec le reste du foyer
