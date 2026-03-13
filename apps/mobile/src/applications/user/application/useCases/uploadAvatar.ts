@@ -1,16 +1,20 @@
 import { supabase } from "../../../../lib/supabase";
 
-export async function uploadAvatar(imageUri: string): Promise<{ url?: string; error?: string }> {
+export async function uploadAvatar(base64: string): Promise<{ url?: string; error?: string }> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Non authentifié" };
 
-  const response = await fetch(imageUri);
-  const blob = await response.blob();
+  const binaryString = atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+
   const path = `${user.id}/avatar.jpg`;
 
   const { error: uploadError } = await supabase.storage
     .from("avatars")
-    .upload(path, blob, { contentType: "image/jpeg", upsert: true });
+    .upload(path, bytes.buffer, { contentType: "image/jpeg", upsert: true });
 
   if (uploadError) return { error: uploadError.message };
 

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Dimensions, Keyboard, Modal, Platform, Pressable, View } from "react-native";
+import { PortalHost } from "heroui-native/portal";
 import { Gesture, GestureDetector, GestureHandlerRootView, ScrollView as GHScrollView } from "react-native-gesture-handler";
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -44,9 +45,10 @@ interface BottomModalProps {
   onClose: () => void;
   height?: string | number;
   children: React.ReactNode;
+  portalHostName?: string;
 }
 
-export function BottomModal({ isOpen, onClose, height = "55%", children }: BottomModalProps) {
+export function BottomModal({ isOpen, onClose, height = "55%", children, portalHostName }: BottomModalProps) {
   const [visible, setVisible] = useState(false);
   const translateY = useSharedValue(SCREEN_HEIGHT);
   const backdropOpacity = useSharedValue(0);
@@ -208,6 +210,7 @@ export function BottomModal({ isOpen, onClose, height = "55%", children }: Botto
                 </View>
               </GestureDetector>
             </Animated.View>
+            {portalHostName && <PortalHost name={portalHostName} />}
           </View>
         </GestureHandlerRootView>
       </Modal>

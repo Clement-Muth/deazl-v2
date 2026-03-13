@@ -44,6 +44,12 @@
         {
           "photosPermission": "Deazl accède à vos photos pour personnaliser votre avatar."
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Deazl utilise ta position pour trouver les magasins autour de toi."
+        }
       ]
     ],
     "experiments": {

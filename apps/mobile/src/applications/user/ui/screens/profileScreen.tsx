@@ -1,13 +1,18 @@
 import Constants from "expo-constants";
 import * as ImagePicker from "expo-image-picker";
 import * as Linking from "expo-linking";
+import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { BottomModal, BottomModalScrollView } from "../../../shopping/ui/components/bottomModal";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, AppState, Image, Pressable, ScrollView, Share, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Line, Path, Polyline } from "react-native-svg";
+import { Button, Dialog } from "heroui-native";
 import { addUserStore } from "../../application/useCases/addUserStore";
+import { addUserStoreFromOSM } from "../../application/useCases/addUserStoreFromOSM";
+import type { OSMStore } from "../../application/useCases/searchStoresOSM";
+import { searchStoresOSMByText, searchStoresOSMNearby } from "../../application/useCases/searchStoresOSM";
 import { changeEmail } from "../../application/useCases/changeEmail";
 import { changePassword } from "../../application/useCases/changePassword";
 import { createStoreManual } from "../../application/useCases/createStore";
@@ -149,7 +154,11 @@ export function ProfileScreen() {
 
   const [storeQuery, setStoreQuery] = useState("");
   const [storeResults, setStoreResults] = useState<StoreResult[]>([]);
+  const [osmResults, setOsmResults] = useState<OSMStore[]>([]);
   const [storeSearching, setStoreSearching] = useState(false);
+  const [geolocating, setGeolocating] = useState(false);
+  const [addingStoreId, setAddingStoreId] = useState<string | null>(null);
+  const [storeError, setStoreError] = useState<string | null>(null);
   const storeDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [createStoreSheet, setCreateStoreSheet] = useState(false);
   const [createBrand, setCreateBrand] = useState("");
@@ -157,6 +166,7 @@ export function ProfileScreen() {
   const [createAddress, setCreateAddress] = useState("");
   const [creatingStore, setCreatingStore] = useState(false);
   const [createStoreError, setCreateStoreError] = useState<string | null>(null);
+  const [removeDialogStore, setRemoveDialogStore] = useState<{ id: string; displayName: string } | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -228,22 +238,56 @@ export function ProfileScreen() {
 
   function handleStoreQueryChange(q: string) {
     setStoreQuery(q);
+    setOsmResults([]);
     if (storeDebounce.current) clearTimeout(storeDebounce.current);
     if (!q.trim()) { setStoreResults([]); return; }
     storeDebounce.current = setTimeout(async () => {
       setStoreSearching(true);
-      const results = await searchStores(q);
-      setStoreResults(results);
+      const [internal, osm] = await Promise.all([searchStores(q), searchStoresOSMByText(q)]);
+      setStoreResults(internal);
+      setOsmResults(osm);
       setStoreSearching(false);
-    }, 300);
+    }, 400);
+  }
+
+  async function handleNearbyStores() {
+    setGeolocating(true);
+    setStoreQuery("");
+    setStoreResults([]);
+    setOsmResults([]);
+    setStoreError(null);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        setStoreError("Autorise la localisation dans les réglages pour utiliser cette fonctionnalité");
+        return;
+      }
+      const cached = await Location.getLastKnownPositionAsync();
+      const loc = cached ?? await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
+      const { results, error } = await searchStoresOSMNearby(loc.coords.latitude, loc.coords.longitude);
+      if (error) setStoreError(error);
+      setOsmResults(results);
+    } catch {
+      setStoreError("Impossible de récupérer ta position");
+    } finally {
+      setGeolocating(false);
+    }
   }
 
   async function handleAddStore(store: StoreResult) {
+    setAddingStoreId(store.id);
     await addUserStore(store.id);
-    setStoreResults([]);
-    setStoreQuery("");
     const s = await getUserStores();
     setUserStores(s);
+    setAddingStoreId(null);
+  }
+
+  async function handleAddOSMStore(store: OSMStore) {
+    setAddingStoreId(store.osmId);
+    await addUserStoreFromOSM(store);
+    const s = await getUserStores();
+    setUserStores(s);
+    setAddingStoreId(null);
   }
 
   async function handleCreateStore() {
@@ -320,10 +364,11 @@ export function ProfileScreen() {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
+      base64: true,
     });
-    if (result.canceled || !result.assets[0]) return;
+    if (result.canceled || !result.assets[0]?.base64) return;
     setUploadingAvatar(true);
-    const { url } = await uploadAvatar(result.assets[0].uri);
+    const { url } = await uploadAvatar(result.assets[0].base64);
     if (url) setProfile((prev) => prev ? { ...prev, avatarUrl: url } : prev);
     setUploadingAvatar(false);
   }
@@ -537,7 +582,7 @@ export function ProfileScreen() {
                     {household.members.length} membre{household.members.length > 1 ? "s" : ""}
                   </Text>
                 </View>
-                {household.members.map((m, i) => {
+                {household.members.slice(0, 4).map((m, i) => {
                   const isMe = m.userId === profile?.id;
                   const isCreator = m.userId === household.createdBy;
                   return (
@@ -563,10 +608,17 @@ export function ProfileScreen() {
                           )}
                         </View>
                       </View>
-                      {i < household.members.length - 1 && <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />}
+                      {i < Math.min(household.members.length, 4) - 1 && <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />}
                     </View>
                   );
                 })}
+                {household.members.length > 4 && (
+                  <View style={{ paddingHorizontal: 16, paddingVertical: 10 }}>
+                    <Text style={{ fontSize: 13, color: "#A8A29E", fontWeight: "500" }}>
+                      +{household.members.length - 4} autre{household.members.length - 4 > 1 ? "s" : ""} membre{household.members.length - 4 > 1 ? "s" : ""}
+                    </Text>
+                  </View>
+                )}
                 <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
                 <NavRow
                   icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Circle cx={18} cy={5} r={3} /><Circle cx={6} cy={12} r={3} /><Circle cx={18} cy={19} r={3} /><Line x1={8.59} y1={13.51} x2={15.42} y2={17.49} /><Line x1={15.41} y1={6.51} x2={8.59} y2={10.49} /></Svg>}
@@ -594,14 +646,28 @@ export function ProfileScreen() {
                   </View>
                 )}
                 <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
-                <NavRow
-                  icon={saving
-                    ? <ActivityIndicator size="small" color="#E8571C" />
-                    : <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><Polyline points="9 22 9 12 15 12 15 22" /></Svg>}
-                  label={saving ? "Création…" : "Créer un foyer"}
-                  description="Générer un code d'invitation"
-                  onPress={saving ? () => {} : handleCreateHousehold}
-                />
+                <Pressable
+                  onPress={saving ? undefined : handleCreateHousehold}
+                  style={({ pressed }) => ({
+                    flexDirection: "row", alignItems: "center", gap: 12,
+                    paddingHorizontal: 16, paddingVertical: 14,
+                    backgroundColor: pressed ? "#FDF0EB" : "#FEF3EE",
+                  })}
+                >
+                  <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: "#E8571C1a", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {saving
+                      ? <ActivityIndicator size="small" color="#E8571C" />
+                      : <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><Polyline points="9 22 9 12 15 12 15 22" /></Svg>
+                    }
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: "#E8571C" }}>{saving ? "Création…" : "Créer un foyer"}</Text>
+                    <Text style={{ fontSize: 11, color: "#E8571C99", marginTop: 1 }}>Générer un code d'invitation</Text>
+                  </View>
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#E8571C60" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <Polyline points="9 18 15 12 9 6" />
+                  </Svg>
+                </Pressable>
                 <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
                 <NavRow
                   icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><Circle cx={8.5} cy={7} r={4} /><Line x1={20} y1={8} x2={20} y2={14} /><Line x1={23} y1={11} x2={17} y2={11} /></Svg>}
@@ -617,16 +683,14 @@ export function ProfileScreen() {
             <Pressable
               onPress={() => setEditSheet("stores")}
               style={({ pressed }) => ({
-                flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-                paddingHorizontal: 16, paddingTop: 14, paddingBottom: userStores.length > 0 ? 8 : 14,
+                flexDirection: "row", alignItems: "center", gap: 12,
+                paddingHorizontal: 16, paddingTop: 14, paddingBottom: userStores.length > 0 ? 10 : 14,
                 backgroundColor: pressed ? "#FAFAF8" : "#fff",
               })}
             >
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>Mes magasins</Text>
-                {userStores.length === 0 ? (
-                  <Text style={{ fontSize: 14, fontWeight: "600", color: "#1C1917" }}>Aucun magasin</Text>
-                ) : null}
+                <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: userStores.length > 0 ? 0 : 4 }}>Mes magasins</Text>
+                {userStores.length === 0 && <Text style={{ fontSize: 14, fontWeight: "600", color: "#C4B8AF", marginTop: 2 }}>Aucun magasin sélectionné</Text>}
               </View>
               <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                 <Polyline points="9 18 15 12 9 6" />
@@ -636,29 +700,23 @@ export function ProfileScreen() {
               <>
                 {userStores.map((s, i) => (
                   <View key={s.id}>
-                    <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 10, gap: 10 }}>
-                      <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: "#F5F3EF", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, gap: 12 }}>
+                      <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#F5F3EF", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                           <Path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
                           <Line x1={3} y1={6} x2={21} y2={6} />
                           <Path d="M16 10a4 4 0 0 1-8 0" />
                         </Svg>
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 13, fontWeight: "600", color: "#1C1917" }}>{s.brand ? `${s.brand} ${s.name}` : s.name}</Text>
-                        <Text style={{ fontSize: 11, color: "#78716C" }}>{s.city}</Text>
+                        <Text style={{ fontSize: 14, fontWeight: "600", color: "#1C1917" }}>{s.brand ? `${s.brand} — ${s.name}` : s.name}</Text>
+                        {s.city ? <Text style={{ fontSize: 12, color: "#78716C", marginTop: 1 }}>{s.city}</Text> : null}
                       </View>
-                      <Pressable onPress={() => handleRemoveStore(s.id)} hitSlop={12} style={{ padding: 4 }}>
-                        <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                          <Line x1={18} y1={6} x2={6} y2={18} />
-                          <Line x1={6} y1={6} x2={18} y2={18} />
-                        </Svg>
-                      </Pressable>
                     </View>
                     {i < userStores.length - 1 && <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />}
                   </View>
                 ))}
-                <View style={{ paddingBottom: 6 }} />
+                <View style={{ paddingBottom: 4 }} />
               </>
             )}
           </View>
@@ -667,24 +725,14 @@ export function ProfileScreen() {
             <NavRow
               icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M18 20V10" /><Path d="M12 20V4" /><Path d="M6 20v-6" /></Svg>}
               label="Statistiques"
-              description="Vos habitudes et budget alimentaire"
+              description="Tes habitudes et budget alimentaire"
               onPress={() => router.push("/analytics" as never)}
-            />
-          </View>
-
-          <View style={{ borderRadius: 14, backgroundColor: "#fff", overflow: "hidden" }}>
-            <NavRow
-              icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><Polyline points="16 17 21 12 16 7" /><Line x1={21} y1={12} x2={9} y2={12} /></Svg>}
-              label="Déconnexion"
-              onPress={doSignOut}
-              destructive
             />
             <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
             <NavRow
-              icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Polyline points="3 6 5 6 21 6" /><Path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><Path d="M10 11v6M14 11v6" /><Path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></Svg>}
-              label="Supprimer mon compte"
-              onPress={() => { setDeleteError(null); setConfirmDelete(true); }}
-              destructive
+              icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><Polyline points="16 17 21 12 16 7" /><Line x1={21} y1={12} x2={9} y2={12} /></Svg>}
+              label="Se déconnecter"
+              onPress={doSignOut}
             />
           </View>
 
@@ -705,10 +753,17 @@ export function ProfileScreen() {
           <Text style={{ fontSize: 11, color: "#C4B8AF", textAlign: "center", marginTop: 4 }}>
             Deazl v{Constants.expoConfig?.version ?? "—"}
           </Text>
+
+          <Pressable
+            onPress={() => { setDeleteError(null); setConfirmDelete(true); }}
+            style={({ pressed }) => ({ alignSelf: "center", marginTop: 16, marginBottom: 4, opacity: pressed ? 0.5 : 1 })}
+          >
+            <Text style={{ fontSize: 12, color: "#C4B8AF", textDecorationLine: "underline" }}>Supprimer mon compte</Text>
+          </Pressable>
         </View>
       </ScrollView>
 
-      <BottomModal isOpen={editSheet === "name"} onClose={() => setEditSheet(null)} height="35%">
+      <BottomModal isOpen={editSheet === "name"} onClose={() => setEditSheet(null)} height="auto">
         <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Nom affiché</Text>
         <View style={{ gap: 12 }}>
           <TextInput
@@ -730,7 +785,7 @@ export function ProfileScreen() {
         </View>
       </BottomModal>
 
-      <BottomModal isOpen={editSheet === "size"} onClose={() => setEditSheet(null)} height="35%">
+      <BottomModal isOpen={editSheet === "size"} onClose={() => setEditSheet(null)} height="auto">
         <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Portions par repas</Text>
         <View style={{ gap: 20 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 24 }}>
@@ -766,7 +821,7 @@ export function ProfileScreen() {
         </View>
       </BottomModal>
 
-      <BottomModal isOpen={editSheet === "dietary"} onClose={() => setEditSheet(null)} height="65%">
+      <BottomModal isOpen={editSheet === "dietary"} onClose={() => setEditSheet(null)} height="auto">
         <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Régime alimentaire</Text>
         <BottomModalScrollView contentContainerStyle={{ paddingBottom: 40, gap: 8 }}>
           {DIETARY_OPTIONS.map((opt) => {
@@ -803,7 +858,7 @@ export function ProfileScreen() {
         </BottomModalScrollView>
       </BottomModal>
 
-      <BottomModal isOpen={editSheet === "household"} onClose={() => setEditSheet(null)} height="40%">
+      <BottomModal isOpen={editSheet === "household"} onClose={() => setEditSheet(null)} height="auto">
         <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Rejoindre un foyer</Text>
         <View style={{ gap: 12 }}>
           <TextInput
@@ -829,69 +884,215 @@ export function ProfileScreen() {
         </View>
       </BottomModal>
 
-      <BottomModal isOpen={editSheet === "stores"} onClose={() => { setEditSheet(null); setStoreQuery(""); setStoreResults([]); }} height="75%">
-        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Mes magasins</Text>
-        <TextInput
-          value={storeQuery}
-          onChangeText={handleStoreQueryChange}
-          placeholder="Rechercher un magasin…"
-          placeholderTextColor="#A8A29E"
-          style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 13, fontSize: 14, color: "#1C1917", marginBottom: 12 }}
-        />
-        {storeSearching && <ActivityIndicator color="#E8571C" style={{ marginBottom: 12 }} />}
-        {storeQuery.trim().length > 0 && !storeSearching && storeResults.length === 0 && (
-          <Pressable onPress={() => { setCreateBrand(storeQuery.trim()); setCreateStoreSheet(true); }} style={{ flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 14, backgroundColor: "#FFF7ED", padding: 12, marginBottom: 12 }}>
-            <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-              <Line x1={12} y1={5} x2={12} y2={19} />
-              <Line x1={5} y1={12} x2={19} y2={12} />
-            </Svg>
-            <Text style={{ fontSize: 13, fontWeight: "700", color: "#E8571C" }}>Créer « {storeQuery.trim()} »</Text>
-          </Pressable>
-        )}
-        {storeResults.length > 0 && (
-          <View style={{ borderRadius: 16, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E7E5E4", overflow: "hidden", marginBottom: 16 }}>
-            {storeResults.map((s, i) => (
-              <View key={s.id}>
-                <Pressable
-                  onPress={() => handleAddStore(s)}
-                  style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: "600", color: "#1C1917" }}>{s.brand ? `${s.brand} ${s.name}` : s.name}</Text>
-                    <Text style={{ fontSize: 11, color: "#78716C" }}>{s.city}{s.address ? ` · ${s.address}` : ""}</Text>
-                  </View>
-                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <Line x1={12} y1={5} x2={12} y2={19} />
-                    <Line x1={5} y1={12} x2={19} y2={12} />
-                  </Svg>
-                </Pressable>
-                {i < storeResults.length - 1 && <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />}
-              </View>
-            ))}
-          </View>
-        )}
-        <BottomModalScrollView contentContainerStyle={{ paddingBottom: 32, gap: 8 }}>
-          {userStores.length === 0 && !storeQuery && (
-            <Text style={{ fontSize: 13, color: "#A8A29E", textAlign: "center", marginTop: 12 }}>Aucun magasin sélectionné</Text>
+      <BottomModal
+        isOpen={editSheet === "stores"}
+        onClose={() => { setEditSheet(null); setStoreQuery(""); setStoreResults([]); setOsmResults([]); setStoreError(null); }}
+        height="85%"
+        portalHostName="stores-sheet-dialog"
+      >
+        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 12 }}>Mes magasins</Text>
+
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 14, paddingVertical: 12, marginBottom: 10 }}>
+          <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <Circle cx={11} cy={11} r={8} />
+            <Line x1={21} y1={21} x2={16.65} y2={16.65} />
+          </Svg>
+          <TextInput
+            value={storeQuery}
+            onChangeText={handleStoreQueryChange}
+            placeholder="Rechercher un magasin…"
+            placeholderTextColor="#A8A29E"
+            autoFocus
+            returnKeyType="search"
+            style={{ flex: 1, fontSize: 14, color: "#1C1917", padding: 0 }}
+          />
+          {storeQuery.length > 0 && (
+            <Pressable onPress={() => { setStoreQuery(""); setStoreResults([]); setOsmResults([]); }} hitSlop={8}>
+              <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <Line x1={18} y1={6} x2={6} y2={18} />
+                <Line x1={6} y1={6} x2={18} y2={18} />
+              </Svg>
+            </Pressable>
           )}
-          {userStores.map((s) => (
-            <View key={s.id} style={{ flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 14, paddingVertical: 12 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, fontWeight: "600", color: "#1C1917" }}>{s.brand ? `${s.brand} ${s.name}` : s.name}</Text>
-                <Text style={{ fontSize: 11, color: "#78716C" }}>{s.city}</Text>
-              </View>
-              <Pressable onPress={() => handleRemoveStore(s.id)} hitSlop={12} style={{ padding: 4 }}>
-                <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <Line x1={18} y1={6} x2={6} y2={18} />
-                  <Line x1={6} y1={6} x2={18} y2={18} />
-                </Svg>
-              </Pressable>
+        </View>
+
+        <Pressable
+          onPress={handleNearbyStores}
+          disabled={geolocating}
+          style={({ pressed }) => ({
+            flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start",
+            borderRadius: 99, paddingHorizontal: 12, paddingVertical: 7, marginBottom: 14,
+            backgroundColor: geolocating ? "#F5F3EF" : "#E8571C1a",
+            opacity: pressed ? 0.7 : 1,
+          })}
+        >
+          {geolocating
+            ? <ActivityIndicator size="small" color="#E8571C" />
+            : <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <Circle cx={12} cy={12} r={3} />
+                <Path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" />
+              </Svg>
+          }
+          <Text style={{ fontSize: 13, fontWeight: "600", color: geolocating ? "#A8A29E" : "#E8571C" }}>
+            {geolocating ? "Localisation…" : "Autour de moi"}
+          </Text>
+        </Pressable>
+
+        <BottomModalScrollView contentContainerStyle={{ paddingBottom: 24 }}>
+          {storeError && (
+            <View style={{ borderRadius: 12, backgroundColor: "#FEF3C7", paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12, flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <Path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <Line x1={12} y1={9} x2={12} y2={13} />
+                <Line x1={12} y1={17} x2={12.01} y2={17} />
+              </Svg>
+              <Text style={{ fontSize: 12, color: "#92400E", flex: 1 }}>{storeError}</Text>
             </View>
-          ))}
+          )}
+          {storeSearching && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <ActivityIndicator size="small" color="#E8571C" />
+              <Text style={{ fontSize: 12, color: "#A8A29E" }}>Recherche en cours…</Text>
+            </View>
+          )}
+
+          {(storeResults.length > 0 || osmResults.length > 0) && (
+            <View style={{ borderRadius: 16, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E7E5E4", overflow: "hidden", marginBottom: 14 }}>
+              {storeResults.map((s, i) => {
+                const alreadyAdded = userStores.some((us) => us.id === s.id);
+                const isAdding = addingStoreId === s.id;
+                return (
+                  <View key={s.id}>
+                    <Pressable
+                      onPress={alreadyAdded ? undefined : () => handleAddStore(s)}
+                      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 13, opacity: pressed && !alreadyAdded ? 0.7 : 1 })}
+                    >
+                      <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: "#F5F3EF", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                          <Path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                          <Line x1={3} y1={6} x2={21} y2={6} />
+                          <Path d="M16 10a4 4 0 0 1-8 0" />
+                        </Svg>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 13, fontWeight: "600", color: "#1C1917" }}>{s.brand ? `${s.brand} — ${s.name}` : s.name}</Text>
+                        <Text style={{ fontSize: 11, color: "#78716C" }}>{s.city}{s.address ? ` · ${s.address}` : ""}</Text>
+                      </View>
+                      {isAdding
+                        ? <ActivityIndicator size="small" color="#E8571C" />
+                        : alreadyAdded
+                          ? <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><Path d="M20 6 9 17l-5-5" /></Svg>
+                          : <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><Line x1={12} y1={5} x2={12} y2={19} /><Line x1={5} y1={12} x2={19} y2={12} /></Svg>
+                      }
+                    </Pressable>
+                    {(i < storeResults.length - 1 || osmResults.length > 0) && <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />}
+                  </View>
+                );
+              })}
+              {osmResults.map((s, i) => {
+                const alreadyAdded = userStores.some((us) => us.name === s.name && us.city === s.city);
+                const isAdding = addingStoreId === s.osmId;
+                return (
+                  <View key={s.osmId}>
+                    <Pressable
+                      onPress={alreadyAdded ? undefined : () => handleAddOSMStore(s)}
+                      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 13, opacity: pressed && !alreadyAdded ? 0.7 : 1 })}
+                    >
+                      <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: "#F5F3EF", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                          <Path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                          <Line x1={3} y1={6} x2={21} y2={6} />
+                          <Path d="M16 10a4 4 0 0 1-8 0" />
+                        </Svg>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 13, fontWeight: "600", color: "#1C1917" }}>{s.brand ? `${s.brand} — ${s.name}` : s.name}</Text>
+                        <Text style={{ fontSize: 11, color: "#78716C" }}>
+                          {s.city}{s.address ? ` · ${s.address}` : ""}
+                          {s.distanceM != null ? ` · ${s.distanceM < 1000 ? `${s.distanceM} m` : `${(s.distanceM / 1000).toFixed(1)} km`}` : ""}
+                        </Text>
+                      </View>
+                      {isAdding
+                        ? <ActivityIndicator size="small" color="#E8571C" />
+                        : alreadyAdded
+                          ? <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><Path d="M20 6 9 17l-5-5" /></Svg>
+                          : <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><Line x1={12} y1={5} x2={12} y2={19} /><Line x1={5} y1={12} x2={19} y2={12} /></Svg>
+                      }
+                    </Pressable>
+                    {i < osmResults.length - 1 && <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />}
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          {storeQuery.trim().length > 0 && !storeSearching && storeResults.length === 0 && osmResults.length === 0 && (
+            <Pressable
+              onPress={() => { setCreateBrand(storeQuery.trim()); setCreateStoreSheet(true); }}
+              style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 14, backgroundColor: "#FFF7ED", padding: 12, marginBottom: 14, opacity: pressed ? 0.8 : 1 })}
+            >
+              <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <Line x1={12} y1={5} x2={12} y2={19} />
+                <Line x1={5} y1={12} x2={19} y2={12} />
+              </Svg>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: "#E8571C" }}>Créer « {storeQuery.trim()} » manuellement</Text>
+            </Pressable>
+          )}
+
+          {userStores.length > 0 && (
+            <>
+              <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>
+                {userStores.length} magasin{userStores.length > 1 ? "s" : ""} sélectionné{userStores.length > 1 ? "s" : ""}
+              </Text>
+              {userStores.map((s) => (
+                <View key={s.id} style={{ flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 14, paddingVertical: 12, marginBottom: 8 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: "#1C1917" }}>{s.brand ? `${s.brand} — ${s.name}` : s.name}</Text>
+                    <Text style={{ fontSize: 11, color: "#78716C" }}>{s.city}</Text>
+                  </View>
+                  <Pressable
+                    onPress={() => setRemoveDialogStore({ id: s.id, displayName: s.brand ? `${s.brand} — ${s.name}` : s.name })}
+                    hitSlop={12}
+                    style={{ padding: 4 }}
+                  >
+                    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <Line x1={18} y1={6} x2={6} y2={18} />
+                      <Line x1={6} y1={6} x2={18} y2={18} />
+                    </Svg>
+                  </Pressable>
+                </View>
+              ))}
+            </>
+          )}
+
+          {userStores.length === 0 && !storeQuery && osmResults.length === 0 && (
+            <Text style={{ fontSize: 13, color: "#A8A29E", textAlign: "center", marginTop: 4 }}>
+              Recherche un magasin ou utilise la géolocalisation
+            </Text>
+          )}
         </BottomModalScrollView>
+        <Dialog isOpen={removeDialogStore !== null} onOpenChange={(open) => { if (!open) setRemoveDialogStore(null); }}>
+          <Dialog.Portal hostName="stores-sheet-dialog">
+            <Dialog.Overlay />
+            <Dialog.Content>
+              <Dialog.Title>Retirer ce magasin</Dialog.Title>
+              <Dialog.Description>
+                Retirer {removeDialogStore?.displayName} de tes magasins ?
+              </Dialog.Description>
+              <View style={{ flexDirection: "row", gap: 8, marginTop: 16 }}>
+                <Button variant="secondary" style={{ flex: 1 }} onPress={() => setRemoveDialogStore(null)}>
+                  <Button.Label>Annuler</Button.Label>
+                </Button>
+                <Button variant="danger" style={{ flex: 1 }} onPress={() => { handleRemoveStore(removeDialogStore!.id); setRemoveDialogStore(null); }}>
+                  <Button.Label>Retirer</Button.Label>
+                </Button>
+              </View>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog>
       </BottomModal>
 
-      <BottomModal isOpen={createStoreSheet} onClose={() => { setCreateStoreSheet(false); setCreateStoreError(null); }} height="55%">
+      <BottomModal isOpen={createStoreSheet} onClose={() => { setCreateStoreSheet(false); setCreateStoreError(null); }} height="auto">
         <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Créer un magasin</Text>
         <View style={{ gap: 10 }}>
           <TextInput value={createBrand} onChangeText={setCreateBrand} placeholder="Enseigne (ex: Carrefour, Lidl…)" placeholderTextColor="#A8A29E" style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 13, fontSize: 14, color: "#1C1917" }} />
@@ -933,27 +1134,31 @@ export function ProfileScreen() {
         </Pressable>
       </BottomModal>
 
-      <BottomModal isOpen={confirmLeave} onClose={() => setConfirmLeave(false)} height="32%">
-        <View style={{ alignItems: "center", marginBottom: 20, gap: 6 }}>
-          <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Quitter le foyer ?</Text>
-          <Text style={{ fontSize: 13, color: "#78716C", textAlign: "center" }}>Vous perdrez l'accès aux listes partagées.</Text>
-        </View>
-        <View style={{ gap: 8 }}>
-          <Pressable
-            onPress={handleLeaveHousehold}
-            disabled={leaving}
-            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: "#FEE2E2", paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1 })}
-          >
-            <Text style={{ fontSize: 15, fontWeight: "700", color: "#DC2626" }}>{leaving ? "Départ…" : "Quitter le foyer"}</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setConfirmLeave(false)}
-            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: "#F5F3EF", paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1 })}
-          >
-            <Text style={{ fontSize: 15, fontWeight: "600", color: "#1C1917" }}>Annuler</Text>
-          </Pressable>
-        </View>
-      </BottomModal>
+      <Dialog isOpen={confirmLeave} onOpenChange={(open) => { if (!open) setConfirmLeave(false); }}>
+        <Dialog.Portal>
+          <Dialog.Overlay />
+          <Dialog.Content>
+            <Dialog.Title>Quitter le foyer ?</Dialog.Title>
+            <Dialog.Description>
+              Tu perdras l'accès aux listes de courses et au planning partagés.
+            </Dialog.Description>
+            {profile?.id === household?.createdBy && (
+              <View style={{ borderRadius: 12, backgroundColor: "#FEF3C7", paddingHorizontal: 14, paddingVertical: 10, marginTop: 12 }}>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: "#92400E", marginBottom: 2 }}>Tu es le créateur du foyer</Text>
+                <Text style={{ fontSize: 12, color: "#B45309", lineHeight: 17 }}>En partant, le foyer sera supprimé pour tous les membres.</Text>
+              </View>
+            )}
+            <View style={{ flexDirection: "row", gap: 8, marginTop: 16 }}>
+              <Button variant="secondary" style={{ flex: 1 }} onPress={() => setConfirmLeave(false)}>
+                <Button.Label>Annuler</Button.Label>
+              </Button>
+              <Button variant="danger" style={{ flex: 1 }} disabled={leaving} onPress={handleLeaveHousehold}>
+                <Button.Label>{leaving ? "Départ…" : "Quitter"}</Button.Label>
+              </Button>
+            </View>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog>
 
       <BottomModal isOpen={editSheet === "email"} onClose={() => { setEditSheet(null); }} height="auto">
         <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Changer l'email</Text>
@@ -1057,36 +1262,30 @@ export function ProfileScreen() {
         )}
       </BottomModal>
 
-      <BottomModal isOpen={confirmDelete} onClose={() => setConfirmDelete(false)} height="auto">
-        <View style={{ alignItems: "center", marginBottom: 20, gap: 6 }}>
-          <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Supprimer mon compte</Text>
-          <Text style={{ fontSize: 13, color: "#78716C", textAlign: "center" }}>
-            Cette action est irréversible. Toutes vos données seront définitivement supprimées.
-          </Text>
-        </View>
-        {deleteError && (
-          <View style={{ borderRadius: 10, backgroundColor: "#FEE2E2", paddingHorizontal: 12, paddingVertical: 8, marginBottom: 12 }}>
-            <Text style={{ fontSize: 12, color: "#DC2626", fontWeight: "600" }}>{deleteError}</Text>
-          </View>
-        )}
-        <View style={{ gap: 8 }}>
-          <Pressable
-            onPress={handleDeleteAccount}
-            disabled={deleting}
-            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: "#FEE2E2", paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1 })}
-          >
-            <Text style={{ fontSize: 15, fontWeight: "700", color: "#DC2626" }}>
-              {deleting ? "Suppression…" : "Supprimer définitivement"}
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setConfirmDelete(false)}
-            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: "#F5F3EF", paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1 })}
-          >
-            <Text style={{ fontSize: 15, fontWeight: "600", color: "#1C1917" }}>Annuler</Text>
-          </Pressable>
-        </View>
-      </BottomModal>
+      <Dialog isOpen={confirmDelete} onOpenChange={(open) => { if (!open) setConfirmDelete(false); }}>
+        <Dialog.Portal>
+          <Dialog.Overlay />
+          <Dialog.Content>
+            <Dialog.Title>Supprimer mon compte</Dialog.Title>
+            <Dialog.Description>
+              Cette action est irréversible. Toutes tes données seront définitivement supprimées.
+            </Dialog.Description>
+            {deleteError && (
+              <View style={{ borderRadius: 10, backgroundColor: "#FEE2E2", paddingHorizontal: 12, paddingVertical: 8, marginTop: 12 }}>
+                <Text style={{ fontSize: 12, color: "#DC2626", fontWeight: "600" }}>{deleteError}</Text>
+              </View>
+            )}
+            <View style={{ flexDirection: "row", gap: 8, marginTop: 16 }}>
+              <Button variant="secondary" style={{ flex: 1 }} onPress={() => setConfirmDelete(false)}>
+                <Button.Label>Annuler</Button.Label>
+              </Button>
+              <Button variant="danger" style={{ flex: 1 }} disabled={deleting} onPress={handleDeleteAccount}>
+                <Button.Label>{deleting ? "Suppression…" : "Supprimer"}</Button.Label>
+              </Button>
+            </View>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog>
 
     </SafeAreaView>
   );
