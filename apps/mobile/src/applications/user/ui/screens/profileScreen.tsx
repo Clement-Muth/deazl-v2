@@ -4,7 +4,7 @@ import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import { BottomModal, BottomModalScrollView } from "../../../shopping/ui/components/bottomModal";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Image, Pressable, ScrollView, Share, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, AppState, Image, Pressable, ScrollView, Share, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Line, Path, Polyline } from "react-native-svg";
 import { addUserStore } from "../../application/useCases/addUserStore";
@@ -170,6 +170,13 @@ export function ProfileScreen() {
 
   useEffect(() => {
     reload().finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") reload();
+    });
+    return () => sub.remove();
   }, []);
 
   function openNameSheet() {
