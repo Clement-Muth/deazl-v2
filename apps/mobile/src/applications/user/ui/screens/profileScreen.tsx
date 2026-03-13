@@ -449,7 +449,7 @@ export function ProfileScreen() {
             <SettingRow
               label="Adresse email"
               value={profile?.email ?? ""}
-              onPress={() => { setEmailInput(""); setEmailError(null); setEmailSent(false); setEditSheet("email"); }}
+              onPress={() => { setEmailInput(""); setEmailError(null); setEditSheet("email"); }}
             />
             {profile?.pendingEmail && (
               <View style={{ paddingHorizontal: 16, paddingVertical: 10, backgroundColor: "#FFFBEB", gap: 6 }}>
