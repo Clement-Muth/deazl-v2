@@ -11,24 +11,12 @@ import { Slot, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
 import { HeroUINativeProvider } from "heroui-native";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { supabase } from "../lib/supabase";
 import "../../global.css";
 
 SplashScreen.preventAutoHideAsync();
-
-function handleDeepLink(url: string) {
-  if (!url.startsWith("deazl://reset-password")) return;
-  const hash = url.split("#")[1] ?? "";
-  const params = new URLSearchParams(hash);
-  const accessToken = params.get("access_token");
-  const refreshToken = params.get("refresh_token");
-  const type = params.get("type");
-  if (type === "recovery" && accessToken && refreshToken) {
-    supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-  }
-}
 
 function AuthGate({
   children,
@@ -50,7 +38,7 @@ function AuthGate({
       router.replace("/(auth)/reset-password");
       return;
     }
-    const inAuth = segments[0] === "(auth)";
+    const inAuth = segments[0] === "(auth)" || segments[0] === "auth";
     const inOnboarding = segments[0] === "(onboarding)";
     if (!session && !inAuth) {
       router.replace("/(auth)/login");
@@ -71,14 +59,37 @@ export default function RootLayout() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [pendingRecovery, setPendingRecovery] = useState(false);
   const splashHiddenRef = useRef(false);
+  const pendingRecoveryRef = useRef(false);
+
+  const handleDeepLink = useCallback((url: string) => {
+    if (!url.startsWith("deazl://reset-password")) return;
+    const queryString = url.split("?")[1]?.split("#")[0] ?? "";
+    const code = new URLSearchParams(queryString).get("code");
+    if (code) {
+      pendingRecoveryRef.current = true;
+      supabase.auth.exchangeCodeForSession(code);
+      return;
+    }
+    const hash = url.split("#")[1] ?? "";
+    const params = new URLSearchParams(hash);
+    const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
+    const type = params.get("type");
+    if (type === "recovery" && accessToken && refreshToken) {
+      pendingRecoveryRef.current = true;
+      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+    }
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       setSession(error ? null : session);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
-      if (event === "PASSWORD_RECOVERY") {
+      if (event === "PASSWORD_RECOVERY" || pendingRecoveryRef.current) {
+        pendingRecoveryRef.current = false;
         setPendingRecovery(true);
+        setSession(newSession);
       } else {
         setSession(newSession);
       }
@@ -92,7 +103,7 @@ export default function RootLayout() {
     });
     const sub = Linking.addEventListener("url", ({ url }) => handleDeepLink(url));
     return () => sub.remove();
-  }, []);
+  }, [handleDeepLink]);
 
   useEffect(() => {
     if (fontsLoaded && session !== undefined && !splashHiddenRef.current) {
