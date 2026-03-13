@@ -1,88 +1,119 @@
-# Deazl
+<div align="center">
 
-Smart meal planning & grocery management — application mobile iOS/Android + landing web.
+<img src=".github/assets/banner.svg" alt="Deazl" width="100%" />
 
-## Vision
+<br />
 
-Planifier ses repas de la semaine ne devrait pas être une corvée. Deazl génère automatiquement ta liste de courses depuis tes recettes, compare les prix par magasin et suggère les meilleures alternatives santé/budget.
+[![CI](https://github.com/Clement-Muth/deazl-v2/actions/workflows/ci.yml/badge.svg?style=flat-square)](https://github.com/Clement-Muth/deazl-v2/actions/workflows/ci.yml)
+[![Version](https://img.shields.io/badge/version-1.0.0-E8571C?style=flat-square)](https://github.com/Clement-Muth/deazl-v2/releases)
+[![Platform](https://img.shields.io/badge/platform-iOS%20%7C%20Android-161616?style=flat-square&logo=apple&logoColor=white)](https://github.com/Clement-Muth/deazl-v2)
+[![Made with Bun](https://img.shields.io/badge/bun-workspace-E8571C?style=flat-square&logo=bun&logoColor=white)](https://bun.sh)
+
+</div>
+
+---
+
+## Pourquoi Deazl ?
+
+La planification des repas est une tâche répétitive et mentalement coûteuse. On finit toujours par acheter au même endroit, sans savoir si c'est le meilleur choix — ni en termes de prix, ni de qualité nutritionnelle.
+
+**Deazl automatise tout ça.**
+
+- Planifie ta semaine depuis tes recettes enregistrées
+- Génère la liste de courses instantanément
+- Compare les prix par ingrédient et par magasin
+- Suggère des alternatives meilleures (santé, budget, ou les deux)
+
+---
 
 ## Stack
 
-| | Tech |
-|---|---|
-| Mobile | Expo (React Native) · HeroUI Native · Expo Router |
-| Web | Next.js 16 · Tailwind CSS v4 · shadcn/ui |
-| Backend | Supabase (PostgreSQL · Auth · Storage) |
-| Monorepo | Bun workspaces |
-| i18n | Lingui.js |
+```
+Mobile       →  Expo (React Native) · HeroUI Native · Expo Router
+Web          →  Next.js 16 · Tailwind CSS v4 · shadcn/ui
+Backend      →  Supabase (PostgreSQL · Auth · Storage · Edge Functions)
+Monorepo     →  Bun workspaces
+i18n         →  Lingui.js
+```
+
+---
 
 ## Architecture
 
-DDD pragmatique + Vertical Slice. Chaque bounded context dans `src/applications/[bc-name]/` :
+DDD pragmatique + Vertical Slice. Chaque bounded context est autonome :
 
 ```
 apps/
-  mobile/          # App Expo (iOS/Android)
-  web/             # Next.js (landing + /r/[id] partage recettes)
+├── mobile/                    # App Expo (iOS / Android)
+│   └── src/applications/
+│       ├── catalog/           # Produits Open Food Facts
+│       ├── recipe/            # Recettes & favoris
+│       ├── planning/          # Planification hebdomadaire
+│       ├── shopping/          # Liste de courses & prix
+│       ├── pantry/            # Garde-manger
+│       ├── analytics/         # Suivi dépenses
+│       └── user/              # Profil & ménage
+└── web/                       # Next.js (landing + partage recettes)
+
 supabase/
-  migrations/      # Migrations SQL
-  templates/       # Templates emails
+├── migrations/                # Historique SQL versionné
+└── templates/                 # Emails transactionnels
 ```
 
-**Bounded contexts :** `catalog` · `recipe` · `planning` · `shopping` · `pantry` · `analytics` · `user`
+Chaque bounded context expose : `domain/` · `application/` · `infrastructure/` · `ui/` · `api/`
 
-## Lancer le projet
+---
 
-### Prérequis
+## Démarrage
 
-- [Bun](https://bun.sh) `>= 1.0`
-- [Expo Go](https://expo.dev/go) ou simulateur iOS/Android
-
-### Installation
+**Prérequis :** [Bun](https://bun.sh) `>= 1.0` · [Expo Go](https://expo.dev/go) ou simulateur
 
 ```bash
+# Cloner et installer
+git clone https://github.com/Clement-Muth/deazl-v2.git
+cd deazl-v2
 bun install
 ```
 
-### Web (landing)
-
-```bash
-bun dev
-# → http://localhost:3002
-```
-
-### Mobile
+**Mobile**
 
 ```bash
 bun mobile
 # Scanner le QR code avec Expo Go
 ```
 
-### Variables d'environnement
+**Web**
 
-**`apps/web/.env.local`**
-```env
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
+```bash
+bun dev
+# http://localhost:3002
 ```
 
-**`apps/mobile/.env`**
-```env
+**Variables d'environnement**
+
+```bash
+# apps/web/.env.local
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+
+# apps/mobile/.env
 EXPO_PUBLIC_SUPABASE_URL=
 EXPO_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
-## Workflow
+---
+
+## Workflow Git
 
 | Branche | Rôle | Déploiement |
 |---|---|---|
 | `staging` | Développement quotidien | Vercel preview |
-| `main` | Production | Vercel production |
+| `main` | Production (PR only, CI required) | Vercel production |
 
-Les merges vers `main` se font via PR depuis `staging`. La CI (typecheck) doit passer.
+---
 
 ## Versioning
 
-Semver — géré dans `apps/mobile/app.json` (source de vérité), synchronisé dans tous les `package.json`.
+Semver — source de vérité dans `apps/mobile/app.json`, synchronisé dans tous les `package.json`.
 
-Voir les [releases](https://github.com/Clement-Muth/deazl-v2/releases).
+→ [Voir les releases](https://github.com/Clement-Muth/deazl-v2/releases)
