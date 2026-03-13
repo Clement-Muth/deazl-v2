@@ -1,13 +1,19 @@
+import Constants from "expo-constants";
+import * as ImagePicker from "expo-image-picker";
+import * as Linking from "expo-linking";
+import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
-import { Card, PressableFeedback, Separator } from "heroui-native";
 import { BottomModal, BottomModalScrollView } from "../../../shopping/ui/components/bottomModal";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Image, Pressable, ScrollView, Share, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, ScrollView, Share, Switch, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Line, Path, Polyline } from "react-native-svg";
 import { addUserStore } from "../../application/useCases/addUserStore";
+import { changeEmail } from "../../application/useCases/changeEmail";
+import { changePassword } from "../../application/useCases/changePassword";
 import { createStoreManual } from "../../application/useCases/createStore";
 import { createHousehold } from "../../application/useCases/createHousehold";
+import { deleteAccount } from "../../application/useCases/deleteAccount";
 import { leaveHousehold } from "../../application/useCases/leaveHousehold";
 import { getHousehold } from "../../application/useCases/getHousehold";
 import type { Household } from "../../application/useCases/getHousehold";
@@ -21,6 +27,9 @@ import type { StoreResult } from "../../application/useCases/searchStores";
 import { signOut } from "../../application/useCases/signOut";
 import { updateDisplayName } from "../../application/useCases/updateDisplayName";
 import { updateHouseholdSize } from "../../application/useCases/updateHouseholdSize";
+import { updateNotificationSettings } from "../../application/useCases/updateNotificationSettings";
+import type { NotificationSettings } from "../../application/useCases/updateNotificationSettings";
+import { uploadAvatar } from "../../application/useCases/uploadAvatar";
 import { getUserStores } from "../../../shopping/application/useCases/getUserStores";
 import type { UserStore } from "../../../shopping/application/useCases/getUserStores";
 
@@ -61,7 +70,14 @@ function InitialsAvatar({ name, email, avatarUrl, size = 80 }: { name: string; e
 
 function SettingRow({ label, value, onPress }: { label: string; value: string; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 14 }}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => ({
+        flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+        paddingHorizontal: 16, paddingVertical: 14,
+        backgroundColor: pressed ? "#FAFAF8" : "#fff",
+      })}
+    >
       <View>
         <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 0.8 }}>{label}</Text>
         <Text style={{ fontSize: 14, fontWeight: "600", color: "#1C1917", marginTop: 2 }}>{value || "Non renseigné"}</Text>
@@ -81,11 +97,14 @@ function NavRow({ icon, label, description, onPress, destructive = false }: {
   destructive?: boolean;
 }) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => ({
-      flexDirection: "row", alignItems: "center", gap: 12,
-      paddingHorizontal: 16, paddingVertical: 14,
-      opacity: pressed ? 0.8 : 1,
-    })}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => ({
+        flexDirection: "row", alignItems: "center", gap: 12,
+        paddingHorizontal: 16, paddingVertical: 14,
+        backgroundColor: pressed ? "#FAFAF8" : "#fff",
+      })}
+    >
       <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: destructive ? "#FEE2E2" : "#F5F3EF", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
         {icon}
       </View>
@@ -109,7 +128,7 @@ export function ProfileScreen() {
   const [userStores, setUserStores] = useState<UserStore[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [editSheet, setEditSheet] = useState<"name" | "size" | "dietary" | "household" | "stores" | null>(null);
+  const [editSheet, setEditSheet] = useState<"name" | "size" | "dietary" | "household" | "stores" | "password" | "email" | "notifications" | null>(null);
   const [nameInput, setNameInput] = useState("");
   const [sizeInput, setSizeInput] = useState(2);
   const [dietaryInput, setDietaryInput] = useState<string[]>([]);
@@ -118,6 +137,17 @@ export function ProfileScreen() {
   const [joinError, setJoinError] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [emailInput, setEmailInput] = useState("");
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
+  const [notifInput, setNotifInput] = useState<NotificationSettings>({ shoppingList: true, household: true, planning: true });
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [storeQuery, setStoreQuery] = useState("");
   const [storeResults, setStoreResults] = useState<StoreResult[]>([]);
@@ -273,6 +303,82 @@ export function ProfileScreen() {
     });
   }
 
+  async function handlePickAvatar() {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    setUploadingAvatar(true);
+    const { url } = await uploadAvatar(result.assets[0].uri);
+    if (url) setProfile((prev) => prev ? { ...prev, avatarUrl: url } : prev);
+    setUploadingAvatar(false);
+  }
+
+  async function handleChangeEmail() {
+    if (!emailInput.trim()) return;
+    setSaving(true);
+    setEmailError(null);
+    const result = await changeEmail(emailInput.trim());
+    setSaving(false);
+    if (result.error) {
+      setEmailError(result.error);
+    } else {
+      setEmailSent(true);
+    }
+  }
+
+  async function handleSaveNotifications() {
+    setSaving(true);
+    await updateNotificationSettings(notifInput);
+    setProfile((prev) => prev ? { ...prev, notificationSettings: notifInput } : prev);
+    setSaving(false);
+    setEditSheet(null);
+  }
+
+  async function requestNotificationPermission() {
+    const { status } = await Notifications.requestPermissionsAsync();
+    return status === "granted";
+  }
+
+  async function handleChangePassword() {
+    if (passwordInput.length < 8) {
+      setPasswordError("Le mot de passe doit contenir au moins 8 caractères.");
+      return;
+    }
+    if (passwordInput !== confirmPasswordInput) {
+      setPasswordError("Les mots de passe ne correspondent pas.");
+      return;
+    }
+    setSaving(true);
+    setPasswordError(null);
+    const result = await changePassword(passwordInput);
+    setSaving(false);
+    if (result.error) {
+      setPasswordError(result.error);
+    } else {
+      setPasswordInput("");
+      setConfirmPasswordInput("");
+      setEditSheet(null);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    setDeleting(true);
+    setDeleteError(null);
+    const result = await deleteAccount();
+    if (result.error) {
+      setDeleteError(result.error);
+      setDeleting(false);
+    } else {
+      router.replace("/(auth)/login" as never);
+    }
+  }
+
   async function doSignOut() {
     setConfirmSignOut(false);
     await signOut();
@@ -292,28 +398,68 @@ export function ProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
 
         <View style={{ alignItems: "center", paddingTop: 32, paddingBottom: 28, paddingHorizontal: 20 }}>
-          <InitialsAvatar name={profile?.fullName ?? ""} email={profile?.email ?? ""} avatarUrl={profile?.avatarUrl} />
-          {profile?.fullName ? (
-            <Text style={{ fontSize: 22, fontWeight: "900", color: "#1C1917", marginTop: 16, letterSpacing: -0.3 }}>
-              {profile.fullName}
-            </Text>
-          ) : null}
-          <Text style={{ fontSize: 13, color: "#78716C", marginTop: profile?.fullName ? 2 : 16 }}>
+          <Pressable onPress={handlePickAvatar} style={{ position: "relative" }}>
+            <InitialsAvatar name={profile?.fullName ?? ""} email={profile?.email ?? ""} avatarUrl={profile?.avatarUrl} />
+            <View style={{
+              position: "absolute", bottom: 0, right: 0,
+              width: 26, height: 26, borderRadius: 13,
+              backgroundColor: "#E8571C", borderWidth: 2, borderColor: "#FAF9F6",
+              alignItems: "center", justifyContent: "center",
+            }}>
+              {uploadingAvatar
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <Polyline points="17 8 12 3 7 8" />
+                    <Line x1={12} y1={3} x2={12} y2={15} />
+                  </Svg>
+              }
+            </View>
+          </Pressable>
+          <Text style={{ fontSize: 22, fontWeight: "900", color: "#1C1917", marginTop: 16, letterSpacing: -0.3 }}>
+            {profile?.fullName || "Nom non renseigné"}
+          </Text>
+          <Text style={{ fontSize: 13, color: "#78716C", marginTop: 2 }}>
             {profile?.email}
           </Text>
         </View>
 
         <View style={{ paddingHorizontal: 16, gap: 12 }}>
-          <Card>
+          <View style={{ borderRadius: 14, backgroundColor: "#fff", overflow: "hidden" }}>
             <SettingRow label="Nom affiché" value={profile?.fullName ?? ""} onPress={openNameSheet} />
-            <Separator />
+            <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
             <SettingRow
-              label="Taille du foyer"
+              label="Nombre de personnes"
               value={`${profile?.householdSize ?? 2} personne${(profile?.householdSize ?? 2) > 1 ? "s" : ""}`}
               onPress={openSizeSheet}
             />
-            <Separator />
-            <Pressable onPress={openDietarySheet} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 14 }}>
+            <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
+            <SettingRow
+              label="Mot de passe"
+              value="••••••••"
+              onPress={() => { setPasswordInput(""); setConfirmPasswordInput(""); setPasswordError(null); setEditSheet("password"); }}
+            />
+            <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
+            <SettingRow
+              label="Adresse email"
+              value={profile?.email ?? ""}
+              onPress={() => { setEmailInput(""); setEmailError(null); setEmailSent(false); setEditSheet("email"); }}
+            />
+            <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
+            <SettingRow
+              label="Notifications"
+              value={Object.values(profile?.notificationSettings ?? {}).some(Boolean) ? "Activées" : "Désactivées"}
+              onPress={() => { setNotifInput(profile?.notificationSettings ?? { shoppingList: true, household: true, planning: true }); setEditSheet("notifications"); }}
+            />
+            <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
+            <Pressable
+              onPress={openDietarySheet}
+              style={({ pressed }) => ({
+                flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+                paddingHorizontal: 16, paddingVertical: 14,
+                backgroundColor: pressed ? "#FAFAF8" : "#fff",
+              })}
+            >
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 0.8 }}>Régime alimentaire</Text>
                 {(profile?.dietaryPreferences ?? []).length > 0 ? (
@@ -334,12 +480,12 @@ export function ProfileScreen() {
                 <Polyline points="9 18 15 12 9 6" />
               </Svg>
             </Pressable>
-          </Card>
+          </View>
 
-          <Card>
+          <View style={{ borderRadius: 14, backgroundColor: "#fff", overflow: "hidden" }}>
             {household ? (
               <>
-                <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 }}>
+                <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10 }}>
                   <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>Mon foyer</Text>
                   <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                     <View style={{ borderRadius: 10, backgroundColor: "#F5F3EF", paddingHorizontal: 12, paddingVertical: 6 }}>
@@ -356,29 +502,39 @@ export function ProfileScreen() {
                       <Text style={{ fontSize: 12, fontWeight: "700", color: "#E8571C" }}>Inviter</Text>
                     </Pressable>
                   </View>
-                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
-                    <Text style={{ fontSize: 11, color: "#A8A29E" }}>
-                      {household.members.length} membre{household.members.length > 1 ? "s" : ""}
-                    </Text>
-                    <Pressable onPress={() => setConfirmLeave(true)} style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: "#FEE2E2" }}>
-                      <Text style={{ fontSize: 11, fontWeight: "700", color: "#DC2626" }}>Quitter</Text>
-                    </Pressable>
-                  </View>
+                  <Text style={{ fontSize: 11, color: "#A8A29E", marginTop: 6 }}>
+                    {household.members.length} membre{household.members.length > 1 ? "s" : ""}
+                  </Text>
                 </View>
-                <Separator />
-                {household.members.map((m, i) => (
-                  <View key={m.userId}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingVertical: 10 }}>
-                      <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: "#E8571C1a", alignItems: "center", justifyContent: "center" }}>
-                        <Text style={{ fontSize: 13, fontWeight: "900", color: "#E8571C" }}>
-                          {(m.displayName ?? m.userId)[0].toUpperCase()}
-                        </Text>
+                <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
+                {household.members.map((m, i) => {
+                  const isMe = m.userId === profile?.id;
+                  return (
+                    <View key={m.userId}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingVertical: 10 }}>
+                        <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: "#E8571C1a", alignItems: "center", justifyContent: "center" }}>
+                          <Text style={{ fontSize: 13, fontWeight: "900", color: "#E8571C" }}>
+                            {(m.displayName ?? m.userId)[0].toUpperCase()}
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 13, fontWeight: "600", color: "#1C1917", flex: 1 }}>{m.displayName ?? "Membre"}</Text>
+                        {isMe && (
+                          <View style={{ borderRadius: 99, paddingHorizontal: 8, paddingVertical: 2, backgroundColor: "#F5F3EF" }}>
+                            <Text style={{ fontSize: 11, fontWeight: "600", color: "#A8A29E" }}>moi</Text>
+                          </View>
+                        )}
                       </View>
-                      <Text style={{ fontSize: 13, fontWeight: "600", color: "#1C1917" }}>{m.displayName ?? "Membre"}</Text>
+                      {i < household.members.length - 1 && <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />}
                     </View>
-                    {i < household.members.length - 1 && <Separator />}
-                  </View>
-                ))}
+                  );
+                })}
+                <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
+                <NavRow
+                  icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><Polyline points="16 17 21 12 16 7" /><Line x1={21} y1={12} x2={9} y2={12} /></Svg>}
+                  label="Quitter le foyer"
+                  onPress={() => setConfirmLeave(true)}
+                  destructive
+                />
               </>
             ) : (
               <>
@@ -391,14 +547,16 @@ export function ProfileScreen() {
                     <Text style={{ fontSize: 12, color: "#DC2626", fontWeight: "600" }}>{createError}</Text>
                   </View>
                 )}
-                <Separator />
+                <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
                 <NavRow
-                  icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><Polyline points="9 22 9 12 15 12 15 22" /></Svg>}
-                  label="Créer un foyer"
+                  icon={saving
+                    ? <ActivityIndicator size="small" color="#E8571C" />
+                    : <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><Polyline points="9 22 9 12 15 12 15 22" /></Svg>}
+                  label={saving ? "Création…" : "Créer un foyer"}
                   description="Générer un code d'invitation"
-                  onPress={handleCreateHousehold}
+                  onPress={saving ? () => {} : handleCreateHousehold}
                 />
-                <Separator />
+                <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
                 <NavRow
                   icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><Circle cx={8.5} cy={7} r={4} /><Line x1={20} y1={8} x2={20} y2={14} /><Line x1={23} y1={11} x2={17} y2={11} /></Svg>}
                   label="Rejoindre un foyer"
@@ -407,10 +565,17 @@ export function ProfileScreen() {
                 />
               </>
             )}
-          </Card>
+          </View>
 
-          <Card>
-            <Pressable onPress={() => setEditSheet("stores")} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 14, paddingBottom: userStores.length > 0 ? 8 : 14 }}>
+          <View style={{ borderRadius: 14, backgroundColor: "#fff", overflow: "hidden" }}>
+            <Pressable
+              onPress={() => setEditSheet("stores")}
+              style={({ pressed }) => ({
+                flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+                paddingHorizontal: 16, paddingTop: 14, paddingBottom: userStores.length > 0 ? 8 : 14,
+                backgroundColor: pressed ? "#FAFAF8" : "#fff",
+              })}
+            >
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>Mes magasins</Text>
                 {userStores.length === 0 ? (
@@ -437,42 +602,63 @@ export function ProfileScreen() {
                         <Text style={{ fontSize: 13, fontWeight: "600", color: "#1C1917" }}>{s.brand ? `${s.brand} ${s.name}` : s.name}</Text>
                         <Text style={{ fontSize: 11, color: "#78716C" }}>{s.city}</Text>
                       </View>
-                      <Pressable
-                        onPress={() => handleRemoveStore(s.id)}
-                        hitSlop={12}
-                        style={{ padding: 4 }}
-                      >
+                      <Pressable onPress={() => handleRemoveStore(s.id)} hitSlop={12} style={{ padding: 4 }}>
                         <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                           <Line x1={18} y1={6} x2={6} y2={18} />
                           <Line x1={6} y1={6} x2={18} y2={18} />
                         </Svg>
                       </Pressable>
                     </View>
-                    {i < userStores.length - 1 && <Separator />}
+                    {i < userStores.length - 1 && <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />}
                   </View>
                 ))}
                 <View style={{ paddingBottom: 6 }} />
               </>
             )}
-          </Card>
+          </View>
 
-          <Card>
+          <View style={{ borderRadius: 14, backgroundColor: "#fff", overflow: "hidden" }}>
             <NavRow
               icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M18 20V10" /><Path d="M12 20V4" /><Path d="M6 20v-6" /></Svg>}
               label="Statistiques"
               description="Vos habitudes et budget alimentaire"
               onPress={() => router.push("/analytics" as never)}
             />
-          </Card>
+          </View>
 
-          <Card>
+          <View style={{ borderRadius: 14, backgroundColor: "#fff", overflow: "hidden" }}>
             <NavRow
               icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><Polyline points="16 17 21 12 16 7" /><Line x1={21} y1={12} x2={9} y2={12} /></Svg>}
               label="Déconnexion"
               onPress={() => setConfirmSignOut(true)}
               destructive
             />
-          </Card>
+            <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
+            <NavRow
+              icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Polyline points="3 6 5 6 21 6" /><Path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><Path d="M10 11v6M14 11v6" /><Path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></Svg>}
+              label="Supprimer mon compte"
+              onPress={() => { setDeleteError(null); setConfirmDelete(true); }}
+              destructive
+            />
+          </View>
+
+          <View style={{ borderRadius: 14, backgroundColor: "#fff", overflow: "hidden" }}>
+            <NavRow
+              icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><Polyline points="14 2 14 8 20 8" /><Line x1={16} y1={13} x2={8} y2={13} /><Line x1={16} y1={17} x2={8} y2={17} /><Polyline points="10 9 9 9 8 9" /></Svg>}
+              label="Conditions d'utilisation"
+              onPress={() => Linking.openURL("https://deazl.fr/legal/cgu")}
+            />
+            <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
+            <NavRow
+              icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></Svg>}
+              label="Politique de confidentialité"
+              onPress={() => Linking.openURL("https://deazl.fr/legal/privacy")}
+            />
+          </View>
+
+          <Text style={{ fontSize: 11, color: "#C4B8AF", textAlign: "center", marginTop: 4 }}>
+            Deazl v{Constants.expoConfig?.version ?? "—"}
+          </Text>
         </View>
       </ScrollView>
 
@@ -540,15 +726,15 @@ export function ProfileScreen() {
           {DIETARY_OPTIONS.map((opt) => {
             const active = dietaryInput.includes(opt.key);
             return (
-              <PressableFeedback
+              <Pressable
                 key={opt.key}
                 onPress={() => toggleDietary(opt.key)}
-                style={{
+                style={({ pressed }) => ({
                   flexDirection: "row", alignItems: "center", justifyContent: "space-between",
                   borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14,
-                  backgroundColor: active ? "#FFF7ED" : "#F5F3EF",
+                  backgroundColor: pressed ? "#F0EDE8" : active ? "#FFF7ED" : "#F5F3EF",
                   borderWidth: active ? 1.5 : 0, borderColor: active ? "#E8571C40" : "transparent",
-                }}
+                })}
               >
                 <Text style={{ fontSize: 14, fontWeight: active ? "700" : "500", color: active ? "#E8571C" : "#1C1917" }}>
                   {opt.label}
@@ -558,7 +744,7 @@ export function ProfileScreen() {
                     <Path d="M20 6 9 17l-5-5" />
                   </Svg>
                 )}
-              </PressableFeedback>
+              </Pressable>
             );
           })}
           <Pressable
@@ -691,6 +877,170 @@ export function ProfileScreen() {
           </Pressable>
           <Pressable
             onPress={() => setConfirmLeave(false)}
+            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: "#F5F3EF", paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1 })}
+          >
+            <Text style={{ fontSize: 15, fontWeight: "600", color: "#1C1917" }}>Annuler</Text>
+          </Pressable>
+        </View>
+      </BottomModal>
+
+      <BottomModal isOpen={editSheet === "email"} onClose={() => { setEditSheet(null); setEmailSent(false); }} height="auto">
+        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Changer l'email</Text>
+        {emailSent ? (
+          <View style={{ alignItems: "center", gap: 8, paddingVertical: 12 }}>
+            <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: "#F0FDF4", alignItems: "center", justifyContent: "center" }}>
+              <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <Path d="M20 6 9 17l-5-5" />
+              </Svg>
+            </View>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: "#1C1917" }}>Email de confirmation envoyé</Text>
+            <Text style={{ fontSize: 13, color: "#78716C", textAlign: "center" }}>
+              Clique sur le lien dans l'email envoyé à {emailInput} pour valider le changement.
+            </Text>
+            <Pressable
+              onPress={() => { setEditSheet(null); setEmailSent(false); }}
+              style={({ pressed }) => ({ marginTop: 8, borderRadius: 16, backgroundColor: pressed ? "#D14A18" : "#E8571C", paddingVertical: 14, paddingHorizontal: 32, alignItems: "center" })}
+            >
+              <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>Fermer</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={{ gap: 10 }}>
+            <TextInput
+              value={emailInput}
+              onChangeText={(v) => { setEmailInput(v); setEmailError(null); }}
+              placeholder="Nouvel email"
+              placeholderTextColor="#A8A29E"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              onSubmitEditing={handleChangeEmail}
+              returnKeyType="done"
+              style={{
+                borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#1C1917",
+                borderWidth: emailError ? 1.5 : 0, borderColor: "#DC2626",
+              }}
+            />
+            {emailError && <Text style={{ fontSize: 12, color: "#DC2626", fontWeight: "600" }}>{emailError}</Text>}
+            <Pressable
+              onPress={handleChangeEmail}
+              disabled={saving || !emailInput.trim()}
+              style={({ pressed }) => ({
+                borderRadius: 16, paddingVertical: 16, alignItems: "center",
+                backgroundColor: saving || !emailInput.trim() ? "#F5F3EF" : pressed ? "#D14A18" : "#E8571C",
+              })}
+            >
+              <Text style={{ fontSize: 15, fontWeight: "700", color: saving || !emailInput.trim() ? "#A8A29E" : "#fff" }}>
+                {saving ? "Envoi…" : "Envoyer la confirmation"}
+              </Text>
+            </Pressable>
+          </View>
+        )}
+      </BottomModal>
+
+      <BottomModal isOpen={editSheet === "notifications"} onClose={() => setEditSheet(null)} height="auto">
+        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Notifications</Text>
+        <View style={{ gap: 8, marginBottom: 16 }}>
+          {([
+            { key: "shoppingList" as const, label: "Modifications de la liste", description: "Quand un membre du foyer modifie la liste" },
+            { key: "household" as const, label: "Foyer", description: "Nouveaux membres, invitations" },
+            { key: "planning" as const, label: "Planning", description: "Rappels de repas et modifications" },
+          ]).map(({ key, label, description }, i, arr) => (
+            <View key={key} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: i < arr.length - 1 ? 1 : 0, borderBottomColor: "#F5F3EF" }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: "#1C1917" }}>{label}</Text>
+                <Text style={{ fontSize: 12, color: "#78716C", marginTop: 2 }}>{description}</Text>
+              </View>
+              <Switch
+                value={notifInput[key]}
+                onValueChange={(v) => setNotifInput((prev) => ({ ...prev, [key]: v }))}
+                trackColor={{ false: "#E0DDD7", true: "#E8571C" }}
+                thumbColor="#fff"
+              />
+            </View>
+          ))}
+        </View>
+        <Pressable
+          onPress={async () => {
+            const granted = await requestNotificationPermission();
+            if (!granted) return;
+            handleSaveNotifications();
+          }}
+          disabled={saving}
+          style={({ pressed }) => ({
+            borderRadius: 16, paddingVertical: 16, alignItems: "center",
+            backgroundColor: saving ? "#F5F3EF" : pressed ? "#D14A18" : "#E8571C",
+          })}
+        >
+          <Text style={{ fontSize: 15, fontWeight: "700", color: saving ? "#A8A29E" : "#fff" }}>
+            {saving ? "Enregistrement…" : "Enregistrer"}
+          </Text>
+        </Pressable>
+      </BottomModal>
+
+      <BottomModal isOpen={editSheet === "password"} onClose={() => setEditSheet(null)} height="auto">
+        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Changer le mot de passe</Text>
+        <View style={{ gap: 10 }}>
+          <TextInput
+            value={passwordInput}
+            onChangeText={(v) => { setPasswordInput(v); setPasswordError(null); }}
+            placeholder="Nouveau mot de passe"
+            placeholderTextColor="#A8A29E"
+            secureTextEntry
+            style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#1C1917" }}
+          />
+          <TextInput
+            value={confirmPasswordInput}
+            onChangeText={(v) => { setConfirmPasswordInput(v); setPasswordError(null); }}
+            placeholder="Confirmer le mot de passe"
+            placeholderTextColor="#A8A29E"
+            secureTextEntry
+            onSubmitEditing={handleChangePassword}
+            returnKeyType="done"
+            style={{
+              borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#1C1917",
+              borderWidth: passwordError ? 1.5 : 0, borderColor: "#DC2626",
+            }}
+          />
+          {passwordError && <Text style={{ fontSize: 12, color: "#DC2626", fontWeight: "600" }}>{passwordError}</Text>}
+          <Pressable
+            onPress={handleChangePassword}
+            disabled={saving || !passwordInput.trim() || !confirmPasswordInput.trim()}
+            style={({ pressed }) => ({
+              borderRadius: 16, paddingVertical: 16, alignItems: "center", marginTop: 2,
+              backgroundColor: saving || !passwordInput.trim() || !confirmPasswordInput.trim() ? "#F5F3EF" : pressed ? "#D14A18" : "#E8571C",
+            })}
+          >
+            <Text style={{ fontSize: 15, fontWeight: "700", color: saving || !passwordInput.trim() || !confirmPasswordInput.trim() ? "#A8A29E" : "#fff" }}>
+              {saving ? "Enregistrement…" : "Enregistrer"}
+            </Text>
+          </Pressable>
+        </View>
+      </BottomModal>
+
+      <BottomModal isOpen={confirmDelete} onClose={() => setConfirmDelete(false)} height="auto">
+        <View style={{ alignItems: "center", marginBottom: 20, gap: 6 }}>
+          <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Supprimer mon compte</Text>
+          <Text style={{ fontSize: 13, color: "#78716C", textAlign: "center" }}>
+            Cette action est irréversible. Toutes vos données seront définitivement supprimées.
+          </Text>
+        </View>
+        {deleteError && (
+          <View style={{ borderRadius: 10, backgroundColor: "#FEE2E2", paddingHorizontal: 12, paddingVertical: 8, marginBottom: 12 }}>
+            <Text style={{ fontSize: 12, color: "#DC2626", fontWeight: "600" }}>{deleteError}</Text>
+          </View>
+        )}
+        <View style={{ gap: 8 }}>
+          <Pressable
+            onPress={handleDeleteAccount}
+            disabled={deleting}
+            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: "#FEE2E2", paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1 })}
+          >
+            <Text style={{ fontSize: 15, fontWeight: "700", color: "#DC2626" }}>
+              {deleting ? "Suppression…" : "Supprimer définitivement"}
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setConfirmDelete(false)}
             style={({ pressed }) => ({ borderRadius: 16, backgroundColor: "#F5F3EF", paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1 })}
           >
             <Text style={{ fontSize: 15, fontWeight: "600", color: "#1C1917" }}>Annuler</Text>

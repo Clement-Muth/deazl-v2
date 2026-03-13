@@ -36,6 +36,20 @@
           "microphonePermission": false,
           "recordAudioAndroid": false
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#E8571C",
+          "sounds": []
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Deazl accède à vos photos pour personnaliser votre avatar."
+        }
       ]
     ],
     "experiments": {

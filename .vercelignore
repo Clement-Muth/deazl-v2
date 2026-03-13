@@ -1,0 +1,6 @@
+node_modules
+.yarn
+apps/mobile
+.expo
+*.tgz
+coverage

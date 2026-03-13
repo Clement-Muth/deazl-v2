@@ -357,12 +357,35 @@ export function ShoppingScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 160 }}>
 
         <View style={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 12 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-            <Text style={{ fontSize: 28, fontWeight: "900", color: "#1C1917", letterSpacing: -0.5 }}>Courses</Text>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <View>
+              <Text style={{ fontSize: 28, fontWeight: "900", color: "#1C1917", letterSpacing: -0.5 }}>Courses</Text>
+              {totalItems > 0 && (
+                <Text style={{ fontSize: 13, color: "#A8A29E", fontWeight: "500", marginTop: 2 }}>
+                  {checkedCount}/{totalItems} articles
+                </Text>
+              )}
+            </View>
             {totalItems > 0 && (
-              <Text style={{ fontSize: 13, color: "#A8A29E", fontWeight: "500" }}>
-                {checkedCount}/{totalItems}
-              </Text>
+              <Pressable
+                onPress={() => router.push("/shopping/mode-courses")}
+                style={({ pressed }) => ({
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                  paddingHorizontal: 14,
+                  paddingVertical: 9,
+                  borderRadius: 99,
+                  backgroundColor: pressed ? "#D14A18" : "#E8571C",
+                })}
+              >
+                <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <Path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                  <Line x1={3} y1={6} x2={21} y2={6} />
+                  <Path d="M16 10a4 4 0 0 1-8 0" />
+                </Svg>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: "#fff" }}>Mode courses</Text>
+              </Pressable>
             )}
           </View>
         </View>
@@ -403,26 +426,6 @@ export function ShoppingScreen() {
           </ScrollView>
         )}
 
-        <Pressable
-          onPress={() => setAddOpen(true)}
-          style={({ pressed }) => ({
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 14,
-            paddingHorizontal: 20,
-            paddingVertical: 14,
-            marginBottom: 4,
-            backgroundColor: pressed ? "#F0EDE8" : "transparent",
-          })}
-        >
-          <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: "#FEF0EC", alignItems: "center", justifyContent: "center" }}>
-            <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-              <Line x1={12} y1={5} x2={12} y2={19} />
-              <Line x1={5} y1={12} x2={19} y2={12} />
-            </Svg>
-          </View>
-          <Text style={{ fontSize: 15, fontWeight: "500", color: "#A8A29E" }}>Ajouter un article</Text>
-        </Pressable>
 
         {items.length === 0 ? (
           <View style={{ alignItems: "center", paddingTop: 48, paddingHorizontal: 32, gap: 12 }}>
@@ -502,34 +505,31 @@ export function ShoppingScreen() {
 
       </ScrollView>
 
-      {totalItems > 0 && (
-        <Pressable
-          onPress={() => router.push("/shopping/mode-courses")}
-          style={({ pressed }) => ({
-            position: "absolute",
-            bottom: 100,
-            right: 20,
-            width: 56,
-            height: 56,
-            borderRadius: 28,
-            backgroundColor: pressed ? "#D14A18" : "#E8571C",
-            alignItems: "center",
-            justifyContent: "center",
-            shadowColor: "#E8571C",
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.4,
-            shadowRadius: 16,
-            elevation: 10,
-            transform: [{ scale: pressed ? 0.92 : 1 }],
-          })}
-        >
-          <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-            <Path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-            <Line x1={3} y1={6} x2={21} y2={6} />
-            <Path d="M16 10a4 4 0 0 1-8 0" />
-          </Svg>
-        </Pressable>
-      )}
+      <Pressable
+        onPress={() => setAddOpen(true)}
+        style={({ pressed }) => ({
+          position: "absolute",
+          bottom: 100,
+          right: 20,
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          backgroundColor: pressed ? "#D14A18" : "#E8571C",
+          alignItems: "center",
+          justifyContent: "center",
+          shadowColor: "#E8571C",
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.4,
+          shadowRadius: 16,
+          elevation: 10,
+          transform: [{ scale: pressed ? 0.92 : 1 }],
+        })}
+      >
+        <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+          <Line x1={12} y1={5} x2={12} y2={19} />
+          <Line x1={5} y1={12} x2={19} y2={12} />
+        </Svg>
+      </Pressable>
 
       <BottomModal isOpen={addOpen} onClose={() => { resetAddForm(); setAddOpen(false); }} height="30%">
         <View style={{ paddingBottom: 16 }}>
