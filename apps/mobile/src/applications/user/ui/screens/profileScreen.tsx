@@ -27,6 +27,7 @@ import { signOut } from "../../application/useCases/signOut";
 import { updateDisplayName } from "../../application/useCases/updateDisplayName";
 import { updateHouseholdSize } from "../../application/useCases/updateHouseholdSize";
 import { uploadAvatar } from "../../application/useCases/uploadAvatar";
+import { supabase } from "../../../../lib/supabase";
 import { getUserStores } from "../../../shopping/application/useCases/getUserStores";
 import type { UserStore } from "../../../shopping/application/useCases/getUserStores";
 
@@ -134,9 +135,11 @@ export function ProfileScreen() {
   const [joinError, setJoinError] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const [currentPasswordInput, setCurrentPasswordInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
   const [confirmPasswordInput, setConfirmPasswordInput] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [emailInput, setEmailInput] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
@@ -319,18 +322,24 @@ export function ProfileScreen() {
     if (!emailInput.trim()) return;
     setSaving(true);
     setEmailError(null);
-    const result = await changeEmail(emailInput.trim());
+    const newEmail = emailInput.trim();
+    const result = await changeEmail(newEmail);
     setSaving(false);
     if (result.error) {
       setEmailError(result.error);
     } else {
       setEmailSent(true);
+      setProfile((prev) => prev ? { ...prev, pendingEmail: newEmail } : prev);
     }
   }
 
   async function handleChangePassword() {
+    if (!currentPasswordInput) {
+      setPasswordError("Saisis ton mot de passe actuel.");
+      return;
+    }
     if (passwordInput.length < 8) {
-      setPasswordError("Le mot de passe doit contenir au moins 8 caractères.");
+      setPasswordError("Le nouveau mot de passe doit contenir au moins 8 caractères.");
       return;
     }
     if (passwordInput !== confirmPasswordInput) {
@@ -339,14 +348,21 @@ export function ProfileScreen() {
     }
     setSaving(true);
     setPasswordError(null);
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email: profile?.email ?? "",
+      password: currentPasswordInput,
+    });
+    if (authError) {
+      setPasswordError("Mot de passe actuel incorrect.");
+      setSaving(false);
+      return;
+    }
     const result = await changePassword(passwordInput);
     setSaving(false);
     if (result.error) {
       setPasswordError(result.error);
     } else {
-      setPasswordInput("");
-      setConfirmPasswordInput("");
-      setEditSheet(null);
+      setPasswordSuccess(true);
     }
   }
 
@@ -420,7 +436,7 @@ export function ProfileScreen() {
             <SettingRow
               label="Mot de passe"
               value="••••••••"
-              onPress={() => { setPasswordInput(""); setConfirmPasswordInput(""); setPasswordError(null); setEditSheet("password"); }}
+              onPress={() => { setCurrentPasswordInput(""); setPasswordInput(""); setConfirmPasswordInput(""); setPasswordError(null); setPasswordSuccess(false); setEditSheet("password"); }}
             />
             <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
             <SettingRow
@@ -428,6 +444,18 @@ export function ProfileScreen() {
               value={profile?.email ?? ""}
               onPress={() => { setEmailInput(""); setEmailError(null); setEmailSent(false); setEditSheet("email"); }}
             />
+            {profile?.pendingEmail && (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: "#FFFBEB" }}>
+                <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <Circle cx={12} cy={12} r={10} />
+                  <Line x1={12} y1={8} x2={12} y2={12} />
+                  <Line x1={12} y1={16} x2={12.01} y2={16} />
+                </Svg>
+                <Text style={{ flex: 1, fontSize: 12, color: "#D97706", fontWeight: "500" }}>
+                  En attente de confirmation : {profile.pendingEmail}
+                </Text>
+              </View>
+            )}
             <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
             <Pressable
               onPress={openDietarySheet}
@@ -796,7 +824,7 @@ export function ProfileScreen() {
                     <Line x1={5} y1={12} x2={19} y2={12} />
                   </Svg>
                 </Pressable>
-                {i < storeResults.length - 1 && <Separator />}
+                {i < storeResults.length - 1 && <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />}
               </View>
             ))}
           </View>
@@ -914,44 +942,73 @@ export function ProfileScreen() {
         )}
       </BottomModal>
 
-      <BottomModal isOpen={editSheet === "password"} onClose={() => setEditSheet(null)} height="auto">
+      <BottomModal isOpen={editSheet === "password"} onClose={() => { setEditSheet(null); setPasswordSuccess(false); }} height="auto">
         <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Changer le mot de passe</Text>
-        <View style={{ gap: 10 }}>
-          <TextInput
-            value={passwordInput}
-            onChangeText={(v) => { setPasswordInput(v); setPasswordError(null); }}
-            placeholder="Nouveau mot de passe"
-            placeholderTextColor="#A8A29E"
-            secureTextEntry
-            style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#1C1917" }}
-          />
-          <TextInput
-            value={confirmPasswordInput}
-            onChangeText={(v) => { setConfirmPasswordInput(v); setPasswordError(null); }}
-            placeholder="Confirmer le mot de passe"
-            placeholderTextColor="#A8A29E"
-            secureTextEntry
-            onSubmitEditing={handleChangePassword}
-            returnKeyType="done"
-            style={{
-              borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#1C1917",
-              borderWidth: passwordError ? 1.5 : 0, borderColor: "#DC2626",
-            }}
-          />
-          {passwordError && <Text style={{ fontSize: 12, color: "#DC2626", fontWeight: "600" }}>{passwordError}</Text>}
-          <Pressable
-            onPress={handleChangePassword}
-            disabled={saving || !passwordInput.trim() || !confirmPasswordInput.trim()}
-            style={({ pressed }) => ({
-              borderRadius: 16, paddingVertical: 16, alignItems: "center", marginTop: 2,
-              backgroundColor: saving || !passwordInput.trim() || !confirmPasswordInput.trim() ? "#F5F3EF" : pressed ? "#D14A18" : "#E8571C",
-            })}
-          >
-            <Text style={{ fontSize: 15, fontWeight: "700", color: saving || !passwordInput.trim() || !confirmPasswordInput.trim() ? "#A8A29E" : "#fff" }}>
-              {saving ? "Enregistrement…" : "Enregistrer"}
-            </Text>
-          </Pressable>
-        </View>
+        {passwordSuccess ? (
+          <View style={{ alignItems: "center", gap: 8, paddingVertical: 12 }}>
+            <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: "#F0FDF4", alignItems: "center", justifyContent: "center" }}>
+              <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <Path d="M20 6 9 17l-5-5" />
+              </Svg>
+            </View>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: "#1C1917" }}>Mot de passe modifié</Text>
+            <Pressable
+              onPress={() => { setEditSheet(null); setPasswordSuccess(false); }}
+              style={({ pressed }) => ({ marginTop: 8, borderRadius: 16, backgroundColor: pressed ? "#D14A18" : "#E8571C", paddingVertical: 14, paddingHorizontal: 32 })}
+            >
+              <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>Fermer</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={{ gap: 10 }}>
+            <TextInput
+              value={currentPasswordInput}
+              onChangeText={(v) => { setCurrentPasswordInput(v); setPasswordError(null); }}
+              placeholder="Mot de passe actuel"
+              placeholderTextColor="#A8A29E"
+              secureTextEntry
+              style={{
+                borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#1C1917",
+                borderWidth: passwordError === "Mot de passe actuel incorrect." ? 1.5 : 0, borderColor: "#DC2626",
+              }}
+            />
+            <View style={{ height: 1, backgroundColor: "#F5F3EF", marginHorizontal: -20 }} />
+            <TextInput
+              value={passwordInput}
+              onChangeText={(v) => { setPasswordInput(v); setPasswordError(null); }}
+              placeholder="Nouveau mot de passe"
+              placeholderTextColor="#A8A29E"
+              secureTextEntry
+              style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#1C1917" }}
+            />
+            <TextInput
+              value={confirmPasswordInput}
+              onChangeText={(v) => { setConfirmPasswordInput(v); setPasswordError(null); }}
+              placeholder="Confirmer le nouveau mot de passe"
+              placeholderTextColor="#A8A29E"
+              secureTextEntry
+              onSubmitEditing={handleChangePassword}
+              returnKeyType="done"
+              style={{
+                borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#1C1917",
+                borderWidth: passwordError && passwordError !== "Mot de passe actuel incorrect." ? 1.5 : 0, borderColor: "#DC2626",
+              }}
+            />
+            {passwordError && <Text style={{ fontSize: 12, color: "#DC2626", fontWeight: "600" }}>{passwordError}</Text>}
+            <Pressable
+              onPress={handleChangePassword}
+              disabled={saving || !currentPasswordInput || !passwordInput.trim() || !confirmPasswordInput.trim()}
+              style={({ pressed }) => ({
+                borderRadius: 16, paddingVertical: 16, alignItems: "center", marginTop: 2,
+                backgroundColor: saving || !currentPasswordInput || !passwordInput.trim() || !confirmPasswordInput.trim() ? "#F5F3EF" : pressed ? "#D14A18" : "#E8571C",
+              })}
+            >
+              <Text style={{ fontSize: 15, fontWeight: "700", color: saving || !currentPasswordInput || !passwordInput.trim() || !confirmPasswordInput.trim() ? "#A8A29E" : "#fff" }}>
+                {saving ? "Vérification…" : "Modifier le mot de passe"}
+              </Text>
+            </Pressable>
+          </View>
+        )}
       </BottomModal>
 
       <BottomModal isOpen={confirmDelete} onClose={() => setConfirmDelete(false)} height="auto">

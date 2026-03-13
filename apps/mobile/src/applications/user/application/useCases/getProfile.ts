@@ -3,6 +3,7 @@ import { supabase } from "../../../../lib/supabase";
 export interface UserProfile {
   id: string;
   email: string;
+  pendingEmail: string | null;
   fullName: string;
   avatarUrl: string | null;
   householdSize: number;
@@ -15,6 +16,7 @@ export async function getProfile(): Promise<UserProfile | null> {
   return {
     id: user.id,
     email: user.email ?? "",
+    pendingEmail: (user as any).new_email ?? null,
     fullName: user.user_metadata?.full_name ?? "",
     avatarUrl: user.user_metadata?.avatar_url ?? null,
     householdSize: user.user_metadata?.household_size ?? 2,

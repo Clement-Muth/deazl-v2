@@ -3,6 +3,8 @@ import { NavBar } from "@/applications/user/ui/components/navigation/navBar";
 import { DesktopSidebar } from "@/applications/user/ui/components/navigation/desktopSidebar";
 import { NotificationScheduler } from "@/applications/user/ui/components/notifications/notificationScheduler";
 import { OfflineIndicator } from "@/shared/components/offlineIndicator";
+import { FlashMessage } from "@/shared/components/flashMessage";
+import { Suspense } from "react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -17,6 +19,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       `}</style>
       <DesktopSidebar />
       <OfflineIndicator />
+      <Suspense><FlashMessage /></Suspense>
       <div className="deazl-content flex flex-1 flex-col" style={{ minWidth: 0 }}>
         <main className="deazl-main flex-1 pb-32 pt-safe">
           <div style={{ maxWidth: "860px", margin: "0 auto" }}>
