@@ -623,13 +623,13 @@ export function ProfileScreen() {
             <NavRow
               icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><Polyline points="14 2 14 8 20 8" /><Line x1={16} y1={13} x2={8} y2={13} /><Line x1={16} y1={17} x2={8} y2={17} /><Polyline points="10 9 9 9 8 9" /></Svg>}
               label="Conditions d'utilisation"
-              onPress={() => Linking.openURL("https://deazl.fr/legal/cgu")}
+              onPress={() => Linking.openURL("https://deazl.fr/conditions")}
             />
             <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
             <NavRow
               icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></Svg>}
               label="Politique de confidentialité"
-              onPress={() => Linking.openURL("https://deazl.fr/legal/privacy")}
+              onPress={() => Linking.openURL("https://deazl.fr/confidentialite")}
             />
           </View>
 

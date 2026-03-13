@@ -32,7 +32,7 @@ export async function updateSession(request: NextRequest) {
   const isOnboardingRoute = pathname.startsWith("/onboarding");
   const isPublicRoute = pathname.startsWith("/r/");
   const isLandingPage = pathname === "/";
-  const isLegalPage = pathname.startsWith("/confidentialite") || pathname.startsWith("/conditions") || pathname.startsWith("/mentions-legales") || pathname.startsWith("/rgpd") || pathname.startsWith("/securite") || pathname.startsWith("/legal/") || pathname === "/roadmap";
+  const isLegalPage = pathname.startsWith("/confidentialite") || pathname.startsWith("/conditions") || pathname.startsWith("/mentions-legales") || pathname.startsWith("/rgpd") || pathname.startsWith("/securite") || pathname === "/roadmap";
 
   if (!user && !isAuthRoute && !isOnboardingRoute && !isPublicRoute && !isLandingPage && !isLegalPage) {
     const url = request.nextUrl.clone();
