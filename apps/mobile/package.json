@@ -9,7 +9,7 @@
     "web": "expo start --web -c",
     "android:build": "expo run:android --variant release",
     "ios:build": "expo run:ios --configuration Release",
-    "android:install": "adb install android/app/build/outputs/apk/release/app-release.apk",
+    "android:install": "adb uninstall fr.deazl.app; adb install android/app/build/outputs/apk/release/app-release.apk",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
