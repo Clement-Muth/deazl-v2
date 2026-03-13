@@ -159,6 +159,7 @@ export function ProfileScreen() {
   const [createStoreError, setCreateStoreError] = useState<string | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
   const [resendError, setResendError] = useState<string | null>(null);
@@ -530,49 +531,49 @@ export function ProfileScreen() {
           <View style={{ borderRadius: 14, backgroundColor: "#fff", overflow: "hidden" }}>
             {household ? (
               <>
-                <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10 }}>
-                  <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>Mon foyer</Text>
-                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                    <View style={{ borderRadius: 10, backgroundColor: "#F5F3EF", paddingHorizontal: 12, paddingVertical: 6 }}>
-                      <Text style={{ fontSize: 15, fontWeight: "900", color: "#1C1917", letterSpacing: 2 }}>{household.inviteCode}</Text>
-                    </View>
-                    <Pressable onPress={handleShareInviteCode} style={{ flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 10, backgroundColor: "#E8571C1a", paddingHorizontal: 12, paddingVertical: 6 }}>
-                      <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                        <Circle cx={18} cy={5} r={3} />
-                        <Circle cx={6} cy={12} r={3} />
-                        <Circle cx={18} cy={19} r={3} />
-                        <Line x1={8.59} y1={13.51} x2={15.42} y2={17.49} />
-                        <Line x1={15.41} y1={6.51} x2={8.59} y2={10.49} />
-                      </Svg>
-                      <Text style={{ fontSize: 12, fontWeight: "700", color: "#E8571C" }}>Inviter</Text>
-                    </Pressable>
-                  </View>
-                  <Text style={{ fontSize: 11, color: "#A8A29E", marginTop: 6 }}>
+                <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 0.8 }}>Mon foyer</Text>
+                  <Text style={{ fontSize: 11, fontWeight: "600", color: "#A8A29E" }}>
                     {household.members.length} membre{household.members.length > 1 ? "s" : ""}
                   </Text>
                 </View>
-                <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
                 {household.members.map((m, i) => {
                   const isMe = m.userId === profile?.id;
+                  const isCreator = m.userId === household.createdBy;
                   return (
                     <View key={m.userId}>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingVertical: 10 }}>
-                        <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: "#E8571C1a", alignItems: "center", justifyContent: "center" }}>
-                          <Text style={{ fontSize: 13, fontWeight: "900", color: "#E8571C" }}>
-                            {(m.displayName ?? m.userId)[0].toUpperCase()}
-                          </Text>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 11 }}>
+                        <InitialsAvatar
+                          name={m.displayName ?? ""}
+                          email={m.userId}
+                          avatarUrl={m.avatarUrl}
+                          size={38}
+                        />
+                        <Text style={{ fontSize: 14, fontWeight: "600", color: "#1C1917", flex: 1 }}>{m.displayName ?? "Membre"}</Text>
+                        <View style={{ flexDirection: "row", gap: 5 }}>
+                          {isCreator && (
+                            <View style={{ borderRadius: 99, paddingHorizontal: 8, paddingVertical: 2, backgroundColor: "#E8571C1a" }}>
+                              <Text style={{ fontSize: 11, fontWeight: "600", color: "#E8571C" }}>créateur</Text>
+                            </View>
+                          )}
+                          {isMe && (
+                            <View style={{ borderRadius: 99, paddingHorizontal: 8, paddingVertical: 2, backgroundColor: "#F5F3EF" }}>
+                              <Text style={{ fontSize: 11, fontWeight: "600", color: "#A8A29E" }}>moi</Text>
+                            </View>
+                          )}
                         </View>
-                        <Text style={{ fontSize: 13, fontWeight: "600", color: "#1C1917", flex: 1 }}>{m.displayName ?? "Membre"}</Text>
-                        {isMe && (
-                          <View style={{ borderRadius: 99, paddingHorizontal: 8, paddingVertical: 2, backgroundColor: "#F5F3EF" }}>
-                            <Text style={{ fontSize: 11, fontWeight: "600", color: "#A8A29E" }}>moi</Text>
-                          </View>
-                        )}
                       </View>
                       {i < household.members.length - 1 && <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />}
                     </View>
                   );
                 })}
+                <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
+                <NavRow
+                  icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Circle cx={18} cy={5} r={3} /><Circle cx={6} cy={12} r={3} /><Circle cx={18} cy={19} r={3} /><Line x1={8.59} y1={13.51} x2={15.42} y2={17.49} /><Line x1={15.41} y1={6.51} x2={8.59} y2={10.49} /></Svg>}
+                  label="Inviter quelqu'un"
+                  description="Partager le code d'invitation"
+                  onPress={() => setShowInviteModal(true)}
+                />
                 <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
                 <NavRow
                   icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><Polyline points="16 17 21 12 16 7" /><Line x1={21} y1={12} x2={9} y2={12} /></Svg>}
@@ -905,6 +906,31 @@ export function ProfileScreen() {
             <Text style={{ fontSize: 15, fontWeight: "700", color: creatingStore || !createBrand.trim() || !createCity.trim() ? "#A8A29E" : "#fff" }}>{creatingStore ? "Création…" : "Créer et ajouter"}</Text>
           </Pressable>
         </View>
+      </BottomModal>
+
+      <BottomModal isOpen={showInviteModal} onClose={() => setShowInviteModal(false)} height="auto">
+        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 4 }}>Inviter quelqu'un</Text>
+        <Text style={{ fontSize: 13, color: "#78716C", marginBottom: 20 }}>Partage ce code ou envoie une invitation directe.</Text>
+        <View style={{ borderRadius: 16, backgroundColor: "#F5F3EF", paddingVertical: 22, alignItems: "center", marginBottom: 12 }}>
+          <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Code d'invitation</Text>
+          <Text style={{ fontSize: 34, fontWeight: "900", color: "#1C1917", letterSpacing: 8 }}>{household?.inviteCode}</Text>
+        </View>
+        <Pressable
+          onPress={async () => { await handleShareInviteCode(); }}
+          style={({ pressed }) => ({
+            borderRadius: 16, backgroundColor: pressed ? "#D14A18" : "#E8571C",
+            paddingVertical: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8,
+          })}
+        >
+          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <Circle cx={18} cy={5} r={3} />
+            <Circle cx={6} cy={12} r={3} />
+            <Circle cx={18} cy={19} r={3} />
+            <Line x1={8.59} y1={13.51} x2={15.42} y2={17.49} />
+            <Line x1={15.41} y1={6.51} x2={8.59} y2={10.49} />
+          </Svg>
+          <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>Envoyer une invitation</Text>
+        </Pressable>
       </BottomModal>
 
       <BottomModal isOpen={confirmLeave} onClose={() => setConfirmLeave(false)} height="32%">
