@@ -16,9 +16,6 @@
     "i18n:update": "lingui extract && lingui compile --namespace es"
   },
   "dependencies": {
-    "@capacitor-mlkit/barcode-scanning": "^8.0.1",
-    "@capacitor/core": "^8.2.0",
-    "@capacitor/local-notifications": "^8.0.2",
     "@deazl/domain": "workspace:*",
     "@deazl/supabase": "workspace:*",
     "@lingui/conf": "^5.9.2",
