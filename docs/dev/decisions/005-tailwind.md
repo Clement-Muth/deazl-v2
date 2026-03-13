@@ -1,35 +1,22 @@
 # ADR-005 — Tailwind CSS v4
 
-**Statut** : Accepté
-
 ## Contexte
 
-Choix du système de style pour l'app.
+Il faut un système de style cohérent entre le web et le mobile (autant que possible), rapide à utiliser, compatible avec les Server Components Next.js.
 
 ## Décision
 
-**Tailwind CSS v4** avec tokens via `@theme {}` dans `globals.css`. Pas de CSS custom, tout en classes utilitaires inline.
+**Tailwind CSS v4** avec Uniwind pour le mobile (React Native).
 
-## Alternatives considérées
+## Alternatives évaluées
 
-### Tailwind v3
-- Plus stable, documentation exhaustive
-- Rejeté : v4 disponible, syntaxe `@theme {}` plus propre pour les design tokens, meilleure performance (pas de purge)
-
-### CSS Modules
-- Isolation parfaite, CSS natif
-- Rejeté : DX plus lente, pas de colocation styles/JSX
-
-### styled-components / Emotion
-- CSS-in-JS, dynamisme total
-- Rejeté : overhead runtime, incompatible Server Components
-
-### UnoCSS
-- Plus rapide que Tailwind
-- Rejeté : écosystème plus petit, moins de ressources
+- **Tailwind v3** — syntaxe plus ancienne, pas de CSS-native layers.
+- **CSS Modules** — verbeux, pas de design tokens partagés.
+- **styled-components** — runtime overhead, incompatible avec les Server Components.
+- **NativeWind v2** — abandonné au profit de Uniwind qui supporte Tailwind v4.
 
 ## Conséquences
 
-- Certaines classes Tailwind v4 diffèrent de v3 : `h-0.75` (pas `h-[3px]`), `bg-linear-to-t` (pas `bg-gradient-to-t`), `rotate-15` (pas `rotate-[15deg]`)
-- shadcn/ui utilisé pour les composants interactifs complexes (Dialog, Select, etc.) — installé via `bunx shadcn@latest add`
-- Classes utilitaires directes uniquement : `bg-primary`, pas `bg-[--color-primary]`
+- La syntaxe v4 diffère de v3 sur certains points (ex: `h-0.75` au lieu de `h-[3px]`).
+- Toujours utiliser les classes utilitaires directes (`bg-primary`, `text-foreground`) — jamais `bg-[--color-*]`.
+- Les tokens de design sont définis dans le fichier de config Tailwind et consommés via les classes.

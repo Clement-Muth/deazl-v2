@@ -1,20 +1,47 @@
 # Planification des repas
 
-Organisez vos repas à la semaine et ne vous posez plus jamais la question "qu'est-ce qu'on mange ce soir ?".
+La planification, c'est le point de départ de tout dans Deazl. Tu organises tes repas à l'avance, et tout le reste suit automatiquement.
 
-## Comment ça marche
+---
 
-1. Ouvrez l'onglet **Planning**
-2. Sélectionnez un jour et un repas (petit-déjeuner, déjeuner, dîner)
-3. Ajoutez une recette depuis votre bibliothèque ou créez-en une nouvelle
-4. Répétez pour toute la semaine
+## Comment ça fonctionne
 
-## Générer votre liste de courses
+Tu assignes des recettes à chaque repas de la semaine — petit-déjeuner, déjeuner, dîner. Deazl génère ensuite ta liste de courses en calculant exactement ce dont tu as besoin, en tenant compte du nombre de personnes dans ton foyer.
 
-Une fois votre semaine planifiée, Deazl agrège automatiquement tous les ingrédients nécessaires et génère votre [liste de courses](shopping.md) — avec les quantités ajustées à la taille de votre foyer.
+---
 
-## Fonctionnalités à venir
+## Planifier un repas
 
-- Suggestions de recettes selon ce que vous avez dans votre garde-manger
+1. Ouvre l'onglet **Planification**
+2. Sélectionne le jour et le moment du repas (matin / midi / soir)
+3. Choisis une recette depuis ta bibliothèque
+
+Répète pour chaque repas que tu veux préparer cette semaine. Tu n'as pas besoin de tout planifier — laisse les cases vides pour les jours où tu improvises.
+
+---
+
+## Générer la liste de courses
+
+Une fois tes repas planifiés, appuie sur **Générer la liste de courses**. Deazl calcule automatiquement :
+
+- Tous les ingrédients nécessaires
+- Les bonnes quantités selon ton nombre de personnes
+- Les articles que tu as peut-être déjà dans ton garde-manger
+
+{% hint style="info" %}
+Si tu as activé le garde-manger, Deazl déduit ce que tu possèdes déjà et ne l'ajoute pas à ta liste.
+{% endhint %}
+
+---
+
+## Modifier ou supprimer un repas
+
+Appuie longuement sur un repas planifié pour le modifier ou le supprimer. Tu peux aussi changer une recette en cours de semaine sans impact sur le reste.
+
+---
+
+## Ce qui arrive bientôt
+
 - Planification sur plusieurs semaines
-- Partage du planning avec les membres du foyer
+- Suggestions basées sur ton garde-manger
+- Partage du planning avec le foyer

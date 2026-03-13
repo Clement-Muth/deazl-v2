@@ -1,18 +1,45 @@
 # Garde-manger
 
-Suivez ce que vous avez déjà chez vous pour éviter les achats en double et réduire le gaspillage.
+Le garde-manger, c'est l'inventaire de ce que tu as déjà chez toi. Deazl l'utilise pour éviter de racheter ce dont tu disposes déjà.
 
-## Comment ça marche
+---
 
-Renseignez les produits que vous avez dans votre frigo, vos placards ou votre congélateur. Deazl soustrait automatiquement ces articles de votre liste de courses.
+## Comment ça fonctionne
 
-## Réduire le gaspillage
+Quand tu termines tes courses, Deazl transfère les articles achetés dans ton garde-manger. Lors de la prochaine génération de liste, les ingrédients déjà présents sont automatiquement déduits.
 
-Deazl vous signale les ingrédients de votre garde-manger qui approchent de leur date de péremption et vous suggère des recettes pour les utiliser.
+Exemple : si tu as un litre de lait dans ton garde-manger et qu'une recette en demande 500 ml, cet article n'apparaîtra pas dans ta liste.
 
-## Fonctionnalités à venir
+---
 
-- Scan de code-barres pour ajouter des produits
-- Alertes dates de péremption
-- Suggestions de recettes "vide-frigo"
-- Gestion des quantités et des unités
+## Gérer le garde-manger
+
+### Ajouter un article
+
+Tu peux ajouter manuellement un article que tu as chez toi — utile quand tu fais l'inventaire de ton frigo ou tes placards.
+
+### Modifier une quantité
+
+Appuie sur un article pour modifier la quantité disponible. Si tu as utilisé la moitié de quelque chose, mets à jour la quantité pour que Deazl calcule correctement.
+
+### Supprimer un article
+
+Appuie longuement sur un article pour le supprimer du garde-manger.
+
+---
+
+## Activer/désactiver la déduction
+
+Tu peux activer ou désactiver la prise en compte du garde-manger lors de la génération de ta liste, depuis les réglages.
+
+{% hint style="info" %}
+Si tu désactives cette option, Deazl génère la liste complète sans tenir compte de ce que tu as déjà.
+{% endhint %}
+
+---
+
+## Ce qui arrive bientôt
+
+- Scan de code-barres pour ajouter des articles
+- Alertes de péremption
+- Suggestions de recettes basées sur ce que tu as

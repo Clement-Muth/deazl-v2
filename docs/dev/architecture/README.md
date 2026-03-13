@@ -1,22 +1,30 @@
-# Architecture — Vue d'ensemble
+# Architecture
 
-Deazl est une app web/mobile construite avec Next.js 16 et déployée sur mobile via Capacitor.
-
-## Principes directeurs
-
-- **Server-first** : Server Components par défaut, `"use client"` uniquement quand nécessaire
-- **DDD pragmatique** : Domain-Driven Design sans sur-ingénierie — les entités et règles métier vivent dans le domaine, pas dans les composants UI
-- **Vertical Slice** : chaque feature est auto-contenue dans son Bounded Context (`applications/[bc-name]/`)
-- **Zéro commentaires** : le code doit être lisible sans annotations
+Deazl suit un **DDD pragmatique + Vertical Slice**. Chaque domaine métier est autonome — il possède ses entités, ses cas d'usage, son infrastructure et son UI.
 
 ## Bounded Contexts
 
 | Context | Responsabilité |
 |---|---|
-| `user` | Auth, profil, préférences, onboarding |
-| `catalog` | Référentiel d'ingrédients (Open Food Facts) |
-| `recipe` | Recettes, instructions, portions |
+| `catalog` | Produits Open Food Facts, recherche, scan code-barres |
+| `recipe` | Recettes, favoris, partage |
 | `planning` | Planification hebdomadaire des repas |
-| `shopping` | Liste de courses, agrégation d'ingrédients |
-| `pantry` | Inventaire du frigo/placards |
-| `analytics` | Comparaison de prix, suggestions |
+| `shopping` | Liste de courses, session de courses, prix |
+| `pantry` | Inventaire du garde-manger |
+| `analytics` | Comparaison de prix, suivi des dépenses |
+| `user` | Profil, foyer, authentification |
+
+## Structure d'un bounded context
+
+```
+src/applications/[bc-name]/
+├── domain/           # Entités, Value Objects, interfaces Repository
+├── application/      # Use cases (logique métier pure)
+├── infrastructure/   # Adapters Supabase, Open Food Facts, etc.
+├── ui/               # Composants React Native propres à ce BC
+└── api/              # React Query hooks, wrappers use cases
+```
+
+## Règle centrale
+
+Un bounded context ne dépend jamais d'un autre bounded context directement. Si une dépendance est nécessaire, elle passe par les interfaces du domaine.
