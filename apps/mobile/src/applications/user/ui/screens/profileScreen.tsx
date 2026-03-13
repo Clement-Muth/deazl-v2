@@ -134,7 +134,6 @@ export function ProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [currentPasswordInput, setCurrentPasswordInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
   const [confirmPasswordInput, setConfirmPasswordInput] = useState("");
@@ -142,7 +141,6 @@ export function ProfileScreen() {
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [emailInput, setEmailInput] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
-  const [emailSent, setEmailSent] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -338,8 +336,8 @@ export function ProfileScreen() {
     if (result.error) {
       setEmailError(result.error);
     } else {
-      setEmailSent(true);
       setProfile((prev) => prev ? { ...prev, pendingEmail: newEmail } : prev);
+      setEditSheet(null);
     }
   }
 
@@ -389,7 +387,6 @@ export function ProfileScreen() {
   }
 
   async function doSignOut() {
-    setConfirmSignOut(false);
     await signOut();
     router.replace("/(auth)/login" as never);
   }
@@ -676,7 +673,7 @@ export function ProfileScreen() {
             <NavRow
               icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><Polyline points="16 17 21 12 16 7" /><Line x1={21} y1={12} x2={9} y2={12} /></Svg>}
               label="Déconnexion"
-              onPress={() => setConfirmSignOut(true)}
+              onPress={doSignOut}
               destructive
             />
             <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
@@ -930,28 +927,9 @@ export function ProfileScreen() {
         </View>
       </BottomModal>
 
-      <BottomModal isOpen={editSheet === "email"} onClose={() => { setEditSheet(null); setEmailSent(false); }} height="auto">
+      <BottomModal isOpen={editSheet === "email"} onClose={() => { setEditSheet(null); }} height="auto">
         <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Changer l'email</Text>
-        {emailSent ? (
-          <View style={{ alignItems: "center", gap: 8, paddingVertical: 12 }}>
-            <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: "#F0FDF4", alignItems: "center", justifyContent: "center" }}>
-              <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                <Path d="M20 6 9 17l-5-5" />
-              </Svg>
-            </View>
-            <Text style={{ fontSize: 15, fontWeight: "700", color: "#1C1917" }}>Email de confirmation envoyé</Text>
-            <Text style={{ fontSize: 13, color: "#78716C", textAlign: "center" }}>
-              Clique sur le lien dans l'email envoyé à {emailInput} pour valider le changement.
-            </Text>
-            <Pressable
-              onPress={() => { setEditSheet(null); setEmailSent(false); }}
-              style={({ pressed }) => ({ marginTop: 8, borderRadius: 16, backgroundColor: pressed ? "#D14A18" : "#E8571C", paddingVertical: 14, paddingHorizontal: 32, alignItems: "center" })}
-            >
-              <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>Fermer</Text>
-            </Pressable>
-          </View>
-        ) : (
-          <View style={{ gap: 10 }}>
+        <View style={{ gap: 10 }}>
             <TextInput
               value={emailInput}
               onChangeText={(v) => { setEmailInput(v); setEmailError(null); }}
@@ -980,7 +958,6 @@ export function ProfileScreen() {
               </Text>
             </Pressable>
           </View>
-        )}
       </BottomModal>
 
       <BottomModal isOpen={editSheet === "password"} onClose={() => { setEditSheet(null); setPasswordSuccess(false); }} height="auto">
@@ -1083,26 +1060,6 @@ export function ProfileScreen() {
         </View>
       </BottomModal>
 
-      <BottomModal isOpen={confirmSignOut} onClose={() => setConfirmSignOut(false)} height="30%">
-        <View style={{ alignItems: "center", marginBottom: 20, gap: 4 }}>
-          <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Déconnexion</Text>
-          <Text style={{ fontSize: 13, color: "#78716C" }}>Es-tu sûr de vouloir te déconnecter ?</Text>
-        </View>
-        <View style={{ gap: 8 }}>
-          <Pressable
-            onPress={doSignOut}
-            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: "#FEE2E2", paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1 })}
-          >
-            <Text style={{ fontSize: 15, fontWeight: "700", color: "#DC2626" }}>Se déconnecter</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setConfirmSignOut(false)}
-            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: "#F5F3EF", paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1 })}
-          >
-            <Text style={{ fontSize: 15, fontWeight: "600", color: "#1C1917" }}>Annuler</Text>
-          </Pressable>
-        </View>
-      </BottomModal>
     </SafeAreaView>
   );
 }
