@@ -62,22 +62,29 @@ export default function RootLayout() {
   const pendingRecoveryRef = useRef(false);
 
   const handleDeepLink = useCallback((url: string) => {
-    if (!url.startsWith("deazl://reset-password")) return;
     const queryString = url.split("?")[1]?.split("#")[0] ?? "";
     const code = new URLSearchParams(queryString).get("code");
-    if (code) {
-      pendingRecoveryRef.current = true;
-      supabase.auth.exchangeCodeForSession(code);
+
+    if (url.startsWith("deazl://auth/callback")) {
+      if (code) supabase.auth.exchangeCodeForSession(code);
       return;
     }
-    const hash = url.split("#")[1] ?? "";
-    const params = new URLSearchParams(hash);
-    const accessToken = params.get("access_token");
-    const refreshToken = params.get("refresh_token");
-    const type = params.get("type");
-    if (type === "recovery" && accessToken && refreshToken) {
-      pendingRecoveryRef.current = true;
-      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+
+    if (url.startsWith("deazl://reset-password")) {
+      if (code) {
+        pendingRecoveryRef.current = true;
+        supabase.auth.exchangeCodeForSession(code);
+        return;
+      }
+      const hash = url.split("#")[1] ?? "";
+      const params = new URLSearchParams(hash);
+      const accessToken = params.get("access_token");
+      const refreshToken = params.get("refresh_token");
+      const type = params.get("type");
+      if (type === "recovery" && accessToken && refreshToken) {
+        pendingRecoveryRef.current = true;
+        supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+      }
     }
   }, []);
 
