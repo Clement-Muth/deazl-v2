@@ -11,7 +11,7 @@ Toujours utiliser **Bun**.
 - Next.js 16, App Router, TypeScript strict
 - Tailwind CSS v4 + shadcn/ui (composants interactifs complexes)
 - Supabase (PostgreSQL + Auth) — `@supabase/supabase-js` + `@supabase/ssr`
-- Capacitor v8 (mobile iOS/Android)
+- Expo (React Native mobile iOS/Android)
 - Open Food Facts API
 - **HeroUI Native** (`heroui-native`) — bibliothèque de composants UI mobile. **TOUJOURS utiliser HeroUI pour les composants UI natifs** (Button, etc.). Ne jamais remplacer par des `Pressable` custom ce qui peut être fait avec HeroUI. Exception unique : `BottomSheet` de HeroUI est remplacé par le composant custom `BottomModal` (`bottomModal.tsx`).
 
@@ -60,3 +60,25 @@ Bounded Contexts : catalog | recipe | planning | shopping | pantry | analytics |
 
 ## Tests
 `bun test`
+
+## Versioning & Releases
+Géré proactivement par Claude — pas besoin de demander.
+
+**Source de vérité :** `apps/mobile/app.json` (version visible utilisateur).
+**Fichiers à synchroniser à chaque bump :**
+- `apps/mobile/app.json` — `version`, `ios.buildString`, `android.versionCode`
+- `apps/mobile/package.json`
+- `apps/web/package.json`
+- `package.json` (root)
+
+**Règles semver :**
+- `fix:` commits → patch (1.0.1)
+- `feat:` commits → minor (1.1.0)
+- Breaking / refonte majeure → major (2.0.0)
+- Travail instable → pre-release (1.1.0-beta.1)
+
+**`versionCode` / `buildString` :** entiers auto-incrémentés à chaque bump (obligatoire pour les stores).
+
+**Quand bumper :** à la fin d'une session de travail significative (feature complète, série de fix), pas à chaque commit.
+
+**GitHub Release :** tag `vX.Y.Z` + release notes générées depuis les commits depuis le dernier tag.

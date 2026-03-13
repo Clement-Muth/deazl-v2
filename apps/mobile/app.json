@@ -9,10 +9,12 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "fr.deazl.app"
+      "bundleIdentifier": "fr.deazl.app",
+      "buildNumber": "1"
     },
     "android": {
       "package": "fr.deazl.app",
+      "versionCode": 1,
       "androidStatusBar": {
         "barStyle": "dark-content",
         "backgroundColor": "#00000000"
