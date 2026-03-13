@@ -1,16 +1,36 @@
 # Bienvenue sur Deazl
 
-**Deazl** est votre assistant intelligent pour planifier vos repas et faire vos courses malin.
+Deazl, c'est ton assistant pour planifier les repas de la semaine, générer ta liste de courses automatiquement, et trouver où acheter chaque ingrédient au meilleur prix.
 
-Fini le casse-tête du dimanche soir : _"Qu'est-ce qu'on mange cette semaine ?"_. Deazl vous aide à organiser vos repas, génère votre liste de courses automatiquement, et compare les prix entre vos magasins habituels pour que vous fassiez toujours le meilleur choix.
+Fini les allers-retours entre le frigo, les recettes et le supermarché. Tout est au même endroit.
 
-## Ce que vous pouvez faire avec Deazl
+---
 
-- **[Planifier vos repas](features/planning.md)** — Organisez votre semaine repas par repas
-- **[Gérer vos recettes](features/recipes.md)** — Sauvegardez et retrouvez vos recettes favorites
-- **[Faire vos courses](features/shopping.md)** — Liste générée automatiquement depuis votre planning
-- **[Comparer les prix](features/analytics.md)** — Sachez toujours où acheter moins cher
+## Ce que tu peux faire avec Deazl
 
-## Premiers pas
+| | |
+|---|---|
+| 🗓 **Planifier** | Organise tes repas semaine par semaine, en quelques taps. |
+| 🛒 **Générer** | Ta liste de courses se crée automatiquement depuis tes recettes planifiées. |
+| 💰 **Comparer** | Vois où acheter chaque ingrédient et fais des économies sans y passer du temps. |
+| 🥗 **Optimiser** | Découvre des alternatives plus saines ou moins chères pour ce que tu achètes. |
 
-Nouveau sur Deazl ? Commencez ici : [Guide de démarrage](guides/getting-started.md)
+---
+
+## Par où commencer ?
+
+{% content-ref url="guides/getting-started.md" %}
+Créer mon compte et configurer Deazl
+{% endcontent-ref %}
+
+{% content-ref url="features/planning.md" %}
+Planifier mes repas de la semaine
+{% endcontent-ref %}
+
+{% content-ref url="features/shopping.md" %}
+Utiliser ma liste de courses
+{% endcontent-ref %}
+
+---
+
+Une question ? Écris-nous à **support@deazl.fr** — on répond dans la journée.

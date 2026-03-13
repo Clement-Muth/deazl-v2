@@ -1,27 +1,49 @@
-# Recettes
+# Mes recettes
 
-Votre bibliothèque de recettes personnelle, toujours disponible.
+Tes recettes sont la base de tout. Plus tu en ajoutes, plus Deazl peut automatiser tes courses.
+
+---
 
 ## Ajouter une recette
 
-Créez vos propres recettes en renseignant :
-- Le nom et la description
-- Les ingrédients avec leurs quantités
-- Les étapes de préparation
-- Le temps de préparation et de cuisson
-- Le nombre de portions (Deazl adapte automatiquement à la taille de votre foyer)
+Dans l'onglet **Recettes**, appuie sur le bouton **+** et remplis :
 
-## Importer depuis le web
+| Champ | Description |
+|---|---|
+| Nom | Le nom de la recette |
+| Description | Optionnel — quelques mots sur le plat |
+| Ingrédients | Nom, quantité et unité pour chaque ingrédient |
+| Étapes | La préparation, étape par étape |
+| Temps | Temps de préparation et de cuisson |
+| Portions | Pour combien de personnes est prévue la recette |
 
-_(Fonctionnalité à venir)_ — Collez l'URL d'une recette et Deazl importe automatiquement les informations.
+{% hint style="info" %}
+Deazl ajuste automatiquement les quantités selon le nombre de personnes dans ton foyer. Si une recette est pour 4 et que tu es 2, les quantités sont divisées par 2.
+{% endhint %}
 
-## Infos nutritionnelles
+---
 
-Grâce à la base de données Open Food Facts, Deazl enrichit vos recettes avec les informations nutritionnelles de chaque ingrédient.
+## Retrouver une recette
 
-## Fonctionnalités à venir
+Tes recettes sont triées par date d'ajout. Utilise la barre de recherche pour trouver rapidement une recette par son nom ou un ingrédient.
 
-- Recherche et filtres (végétarien, sans gluten, rapide...)
-- Import depuis URL
-- Suggestions de recettes selon votre garde-manger
-- Notation et favoris
+---
+
+## Partager une recette
+
+Chaque recette peut être partagée via un lien. La personne qui reçoit le lien voit la recette sur le web, sans avoir besoin de l'application.
+
+---
+
+## Données nutritionnelles
+
+Quand un ingrédient est reconnu dans notre base de données (Open Food Facts), Deazl affiche automatiquement les informations nutritionnelles de la recette.
+
+---
+
+## Ce qui arrive bientôt
+
+- Import de recettes depuis une URL
+- Filtres (végétarien, sans gluten, rapide...)
+- Suggestions basées sur ce que tu as dans le garde-manger
+- Notes et évaluations

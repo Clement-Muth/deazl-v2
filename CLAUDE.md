@@ -82,3 +82,17 @@ Géré proactivement par Claude — pas besoin de demander.
 **Quand bumper :** à la fin d'une session de travail significative (feature complète, série de fix), pas à chaque commit.
 
 **GitHub Release :** tag `vX.Y.Z` + release notes générées depuis les commits depuis le dernier tag.
+
+## Documentation (GitBook)
+
+**Espaces GitBook :**
+- `docs/user/` → `docs.deazl.fr` (public, utilisateurs finaux)
+- `docs/dev/` → espace Dev privé GitBook (développeurs)
+
+**Git sync :** les deux espaces sont synchronisés sur la branche `main`. Les docs évoluent avec le code via les PRs.
+
+**Obligation à chaque release :** avant de merger sur `main`, vérifier et mettre à jour :
+- `docs/user/` si une feature a changé côté utilisateur
+- `docs/dev/` si l'architecture, le stack ou les ADRs ont évolué
+
+**Langue :** Français uniquement pour l'instant. Anglais via la localisation GitBook native à venir.

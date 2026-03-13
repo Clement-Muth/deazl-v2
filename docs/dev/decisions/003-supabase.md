@@ -1,31 +1,22 @@
-# ADR-003 — Supabase comme backend
-
-**Statut** : Accepté
+# ADR-003 — Supabase
 
 ## Contexte
 
-L'app a besoin d'auth (email + OAuth social), d'une base de données relationnelle (prix, ingrédients, recettes avec relations), et potentiellement de temps réel (liste de courses partagée).
+Il faut un backend avec authentification, base de données relationnelle et stockage de fichiers.
 
 ## Décision
 
-**Supabase** : PostgreSQL + Auth + Storage + Realtime, hébergé.
+**Supabase** — PostgreSQL + Auth + Storage, hébergé.
 
-## Alternatives considérées
+## Alternatives évaluées
 
-### Firebase (Firestore)
-- Très bon sur mobile, SDK mature
-- Rejeté : NoSQL inadapté aux requêtes de comparaison de prix (jointures, agrégations), vendor lock-in Google
-
-### PlanetScale / Neon + Auth séparée (NextAuth)
-- Plus de contrôle, PostgreSQL natif
-- Rejeté : configuration plus complexe, Auth à gérer séparément, deux providers au lieu d'un
-
-### Self-hosted PostgreSQL + Lucia Auth
-- Contrôle total
-- Rejeté : overhead opérationnel trop élevé pour une app early-stage
+- **Firebase** — NoSQL (inadapté au modèle relationnel de Deazl), vendor lock-in Google fort.
+- **PlanetScale + NextAuth** — plus de configuration à maintenir, pas de Storage intégré.
+- **Self-hosted PostgreSQL + Auth maison** — overhead opérationnel non justifié.
 
 ## Conséquences
 
-- Row Level Security (RLS) obligatoire sur toutes les tables pour la sécurité multi-tenant
-- Deux clients Supabase distincts : `client.ts` (navigateur) et `server.ts` (Server Components/Actions)
-- `proxy.ts` (pas `middleware.ts`) pour la gestion des cookies auth avec `@supabase/ssr`
+- Row Level Security (RLS) est obligatoire sur toutes les tables.
+- Deux clients Supabase à maintenir : `client.ts` (browser) et `server.ts` (Server Components / Server Actions).
+- Les migrations SQL sont versionnées dans `supabase/migrations/`.
+- Deux projets Supabase : prod (`sqjfvkmgdyardcbpcwan`) et staging (`qccvwajldbzykeekypzc`).

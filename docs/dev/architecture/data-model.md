@@ -1,31 +1,114 @@
 # Modèle de données
 
-Base de données PostgreSQL hébergée sur Supabase.
+Toutes les tables sont en PostgreSQL (Supabase). Row Level Security (RLS) activée partout.
+
+## Conventions
+
+- **PKs** : `uuid` généré côté Supabase (`gen_random_uuid()`)
+- **Nommage** : snake_case
+- **Timestamps** : `created_at` systématiquement, `updated_at` si besoin
+- **RLS** : chaque table a une policy qui restreint l'accès à l'utilisateur propriétaire (via `auth.uid()`)
 
 ## Tables principales
 
 ### `profiles`
-Extension de `auth.users` (Supabase Auth). Stocke les préférences utilisateur.
+Extension de `auth.users`. Créée automatiquement à l'inscription via trigger.
 
-| Colonne | Type | Description |
-|---|---|---|
-| `id` | uuid (FK auth.users) | Identifiant utilisateur |
-| `household_size` | int | Nombre de personnes dans le foyer |
-| `preferred_stores` | text[] | Magasins habituels sélectionnés à l'onboarding |
-| `onboarding_completed` | bool | Onboarding terminé |
-| `created_at` | timestamptz | |
+```sql
+profiles (
+  id          uuid references auth.users primary key,
+  household_size      int default 1,
+  preferred_stores    text[],
+  onboarding_completed boolean default false,
+  created_at  timestamptz default now()
+)
+```
 
-### À venir
+### `recipes`
+```sql
+recipes (
+  id          uuid primary key,
+  user_id     uuid references profiles,
+  title       text,
+  description text,
+  servings    int,
+  prep_time   int,   -- minutes
+  cook_time   int,   -- minutes
+  is_public   boolean default false,
+  created_at  timestamptz
+)
+```
 
-- `recipes` — recettes créées ou sauvegardées par l'utilisateur
-- `meal_plans` — planification hebdomadaire (semaine + repas par jour)
-- `shopping_lists` — listes de courses générées
-- `shopping_items` — items dans une liste
-- `pantry_items` — inventaire du garde-manger
+### `recipe_ingredients`
+```sql
+recipe_ingredients (
+  id          uuid primary key,
+  recipe_id   uuid references recipes,
+  name        text,
+  quantity    numeric,
+  unit        text,
+  off_id      text   -- Open Food Facts barcode (optionnel)
+)
+```
 
-## Conventions SQL
+### `meal_plans`
+```sql
+meal_plans (
+  id          uuid primary key,
+  user_id     uuid references profiles,
+  week_start  date,
+  created_at  timestamptz
+)
+```
 
-- Nommage : `snake_case`
-- Clés primaires : `uuid` générées par Supabase
-- RLS (Row Level Security) activé sur toutes les tables
-- Triggers Supabase pour la création automatique du profil à l'inscription
+### `meal_plan_items`
+```sql
+meal_plan_items (
+  id           uuid primary key,
+  meal_plan_id uuid references meal_plans,
+  recipe_id    uuid references recipes,
+  day          int,         -- 0 = lundi, 6 = dimanche
+  meal_type    text         -- 'breakfast' | 'lunch' | 'dinner'
+)
+```
+
+### `shopping_items`
+```sql
+shopping_items (
+  id           uuid primary key,
+  user_id      uuid references profiles,
+  name         text,
+  quantity     numeric,
+  unit         text,
+  category     text,
+  checked      boolean default false,
+  price        numeric,
+  store        text,
+  week_start   date,
+  created_at   timestamptz
+)
+```
+
+### `pantry_items`
+```sql
+pantry_items (
+  id          uuid primary key,
+  user_id     uuid references profiles,
+  name        text,
+  quantity    numeric,
+  unit        text,
+  created_at  timestamptz
+)
+```
+
+## Migrations
+
+Toutes les migrations sont dans `supabase/migrations/` avec le préfixe timestamp YYYYMMDDHHMMSS. Ne jamais modifier une migration existante — créer une nouvelle.
+
+```bash
+# Appliquer les migrations en local
+supabase db push
+
+# Appliquer sur un projet Supabase distant
+supabase db push --project-ref <project-ref>
+```

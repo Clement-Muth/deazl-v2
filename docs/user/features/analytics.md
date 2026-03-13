@@ -1,22 +1,45 @@
 # Comparaison des prix
 
-Faites vos courses malin : Deazl compare les prix de vos ingrédients entre vos magasins habituels.
+Deazl t'aide à savoir où acheter chaque ingrédient au meilleur prix, sans avoir à comparer toi-même.
 
-## Comment ça marche
+---
 
-Pour chaque ingrédient de votre liste de courses, Deazl affiche le prix pratiqué dans chacun de vos magasins sélectionnés. Vous pouvez ainsi choisir où acheter chaque produit selon votre trajet ou vos préférences.
+## Comment Deazl connaît les prix
 
-## Optimisation du budget
+Les prix viennent de deux sources :
 
-Deazl peut calculer la répartition optimale de vos courses entre vos magasins pour minimiser votre budget total sur la semaine.
+| Source | Comment |
+|---|---|
+| **Tes scans** | Quand tu scannes un produit pendant tes courses, le prix et le magasin sont enregistrés. |
+| **Base collaborative** | Des données de prix partagées anonymement par les utilisateurs de Deazl. |
 
-## Sources de données
+Plus tu scannes, plus les comparaisons sont précises pour tes magasins habituels.
 
-Les prix sont issus de bases de données publiques et collaboratives. Ils peuvent ne pas refléter exactement les prix en magasin au moment de vos achats.
+---
 
-## Fonctionnalités à venir
+## Lire la comparaison
 
-- Alertes prix (notifiez quand un produit est en promo)
-- Historique de vos dépenses par semaine
-- Analyse de votre budget alimentaire mensuel
-- Suggestions d'alternatives moins chères
+Dans l'onglet **Comparaison**, tu vois pour chaque ingrédient de ta liste :
+
+- Le prix dans chacun de tes magasins
+- Le magasin le moins cher pour cet article
+- L'économie possible si tu achètes au meilleur endroit
+
+---
+
+## Optimiser son budget
+
+Deazl peut calculer dans quel magasin faire l'ensemble de tes courses revient le moins cher — en tenant compte du fait que tous les produits ne sont pas disponibles partout.
+
+{% hint style="info" %}
+Cette fonctionnalité est plus précise au fil du temps, à mesure que tu accumules des données de scan dans tes magasins habituels.
+{% endhint %}
+
+---
+
+## Ce qui arrive bientôt
+
+- Alertes quand un prix baisse
+- Historique de tes dépenses par semaine
+- Analyse de budget mensuel
+- Alternatives moins chères suggérées automatiquement
