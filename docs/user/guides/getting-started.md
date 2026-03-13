@@ -1,52 +1,61 @@
-# Créer mon compte
+---
+description: Installe Deazl et configure ton compte en 5 minutes.
+---
 
-Deazl est disponible sur **iPhone** et **Android**. L'application est gratuite.
+# Premiers pas
+
+Deazl est disponible gratuitement sur iPhone et Android. Voilà comment démarrer.
 
 ---
 
-## 1. Télécharger l'application
+## 1. Télécharge l'application
 
-Recherche **Deazl** sur l'App Store ou le Google Play Store, puis installe l'application.
+Recherche **Deazl** sur l'App Store ou le Google Play Store et installe l'app.
 
 ---
 
-## 2. Créer un compte
+## 2. Crée ton compte
 
-Ouvre Deazl et appuie sur **Créer un compte**. Tu peux t'inscrire avec :
+Ouvre Deazl et choisis comment t'inscrire :
 
-- Ton adresse email
-- Ton compte Google
+{% tabs %}
+{% tab title="Avec ton email" %}
+Saisis ton adresse et choisis un mot de passe. Un email de confirmation t'est envoyé — clique sur le lien pour activer ton compte.
 
 {% hint style="info" %}
-Un email de confirmation t'est envoyé si tu t'inscris avec une adresse email. Clique sur le lien dans l'email pour activer ton compte.
+L'email arrive en général en moins d'une minute. Vérifie tes spams si tu ne le vois pas.
 {% endhint %}
+{% endtab %}
+
+{% tab title="Avec Google" %}
+Appuie sur **Continuer avec Google** et sélectionne ton compte. Pas de mot de passe à créer, tu es connecté directement.
+{% endtab %}
+{% endtabs %}
 
 ---
 
-## 3. Configurer ton foyer
+## 3. Dis-lui pour combien de personnes tu cuisines
 
-Deazl adapte les quantités dans tes recettes et ta liste de courses en fonction du nombre de personnes chez toi.
-
-Indique combien de personnes tu nourris au quotidien (toi inclus). Tu peux modifier ça à tout moment dans ton profil.
-
----
-
-## 4. Choisir tes magasins
-
-Sélectionne les magasins où tu fais habituellement tes courses. Deazl comparera les prix dans ces enseignes pour te montrer où chaque ingrédient est le moins cher.
+Deazl utilise ce chiffre pour ajuster automatiquement les quantités dans toutes tes recettes. Si une recette est prévue pour 4 et que tu es 2, les quantités sont divisées par 2 — sans que tu n'aies à calculer quoi que ce soit.
 
 {% hint style="success" %}
-Tu es prêt. Commence par ajouter une recette ou planifie directement tes repas de la semaine.
+Tu peux changer ce réglage à tout moment dans ton profil.
 {% endhint %}
 
 ---
 
-## Et ensuite ?
+## 4. Sélectionne tes magasins habituels
+
+Choisis où tu fais généralement tes courses. Deazl comparera les prix dans ces enseignes pour chaque ingrédient de ta liste.
+
+Plus tu en sélectionnes, plus la comparaison est utile — mais même avec un seul magasin, Deazl fonctionne très bien.
+
+---
+
+## Et voilà.
+
+Tu es prêt. La meilleure façon de prendre en main Deazl : planifie les repas d'une seule journée et génère ta liste pour voir comment ça fonctionne.
 
 {% content-ref url="../features/planning.md" %}
-Planifier mes repas
-{% endcontent-ref %}
-
-{% content-ref url="../features/recipes.md" %}
-Ajouter mes premières recettes
+Planifier mon premier repas →
 {% endcontent-ref %}
