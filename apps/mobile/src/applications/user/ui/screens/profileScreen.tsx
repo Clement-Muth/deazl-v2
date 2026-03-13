@@ -66,7 +66,7 @@ function InitialsAvatar({ name, email, avatarUrl, size = 80 }: { name: string; e
   );
 }
 
-function SettingRow({ label, value, onPress }: { label: string; value: string; onPress: () => void }) {
+function SettingRow({ label, value, description, onPress }: { label: string; value: string; description?: string; onPress: () => void }) {
   return (
     <Pressable
       onPress={onPress}
@@ -79,6 +79,7 @@ function SettingRow({ label, value, onPress }: { label: string; value: string; o
       <View>
         <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 0.8 }}>{label}</Text>
         <Text style={{ fontSize: 14, fontWeight: "600", color: "#1C1917", marginTop: 2 }}>{value || "Non renseigné"}</Text>
+        {description && <Text style={{ fontSize: 11, color: "#A8A29E", marginTop: 2 }}>{description}</Text>}
       </View>
       <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
         <Polyline points="9 18 15 12 9 6" />
@@ -435,8 +436,9 @@ export function ProfileScreen() {
             <SettingRow label="Nom affiché" value={profile?.fullName ?? ""} onPress={openNameSheet} />
             <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
             <SettingRow
-              label="Nombre de personnes"
+              label="Portions par repas"
               value={`${profile?.householdSize ?? 2} personne${(profile?.householdSize ?? 2) > 1 ? "s" : ""}`}
+              description="Adapte les quantités dans tes recettes"
               onPress={openSizeSheet}
             />
             <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
@@ -583,7 +585,7 @@ export function ProfileScreen() {
               <>
                 <View style={{ paddingHorizontal: 16, paddingVertical: 14 }}>
                   <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>Foyer</Text>
-                  <Text style={{ fontSize: 13, color: "#78716C" }}>Partagez vos courses et recettes avec votre foyer.</Text>
+                  <Text style={{ fontSize: 13, color: "#78716C" }}>Partage ta liste de courses et ton planning avec d'autres utilisateurs Deazl.</Text>
                 </View>
                 {createError && (
                   <View style={{ marginHorizontal: 16, marginBottom: 8, borderRadius: 10, backgroundColor: "#FEE2E2", paddingHorizontal: 12, paddingVertical: 8 }}>
@@ -728,7 +730,7 @@ export function ProfileScreen() {
       </BottomModal>
 
       <BottomModal isOpen={editSheet === "size"} onClose={() => setEditSheet(null)} height="35%">
-        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Taille du foyer</Text>
+        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Portions par repas</Text>
         <View style={{ gap: 20 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 24 }}>
             <Pressable
