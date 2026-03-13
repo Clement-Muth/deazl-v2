@@ -1152,7 +1152,7 @@ export function ProfileScreen() {
               <Button variant="secondary" style={{ flex: 1 }} onPress={() => setConfirmLeave(false)}>
                 <Button.Label>Annuler</Button.Label>
               </Button>
-              <Button variant="danger" style={{ flex: 1 }} disabled={leaving} onPress={handleLeaveHousehold}>
+              <Button variant="danger" style={{ flex: 1 }} isDisabled={leaving} onPress={handleLeaveHousehold}>
                 <Button.Label>{leaving ? "Départ…" : "Quitter"}</Button.Label>
               </Button>
             </View>
@@ -1279,7 +1279,7 @@ export function ProfileScreen() {
               <Button variant="secondary" style={{ flex: 1 }} onPress={() => setConfirmDelete(false)}>
                 <Button.Label>Annuler</Button.Label>
               </Button>
-              <Button variant="danger" style={{ flex: 1 }} disabled={deleting} onPress={handleDeleteAccount}>
+              <Button variant="danger" style={{ flex: 1 }} isDisabled={deleting} onPress={handleDeleteAccount}>
                 <Button.Label>{deleting ? "Suppression…" : "Supprimer"}</Button.Label>
               </Button>
             </View>
