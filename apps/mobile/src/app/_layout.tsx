@@ -62,15 +62,9 @@ export default function RootLayout() {
   const pendingRecoveryRef = useRef(false);
 
   const handleDeepLink = useCallback((url: string) => {
-    const queryString = url.split("?")[1]?.split("#")[0] ?? "";
-    const code = new URLSearchParams(queryString).get("code");
-
-    if (url.startsWith("deazl://auth/callback")) {
-      if (code) supabase.auth.exchangeCodeForSession(code);
-      return;
-    }
-
     if (url.startsWith("deazl://reset-password")) {
+      const queryString = url.split("?")[1]?.split("#")[0] ?? "";
+      const code = new URLSearchParams(queryString).get("code");
       if (code) {
         pendingRecoveryRef.current = true;
         supabase.auth.exchangeCodeForSession(code);
