@@ -67,7 +67,9 @@ export default function RootLayout() {
       const code = new URLSearchParams(queryString).get("code");
       if (code) {
         pendingRecoveryRef.current = true;
-        supabase.auth.exchangeCodeForSession(code);
+        supabase.auth.exchangeCodeForSession(code).catch(() => {
+          pendingRecoveryRef.current = false;
+        });
         return;
       }
       const hash = url.split("#")[1] ?? "";

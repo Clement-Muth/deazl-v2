@@ -14,7 +14,10 @@ export async function signInWithGoogle(): Promise<{ error?: string }> {
   const result = await WebBrowser.openAuthSessionAsync(data.url, "deazl://auth/callback");
   if (result.type !== "success") return {};
 
-  const code = new URLSearchParams(result.url.split("?")[1] ?? "").get("code");
+  const url = "url" in result ? result.url : null;
+  if (!url) return { error: "Redirection manquante" };
+
+  const code = new URLSearchParams(url.split("?")[1] ?? "").get("code");
   if (!code) return { error: "Code de connexion manquant" };
 
   const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
