@@ -2,7 +2,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { Button, Chip, SearchField } from "heroui-native";
 import { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Dimensions, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Line, Polyline } from "react-native-svg";
 import { BottomModal } from "../../../shopping/ui/components/bottomModal";
@@ -17,6 +17,8 @@ import { ThumbCard } from "../components/thumbCard";
 function normalize(s: string) {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 }
+
+const GRID_CARD_WIDTH = (Dimensions.get("window").width - 32 - 12) / 2;
 
 type SortOption = "recent" | "fast" | "slow";
 type QuickFilter = "favorites" | null;
@@ -202,7 +204,7 @@ export function RecipesScreen() {
             ) : (
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
                 {filtered.map((recipe) => (
-                  <View key={recipe.id} style={{ width: "47%" }}>
+                  <View key={recipe.id} style={{ width: GRID_CARD_WIDTH }}>
                     <GridCard recipe={recipe} onPress={() => goToRecipe(recipe.id)} />
                   </View>
                 ))}
@@ -241,7 +243,7 @@ export function RecipesScreen() {
                     <SectionLabel label="Toutes les recettes" />
                     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, paddingHorizontal: 16 }}>
                       {gridRecipes.map((recipe) => (
-                        <View key={recipe.id} style={{ width: "47%" }}>
+                        <View key={recipe.id} style={{ width: GRID_CARD_WIDTH }}>
                           <GridCard recipe={recipe} onPress={() => goToRecipe(recipe.id)} />
                         </View>
                       ))}
