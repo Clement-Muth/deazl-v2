@@ -1,10 +1,10 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { Button, Chip, SearchField } from "heroui-native";
+import { Button, SearchField } from "heroui-native";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Dimensions, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Svg, { Circle, Line, Polyline } from "react-native-svg";
+import Svg, { Circle, Line, Path, Polyline } from "react-native-svg";
 import { BottomModal } from "../../../shopping/ui/components/bottomModal";
 import { useRecipes } from "../../api/useRecipes";
 import type { Recipe } from "../../domain/entities/recipe";
@@ -21,7 +21,6 @@ function normalize(s: string) {
 const GRID_CARD_WIDTH = (Dimensions.get("window").width - 32 - 12) / 2;
 
 type SortOption = "recent" | "fast" | "slow";
-type QuickFilter = "favorites" | null;
 
 function SectionLabel({ label }: { label: string }) {
   return (
@@ -38,8 +37,8 @@ export function RecipesScreen() {
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [timeFilter, setTimeFilter] = useState("any");
   const [sort, setSort] = useState<SortOption>("recent");
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
-  const [quickFilter, setQuickFilter] = useState<QuickFilter>(null);
 
   useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
 
@@ -49,9 +48,9 @@ export function RecipesScreen() {
     return [...tags];
   }, [recipes]);
 
-  const activeFilterCount = activeTags.length + (timeFilter !== "any" ? 1 : 0) + (sort !== "recent" ? 1 : 0);
+  const activeFilterCount = activeTags.length + (timeFilter !== "any" ? 1 : 0) + (sort !== "recent" ? 1 : 0) + (favoritesOnly ? 1 : 0);
   const isSearching = search.trim() !== "";
-  const isFiltering = isSearching || activeTags.length > 0 || timeFilter !== "any" || sort !== "recent" || quickFilter !== null;
+  const isFiltering = isSearching || activeTags.length > 0 || timeFilter !== "any" || sort !== "recent" || favoritesOnly;
 
   const filtered = useMemo(() => {
     let result = recipes;
@@ -67,7 +66,7 @@ export function RecipesScreen() {
     } else if (timeFilter === "medium") {
       result = result.filter((r) => { const t = (r.prepTimeMinutes ?? 0) + (r.cookTimeMinutes ?? 0); return t > 0 && t <= 60; });
     }
-    if (quickFilter === "favorites") {
+    if (favoritesOnly) {
       result = result.filter((r) => r.isFavorite);
     }
     return [...result].sort((a, b) => {
@@ -76,18 +75,14 @@ export function RecipesScreen() {
       const tb = (b.prepTimeMinutes ?? 0) + (b.cookTimeMinutes ?? 0);
       return sort === "fast" ? ta - tb : tb - ta;
     });
-  }, [recipes, search, activeTags, timeFilter, sort, quickFilter]);
+  }, [recipes, search, activeTags, timeFilter, sort, favoritesOnly]);
 
-  const sections = useMemo(() => {
-    if (isFiltering) return null;
-    const result: { label: string; items: Recipe[] }[] = [];
-    const quick = recipes.filter((r) => {
-      const t = (r.prepTimeMinutes ?? 0) + (r.cookTimeMinutes ?? 0);
-      return t > 0 && t <= 30;
-    });
-    if (quick.length > 0) result.push({ label: "Rapides · moins de 30 min", items: quick });
-    return result;
-  }, [recipes, isFiltering]);
+  const favorites = useMemo(() => recipes.filter((r) => r.isFavorite), [recipes]);
+
+  const quickRecipes = useMemo(() => recipes.filter((r) => {
+    const t = (r.prepTimeMinutes ?? 0) + (r.cookTimeMinutes ?? 0);
+    return t > 0 && t <= 30;
+  }), [recipes]);
 
   const heroRecipe = !isFiltering && recipes.length > 0 ? recipes[0] : null;
   const gridRecipes = !isFiltering ? recipes.slice(1) : [];
@@ -97,7 +92,7 @@ export function RecipesScreen() {
   }
 
   function clearFilters() {
-    setSearch(""); setActiveTags([]); setTimeFilter("any"); setSort("recent"); setQuickFilter(null);
+    setSearch(""); setActiveTags([]); setTimeFilter("any"); setSort("recent"); setFavoritesOnly(false);
   }
 
   function goToRecipe(id: string) {
@@ -115,7 +110,7 @@ export function RecipesScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#FAF9F6" }} edges={["top"]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
-        <View style={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 8 }}>
+        <View style={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 16 }}>
           <Text style={{ fontSize: 28, fontWeight: "900", color: "#1C1917", letterSpacing: -0.5, marginBottom: 16 }}>Recettes</Text>
 
           <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
@@ -155,21 +150,6 @@ export function RecipesScreen() {
               )}
             </Pressable>
           </View>
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }} contentContainerStyle={{ gap: 6 }}>
-            <Chip
-              variant={quickFilter === "favorites" ? "primary" : "secondary"}
-              color={quickFilter === "favorites" ? "danger" : "default"}
-              onPress={() => setQuickFilter((q) => q === "favorites" ? null : "favorites")}
-            >
-              <Chip.Label>❤️ Favoris</Chip.Label>
-            </Chip>
-            {activeTags.map((tag) => (
-              <Chip key={tag} variant="primary" color="accent" onPress={() => toggleTag(tag)}>
-                <Chip.Label>{DIETARY_LABELS[tag] ?? tag} ×</Chip.Label>
-              </Chip>
-            ))}
-          </ScrollView>
         </View>
 
         {isFiltering ? (
@@ -227,16 +207,27 @@ export function RecipesScreen() {
                   </View>
                 )}
 
-                {sections && sections.map((section) => (
-                  <View key={section.label} style={{ marginBottom: 20 }}>
-                    <SectionLabel label={section.label} />
+                {favorites.length > 0 && (
+                  <View style={{ marginBottom: 20 }}>
+                    <SectionLabel label="Mes favoris" />
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: -8 }} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 8, gap: 12 }}>
-                      {section.items.map((recipe) => (
+                      {favorites.map((recipe) => (
                         <ThumbCard key={recipe.id} recipe={recipe} onPress={() => goToRecipe(recipe.id)} />
                       ))}
                     </ScrollView>
                   </View>
-                ))}
+                )}
+
+                {quickRecipes.length > 0 && (
+                  <View style={{ marginBottom: 20 }}>
+                    <SectionLabel label="Rapides · moins de 30 min" />
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: -8 }} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 8, gap: 12 }}>
+                      {quickRecipes.map((recipe) => (
+                        <ThumbCard key={recipe.id} recipe={recipe} onPress={() => goToRecipe(recipe.id)} />
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
 
                 {gridRecipes.length > 0 && (
                   <View style={{ marginBottom: 20 }}>
@@ -275,81 +266,99 @@ export function RecipesScreen() {
       </Pressable>
 
       <BottomModal isOpen={filterOpen} onClose={() => setFilterOpen(false)} height="auto">
-        <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 16 }}>
-            <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Filtres</Text>
-            {(activeTags.length > 0 || timeFilter !== "any" || sort !== "recent") && (
-              <Pressable onPress={() => { setActiveTags([]); setTimeFilter("any"); setSort("recent"); }}>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: "#E8571C" }}>Tout effacer</Text>
-              </Pressable>
-            )}
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 16 }}>
+          <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Filtres</Text>
+          {activeFilterCount > 0 && (
+            <Pressable onPress={clearFilters}>
+              <Text style={{ fontSize: 12, fontWeight: "600", color: "#E8571C" }}>Tout effacer</Text>
+            </Pressable>
+          )}
+        </View>
+
+        <View style={{ paddingBottom: 8 }}>
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ fontSize: 11, fontWeight: "700", color: "#78716C99", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Favoris</Text>
+            <Pressable
+              onPress={() => setFavoritesOnly((v) => !v)}
+              style={{
+                flexDirection: "row", alignItems: "center", gap: 8,
+                borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10,
+                backgroundColor: favoritesOnly ? "#E8571C" : "#F5F3EF",
+                alignSelf: "flex-start",
+              }}
+            >
+              <Svg width={12} height={12} viewBox="0 0 24 24" fill={favoritesOnly ? "#fff" : "#78716C"} stroke="none">
+                <Path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </Svg>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: favoritesOnly ? "#fff" : "#78716C" }}>
+                Favoris uniquement
+              </Text>
+            </Pressable>
           </View>
 
-          <View style={{ paddingBottom: 8 }}>
-            {allTags.length > 0 && (
-              <View style={{ marginBottom: 20 }}>
-                <Text style={{ fontSize: 11, fontWeight: "700", color: "#78716C99", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Régime</Text>
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                  {allTags.map((tag) => (
-                    <Pressable
-                      key={tag}
-                      onPress={() => toggleTag(tag)}
-                      style={{
-                        borderRadius: 99, paddingHorizontal: 14, paddingVertical: 8,
-                        backgroundColor: activeTags.includes(tag) ? "#E8571C" : "#F5F3EF",
-                      }}
-                    >
-                      <Text style={{ fontSize: 12, fontWeight: "700", color: activeTags.includes(tag) ? "#fff" : "#78716C" }}>
-                        {DIETARY_LABELS[tag] ?? tag}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            )}
-
+          {allTags.length > 0 && (
             <View style={{ marginBottom: 20 }}>
-              <Text style={{ fontSize: 11, fontWeight: "700", color: "#78716C99", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Temps total</Text>
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                {[["any", "Tout"], ["quick", "≤ 30 min"], ["medium", "≤ 60 min"]].map(([val, label]) => (
+              <Text style={{ fontSize: 11, fontWeight: "700", color: "#78716C99", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Régime</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                {allTags.map((tag) => (
                   <Pressable
-                    key={val}
-                    onPress={() => setTimeFilter(val)}
+                    key={tag}
+                    onPress={() => toggleTag(tag)}
                     style={{
-                      flex: 1, borderRadius: 16, paddingVertical: 10,
-                      alignItems: "center",
-                      backgroundColor: timeFilter === val ? "#E8571C" : "#F5F3EF",
+                      borderRadius: 99, paddingHorizontal: 14, paddingVertical: 8,
+                      backgroundColor: activeTags.includes(tag) ? "#E8571C" : "#F5F3EF",
                     }}
                   >
-                    <Text style={{ fontSize: 12, fontWeight: "700", color: timeFilter === val ? "#fff" : "#78716C" }}>{label}</Text>
+                    <Text style={{ fontSize: 12, fontWeight: "700", color: activeTags.includes(tag) ? "#fff" : "#78716C" }}>
+                      {DIETARY_LABELS[tag] ?? tag}
+                    </Text>
                   </Pressable>
                 ))}
               </View>
             </View>
+          )}
 
-            <View style={{ marginBottom: 24 }}>
-              <Text style={{ fontSize: 11, fontWeight: "700", color: "#78716C99", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Trier par</Text>
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                {([["recent", "Plus récent"], ["fast", "Plus rapide"], ["slow", "Plus long"]] as [SortOption, string][]).map(([val, label]) => (
-                  <Pressable
-                    key={val}
-                    onPress={() => setSort(val)}
-                    style={{
-                      flex: 1, borderRadius: 16, paddingVertical: 10,
-                      alignItems: "center",
-                      backgroundColor: sort === val ? "#E8571C" : "#F5F3EF",
-                    }}
-                  >
-                    <Text style={{ fontSize: 12, fontWeight: "700", color: sort === val ? "#fff" : "#78716C" }}>{label}</Text>
-                  </Pressable>
-                ))}
-              </View>
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ fontSize: 11, fontWeight: "700", color: "#78716C99", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Temps total</Text>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {[["any", "Tout"], ["quick", "≤ 30 min"], ["medium", "≤ 60 min"]].map(([val, label]) => (
+                <Pressable
+                  key={val}
+                  onPress={() => setTimeFilter(val)}
+                  style={{
+                    flex: 1, borderRadius: 16, paddingVertical: 10,
+                    alignItems: "center",
+                    backgroundColor: timeFilter === val ? "#E8571C" : "#F5F3EF",
+                  }}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: timeFilter === val ? "#fff" : "#78716C" }}>{label}</Text>
+                </Pressable>
+              ))}
             </View>
-
-            <Button variant="primary" className="w-full rounded-2xl" onPress={() => setFilterOpen(false)}>
-              <Button.Label>Appliquer</Button.Label>
-            </Button>
           </View>
+
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{ fontSize: 11, fontWeight: "700", color: "#78716C99", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Trier par</Text>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {([["recent", "Plus récent"], ["fast", "Plus rapide"], ["slow", "Plus long"]] as [SortOption, string][]).map(([val, label]) => (
+                <Pressable
+                  key={val}
+                  onPress={() => setSort(val)}
+                  style={{
+                    flex: 1, borderRadius: 16, paddingVertical: 10,
+                    alignItems: "center",
+                    backgroundColor: sort === val ? "#E8571C" : "#F5F3EF",
+                  }}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: sort === val ? "#fff" : "#78716C" }}>{label}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+          <Button variant="primary" className="w-full rounded-2xl" onPress={() => setFilterOpen(false)}>
+            <Button.Label>Appliquer</Button.Label>
+          </Button>
         </View>
       </BottomModal>
     </SafeAreaView>
