@@ -230,7 +230,7 @@ export function RecipesScreen() {
                 {sections && sections.map((section) => (
                   <View key={section.label} style={{ marginBottom: 20 }}>
                     <SectionLabel label={section.label} />
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: -8 }} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 8, gap: 12 }}>
                       {section.items.map((recipe) => (
                         <ThumbCard key={recipe.id} recipe={recipe} onPress={() => goToRecipe(recipe.id)} />
                       ))}
