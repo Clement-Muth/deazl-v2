@@ -1,8 +1,8 @@
-import { BottomSheet } from "heroui-native";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Line, Path, Polyline } from "react-native-svg";
+import { BottomModal, BottomModalScrollView } from "../../../shopping/ui/components/bottomModal";
 import { createRecipe } from "../../application/useCases/createRecipe";
 import type { RecipeIngredientInput } from "../../application/useCases/createRecipe";
 import { importRecipeFromUrl } from "../../application/useCases/importRecipeFromUrl";
@@ -22,6 +22,9 @@ const DIETARY_OPTIONS = [
 
 const COMMON_UNITS = ["pièce", "g", "kg", "ml", "cl", "L", "càs", "càc", "tasse", "pincée", "tranche"];
 
+const STEPS_LABELS = ["Informations", "Ingrédients", "Préparation"];
+const TOTAL_STEPS = 3;
+
 interface Props {
   existingRecipe?: Recipe;
   onSuccess: (id: string) => void;
@@ -29,6 +32,9 @@ interface Props {
 }
 
 export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
+  const [step, setStep] = useState(1);
+  const scrollRef = useRef<ScrollView>(null);
+
   const [name, setName] = useState(existingRecipe?.name ?? "");
   const [description, setDescription] = useState(existingRecipe?.description ?? "");
   const [servings, setServings] = useState(String(existingRecipe?.servings ?? 4));
@@ -41,12 +47,18 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
   const [steps, setSteps] = useState<string[]>(
     existingRecipe?.steps.map((s) => s.description) ?? [""]
   );
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [importUrl, setImportUrl] = useState("");
   const [importing, setImporting] = useState(false);
   const [importSheet, setImportSheet] = useState(false);
   const [unitSheet, setUnitSheet] = useState<number | null>(null);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+    setError(null);
+  }, [step]);
 
   async function handleImport() {
     if (!importUrl.trim()) return;
@@ -67,7 +79,6 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
   }
 
   async function handleSubmit() {
-    if (!name.trim()) { setError("Le nom est requis"); return; }
     setSubmitting(true);
     setError(null);
     const input = {
@@ -93,6 +104,16 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
     }
   }
 
+  function goNext() {
+    if (step === 1 && !name.trim()) { setError("Le nom est requis"); return; }
+    setStep((s) => s + 1);
+  }
+
+  function goBack() {
+    if (step === 1) { onBack(); return; }
+    setStep((s) => s - 1);
+  }
+
   function addIngredient() {
     setIngredients((prev) => [...prev, { name: "", quantity: 1, unit: "pièce" }]);
   }
@@ -113,223 +134,256 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
     setSteps((prev) => prev.filter((_, idx) => idx !== i));
   }
 
-  function toggleTag(key: string) {
-    setDietaryTags((prev) => prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]);
-  }
+  const isLastStep = step === TOTAL_STEPS;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#FAF9F6" }} edges={["top"]}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#F5F3EF" }}>
-          <Pressable onPress={onBack} style={{ marginRight: 12, padding: 4 }}>
-            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#1C1917" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-              <Polyline points="15 18 9 12 15 6" />
-            </Svg>
-          </Pressable>
-          <Text style={{ flex: 1, fontSize: 18, fontWeight: "900", color: "#1C1917", letterSpacing: -0.3 }}>
-            {existingRecipe ? "Modifier la recette" : "Nouvelle recette"}
-          </Text>
-          {!existingRecipe && (
-            <Pressable
-              onPress={() => setImportSheet(true)}
-              style={{ borderRadius: 12, backgroundColor: "#F5F3EF", paddingHorizontal: 12, paddingVertical: 8, marginRight: 8 }}
-            >
-              <Text style={{ fontSize: 13, fontWeight: "700", color: "#78716C" }}>Import URL</Text>
+
+        {/* Header */}
+        <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
+            <Pressable onPress={goBack} style={{ padding: 4, marginRight: 8 }}>
+              <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#1C1917" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <Polyline points="15 18 9 12 15 6" />
+              </Svg>
             </Pressable>
-          )}
-          <Pressable
-            onPress={handleSubmit}
-            disabled={submitting || !name.trim()}
-            style={{ borderRadius: 12, backgroundColor: "#E8571C", paddingHorizontal: 16, paddingVertical: 8, opacity: (submitting || !name.trim()) ? 0.6 : 1 }}
-          >
-            {submitting ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}>{existingRecipe ? "Enregistrer" : "Créer"}</Text>}
-          </Pressable>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 11, fontWeight: "700", color: "#78716C99", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 1 }}>
+                {existingRecipe ? "Modifier" : "Nouvelle recette"} · {step}/{TOTAL_STEPS}
+              </Text>
+              <Text style={{ fontSize: 20, fontWeight: "900", color: "#1C1917", letterSpacing: -0.3 }}>
+                {STEPS_LABELS[step - 1]}
+              </Text>
+            </View>
+            <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+              {step === 1 && !existingRecipe && (
+                <Pressable
+                  onPress={() => setImportSheet(true)}
+                  style={{ borderRadius: 12, backgroundColor: "#F5F3EF", paddingHorizontal: 12, paddingVertical: 8 }}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: "#78716C" }}>Import URL</Text>
+                </Pressable>
+              )}
+              {isLastStep ? (
+                <Pressable
+                  onPress={handleSubmit}
+                  disabled={submitting}
+                  style={{ borderRadius: 12, backgroundColor: "#E8571C", paddingHorizontal: 16, paddingVertical: 8, opacity: submitting ? 0.6 : 1 }}
+                >
+                  {submitting
+                    ? <ActivityIndicator color="#fff" size="small" />
+                    : <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}>{existingRecipe ? "Enregistrer" : "Créer"}</Text>
+                  }
+                </Pressable>
+              ) : (
+                <Pressable
+                  onPress={goNext}
+                  style={{ borderRadius: 12, backgroundColor: "#1C1917", paddingHorizontal: 16, paddingVertical: 8 }}
+                >
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}>Suivant</Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+
+          {/* Progress bar */}
+          <View style={{ flexDirection: "row", gap: 5 }}>
+            {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+              <View
+                key={i}
+                style={{
+                  flex: 1, height: 3, borderRadius: 99,
+                  backgroundColor: i < step ? "#E8571C" : "#E7E5E4",
+                }}
+              />
+            ))}
+          </View>
         </View>
 
-        <ScrollView contentContainerStyle={{ padding: 16, gap: 20, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+        <ScrollView ref={scrollRef} contentContainerStyle={{ padding: 16, gap: 20, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
           {error && (
             <View style={{ borderRadius: 12, backgroundColor: "#FEE2E2", padding: 12 }}>
               <Text style={{ fontSize: 13, color: "#DC2626", fontWeight: "600" }}>{error}</Text>
             </View>
           )}
 
-          <Section title="Informations">
-            <Field label="Nom *">
-              <TextInput value={name} onChangeText={setName} placeholder="Ex: Poulet rôti aux herbes" placeholderTextColor="#A8A29E" style={inputStyle} />
-            </Field>
-            <Field label="Description">
-              <TextInput value={description} onChangeText={setDescription} placeholder="Une brève description…" placeholderTextColor="#A8A29E" multiline numberOfLines={3} style={[inputStyle, { minHeight: 80, textAlignVertical: "top" }]} />
-            </Field>
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <Field label="Personnes" style={{ flex: 1 }}>
-                <TextInput value={servings} onChangeText={setServings} keyboardType="number-pad" style={inputStyle} />
-              </Field>
-              <Field label="Prép. (min)" style={{ flex: 1 }}>
-                <TextInput value={prepTime} onChangeText={setPrepTime} keyboardType="number-pad" placeholder="0" placeholderTextColor="#A8A29E" style={inputStyle} />
-              </Field>
-              <Field label="Cuisson (min)" style={{ flex: 1 }}>
-                <TextInput value={cookTime} onChangeText={setCookTime} keyboardType="number-pad" placeholder="0" placeholderTextColor="#A8A29E" style={inputStyle} />
-              </Field>
-            </View>
-          </Section>
-
-          <Section title="Régime alimentaire">
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {DIETARY_OPTIONS.map((opt) => {
-                const active = dietaryTags.includes(opt.key);
-                return (
-                  <Pressable
-                    key={opt.key}
-                    onPress={() => toggleTag(opt.key)}
-                    style={{ borderRadius: 99, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: active ? "#E8571C" : "#F5F3EF" }}
-                  >
-                    <Text style={{ fontSize: 12, fontWeight: "700", color: active ? "#fff" : "#78716C" }}>{opt.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </Section>
-
-          <Section title="Ingrédients">
-            {ingredients.map((ing, i) => (
-              <View key={i} style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+          {step === 1 && (
+            <>
+              <Field label="Nom *">
                 <TextInput
-                  value={String(ing.quantity)}
-                  onChangeText={(v) => updateIngredient(i, "quantity", parseFloat(v) || 1)}
-                  keyboardType="decimal-pad"
-                  style={[inputStyle, { width: 52, textAlign: "center" }]}
-                />
-                <Pressable onPress={() => setUnitSheet(i)} style={[inputStyle, { width: 72, alignItems: "center", justifyContent: "center" }]}>
-                  <Text style={{ fontSize: 13, color: "#1C1917", fontWeight: "600" }}>{ing.unit}</Text>
-                </Pressable>
-                <TextInput
-                  value={ing.name}
-                  onChangeText={(v) => updateIngredient(i, "name", v)}
-                  placeholder="Ingrédient"
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Ex: Poulet rôti aux herbes"
                   placeholderTextColor="#A8A29E"
-                  style={[inputStyle, { flex: 1 }]}
+                  style={inputStyle}
                 />
-                <Pressable onPress={() => removeIngredient(i)} style={{ padding: 4 }}>
-                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <Line x1={18} y1={6} x2={6} y2={18} />
-                    <Line x1={6} y1={6} x2={18} y2={18} />
-                  </Svg>
-                </Pressable>
-              </View>
-            ))}
-            <Pressable onPress={addIngredient} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8 }}>
-              <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                <Line x1={12} y1={5} x2={12} y2={19} />
-                <Line x1={5} y1={12} x2={19} y2={12} />
-              </Svg>
-              <Text style={{ fontSize: 13, fontWeight: "700", color: "#E8571C" }}>Ajouter un ingrédient</Text>
-            </Pressable>
-          </Section>
-
-          <Section title="Étapes de préparation">
-            {steps.map((step, i) => (
-              <View key={i} style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
-                <View style={{ width: 24, height: 24, borderRadius: 99, backgroundColor: "#E8571C", alignItems: "center", justifyContent: "center", marginTop: 12, flexShrink: 0 }}>
-                  <Text style={{ fontSize: 11, fontWeight: "900", color: "#fff" }}>{i + 1}</Text>
-                </View>
+              </Field>
+              <Field label="Description">
                 <TextInput
-                  value={step}
-                  onChangeText={(v) => setSteps((prev) => prev.map((s, idx) => idx === i ? v : s))}
-                  placeholder={`Étape ${i + 1}…`}
+                  value={description}
+                  onChangeText={setDescription}
+                  placeholder="Une brève description…"
                   placeholderTextColor="#A8A29E"
                   multiline
-                  style={[inputStyle, { flex: 1, minHeight: 60, textAlignVertical: "top" }]}
+                  numberOfLines={3}
+                  style={[inputStyle, { minHeight: 80, textAlignVertical: "top" }]}
                 />
-                <Pressable onPress={() => removeStep(i)} style={{ padding: 4, marginTop: 12 }}>
-                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <Line x1={18} y1={6} x2={6} y2={18} />
-                    <Line x1={6} y1={6} x2={18} y2={18} />
-                  </Svg>
-                </Pressable>
+              </Field>
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <Field label="Personnes" style={{ flex: 1 }}>
+                  <TextInput value={servings} onChangeText={setServings} keyboardType="number-pad" style={inputStyle} />
+                </Field>
+                <Field label="Prép. (min)" style={{ flex: 1 }}>
+                  <TextInput value={prepTime} onChangeText={setPrepTime} keyboardType="number-pad" placeholder="0" placeholderTextColor="#A8A29E" style={inputStyle} />
+                </Field>
+                <Field label="Cuisson (min)" style={{ flex: 1 }}>
+                  <TextInput value={cookTime} onChangeText={setCookTime} keyboardType="number-pad" placeholder="0" placeholderTextColor="#A8A29E" style={inputStyle} />
+                </Field>
               </View>
-            ))}
-            <Pressable onPress={addStep} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8 }}>
-              <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                <Line x1={12} y1={5} x2={12} y2={19} />
-                <Line x1={5} y1={12} x2={19} y2={12} />
-              </Svg>
-              <Text style={{ fontSize: 13, fontWeight: "700", color: "#E8571C" }}>Ajouter une étape</Text>
-            </Pressable>
-          </Section>
+              <Field label="Régime alimentaire">
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                  {DIETARY_OPTIONS.map((opt) => {
+                    const active = dietaryTags.includes(opt.key);
+                    return (
+                      <Pressable
+                        key={opt.key}
+                        onPress={() => setDietaryTags((prev) => prev.includes(opt.key) ? prev.filter((k) => k !== opt.key) : [...prev, opt.key])}
+                        style={{ borderRadius: 99, paddingHorizontal: 12, paddingVertical: 7, backgroundColor: active ? "#E8571C" : "#F5F3EF" }}
+                      >
+                        <Text style={{ fontSize: 12, fontWeight: "700", color: active ? "#fff" : "#78716C" }}>{opt.label}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </Field>
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              {ingredients.map((ing, i) => (
+                <View key={i} style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                  <TextInput
+                    value={String(ing.quantity)}
+                    onChangeText={(v) => updateIngredient(i, "quantity", parseFloat(v) || 1)}
+                    keyboardType="decimal-pad"
+                    style={[inputStyle, { width: 52, textAlign: "center" }]}
+                  />
+                  <Pressable onPress={() => setUnitSheet(i)} style={[inputStyle, { width: 72, alignItems: "center", justifyContent: "center" }]}>
+                    <Text style={{ fontSize: 13, color: "#1C1917", fontWeight: "600" }}>{ing.unit}</Text>
+                  </Pressable>
+                  <TextInput
+                    value={ing.name}
+                    onChangeText={(v) => updateIngredient(i, "name", v)}
+                    placeholder="Ingrédient"
+                    placeholderTextColor="#A8A29E"
+                    style={[inputStyle, { flex: 1 }]}
+                  />
+                  <Pressable onPress={() => removeIngredient(i)} style={{ padding: 4 }}>
+                    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <Line x1={18} y1={6} x2={6} y2={18} />
+                      <Line x1={6} y1={6} x2={18} y2={18} />
+                    </Svg>
+                  </Pressable>
+                </View>
+              ))}
+              <Pressable onPress={addIngredient} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8 }}>
+                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                  <Line x1={12} y1={5} x2={12} y2={19} />
+                  <Line x1={5} y1={12} x2={19} y2={12} />
+                </Svg>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: "#E8571C" }}>Ajouter un ingrédient</Text>
+              </Pressable>
+            </>
+          )}
+
+          {step === 3 && (
+            <>
+              {steps.map((s, i) => (
+                <View key={i} style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
+                  <View style={{ width: 26, height: 26, borderRadius: 99, backgroundColor: "#E8571C", alignItems: "center", justifyContent: "center", marginTop: 11, flexShrink: 0 }}>
+                    <Text style={{ fontSize: 11, fontWeight: "900", color: "#fff" }}>{i + 1}</Text>
+                  </View>
+                  <TextInput
+                    value={s}
+                    onChangeText={(v) => setSteps((prev) => prev.map((st, idx) => idx === i ? v : st))}
+                    placeholder={`Étape ${i + 1}…`}
+                    placeholderTextColor="#A8A29E"
+                    multiline
+                    style={[inputStyle, { flex: 1, minHeight: 72, textAlignVertical: "top" }]}
+                  />
+                  <Pressable onPress={() => removeStep(i)} style={{ padding: 4, marginTop: 11 }}>
+                    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <Line x1={18} y1={6} x2={6} y2={18} />
+                      <Line x1={6} y1={6} x2={18} y2={18} />
+                    </Svg>
+                  </Pressable>
+                </View>
+              ))}
+              <Pressable onPress={addStep} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8 }}>
+                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                  <Line x1={12} y1={5} x2={12} y2={19} />
+                  <Line x1={5} y1={12} x2={19} y2={12} />
+                </Svg>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: "#E8571C" }}>Ajouter une étape</Text>
+              </Pressable>
+            </>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <BottomSheet isOpen={importSheet} onOpenChange={(v) => !v && setImportSheet(false)}>
-        <BottomSheet.Portal>
-          <BottomSheet.Overlay />
-          <BottomSheet.Content snapPoints={["40%"]}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 16 }}>
-              <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Importer depuis une URL</Text>
-              <BottomSheet.Close />
-            </View>
-            <View style={{ gap: 12 }}>
-              <TextInput
-                value={importUrl}
-                onChangeText={setImportUrl}
-                placeholder="https://www.marmiton.org/…"
-                placeholderTextColor="#A8A29E"
-                autoCapitalize="none"
-                keyboardType="url"
-                style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 13, fontSize: 14, color: "#1C1917" }}
-              />
-              {importing && <ActivityIndicator color="#E8571C" />}
-              {error && <Text style={{ fontSize: 12, color: "#DC2626" }}>{error}</Text>}
-              <Pressable
-                onPress={handleImport}
-                disabled={importing || !importUrl.trim()}
-                style={{ borderRadius: 16, backgroundColor: "#E8571C", paddingVertical: 14, alignItems: "center", opacity: (importing || !importUrl.trim()) ? 0.6 : 1 }}
-              >
-                <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>{importing ? "Importation…" : "Importer"}</Text>
-              </Pressable>
-            </View>
-          </BottomSheet.Content>
-        </BottomSheet.Portal>
-      </BottomSheet>
+      {/* Import URL sheet */}
+      <BottomModal isOpen={importSheet} onClose={() => setImportSheet(false)} height="auto">
+        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Importer depuis une URL</Text>
+        <View style={{ gap: 12, paddingBottom: 8 }}>
+          <TextInput
+            value={importUrl}
+            onChangeText={setImportUrl}
+            placeholder="https://www.marmiton.org/…"
+            placeholderTextColor="#A8A29E"
+            autoCapitalize="none"
+            keyboardType="url"
+            style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 13, fontSize: 14, color: "#1C1917" }}
+          />
+          {importing && <ActivityIndicator color="#E8571C" />}
+          {error && <Text style={{ fontSize: 12, color: "#DC2626" }}>{error}</Text>}
+          <Pressable
+            onPress={handleImport}
+            disabled={importing || !importUrl.trim()}
+            style={{ borderRadius: 16, backgroundColor: "#E8571C", paddingVertical: 14, alignItems: "center", opacity: (importing || !importUrl.trim()) ? 0.6 : 1 }}
+          >
+            <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>{importing ? "Importation…" : "Importer"}</Text>
+          </Pressable>
+        </View>
+      </BottomModal>
 
-      <BottomSheet isOpen={unitSheet !== null} onOpenChange={(v) => !v && setUnitSheet(null)}>
-        <BottomSheet.Portal>
-          <BottomSheet.Overlay />
-          <BottomSheet.Content snapPoints={["50%"]}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 16 }}>
-              <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Choisir une unité</Text>
-              <BottomSheet.Close />
-            </View>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {COMMON_UNITS.map((u) => (
-                <Pressable
-                  key={u}
-                  onPress={() => { if (unitSheet !== null) updateIngredient(unitSheet, "unit", u); setUnitSheet(null); }}
-                  style={{ borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: unitSheet !== null && ingredients[unitSheet]?.unit === u ? "#E8571C" : "#F5F3EF" }}
-                >
-                  <Text style={{ fontSize: 14, fontWeight: "600", color: unitSheet !== null && ingredients[unitSheet]?.unit === u ? "#fff" : "#1C1917" }}>{u}</Text>
-                </Pressable>
-              ))}
-            </View>
-          </BottomSheet.Content>
-        </BottomSheet.Portal>
-      </BottomSheet>
+      {/* Unit picker sheet */}
+      <BottomModal isOpen={unitSheet !== null} onClose={() => setUnitSheet(null)} height="auto">
+        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Choisir une unité</Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, paddingBottom: 8 }}>
+          {COMMON_UNITS.map((u) => (
+            <Pressable
+              key={u}
+              onPress={() => { if (unitSheet !== null) updateIngredient(unitSheet, "unit", u); setUnitSheet(null); }}
+              style={{
+                borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10,
+                backgroundColor: unitSheet !== null && ingredients[unitSheet]?.unit === u ? "#E8571C" : "#F5F3EF",
+              }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: "600", color: unitSheet !== null && ingredients[unitSheet]?.unit === u ? "#fff" : "#1C1917" }}>{u}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </BottomModal>
     </SafeAreaView>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <View style={{ gap: 12 }}>
-      <Text style={{ fontSize: 13, fontWeight: "800", color: "#1C1917", textTransform: "uppercase", letterSpacing: 0.8 }}>{title}</Text>
-      {children}
-    </View>
   );
 }
 
 function Field({ label, children, style }: { label: string; children: React.ReactNode; style?: object }) {
   return (
     <View style={[{ gap: 6 }, style]}>
-      <Text style={{ fontSize: 11, fontWeight: "600", color: "#78716C" }}>{label}</Text>
+      <Text style={{ fontSize: 11, fontWeight: "700", color: "#78716C", textTransform: "uppercase", letterSpacing: 1 }}>{label}</Text>
       {children}
     </View>
   );
