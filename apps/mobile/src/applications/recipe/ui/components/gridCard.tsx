@@ -9,9 +9,8 @@ export function GridCard({ recipe, onPress }: { recipe: Recipe; onPress: () => v
   const pal = paletteFor(recipe.name);
   const totalTime = (recipe.prepTimeMinutes ?? 0) + (recipe.cookTimeMinutes ?? 0);
   const hasImg = !!recipe.imageUrl;
-  const textColor = hasImg ? "#fff" : pal.text;
-  const mutedColor = hasImg ? "rgba(255,255,255,0.65)" : `${pal.accent}cc`;
   const badgeBg = hasImg ? "rgba(0,0,0,0.38)" : `${pal.accent}1a`;
+  const badgeText = hasImg ? "#fff" : pal.accent;
 
   return (
     <PressableFeedback
@@ -43,56 +42,48 @@ export function GridCard({ recipe, onPress }: { recipe: Recipe; onPress: () => v
 
         {/* Top row */}
         <View style={{ position: "absolute", top: 10, left: 10, right: 10, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <View style={{ flexDirection: "row", gap: 5, flexShrink: 1 }}>
-            {recipe.dietaryTags.length > 0 && (
-              <View style={{ borderRadius: 99, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: badgeBg }}>
-                <Text style={{ fontSize: 9, fontWeight: "700", color: hasImg ? "rgba(255,255,255,0.9)" : pal.text, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                  {DIETARY_LABELS[recipe.dietaryTags[0]] ?? recipe.dietaryTags[0]}
-                </Text>
-              </View>
-            )}
-            {recipe.isFavorite && recipe.dietaryTags.length === 0 && (
-              <View style={{ borderRadius: 99, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: badgeBg }}>
-                <Svg width={10} height={10} viewBox="0 0 24 24" fill={hasImg ? "#fff" : pal.accent} stroke="none">
-                  <Path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                </Svg>
-              </View>
-            )}
-          </View>
+          {recipe.dietaryTags.length > 0 ? (
+            <View style={{ borderRadius: 99, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: badgeBg }}>
+              <Text style={{ fontSize: 9, fontWeight: "700", color: hasImg ? "rgba(255,255,255,0.9)" : pal.text, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                {DIETARY_LABELS[recipe.dietaryTags[0]] ?? recipe.dietaryTags[0]}
+              </Text>
+            </View>
+          ) : (
+            <View />
+          )}
 
           {totalTime > 0 && (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 99, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: badgeBg }}>
-              <Svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke={hasImg ? "#fff" : pal.accent} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+              <Svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke={badgeText} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                 <Circle cx={12} cy={12} r={10} />
                 <Polyline points="12 6 12 12 16 14" />
               </Svg>
-              <Text style={{ fontSize: 10, fontWeight: "700", color: hasImg ? "#fff" : pal.accent }}>{fmtTime(totalTime)}</Text>
+              <Text style={{ fontSize: 10, fontWeight: "700", color: badgeText }}>{fmtTime(totalTime)}</Text>
             </View>
           )}
         </View>
 
-        {/* Bottom overlay */}
-        <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 12, paddingBottom: 14 }}>
-          <Text numberOfLines={2} style={{ fontSize: 13, fontWeight: "900", color: textColor, lineHeight: 17, marginBottom: 5 }}>
+        {/* Bottom */}
+        <View style={{ position: "absolute", bottom: 12, left: 12, right: 12 }}>
+          <Text numberOfLines={2} style={{ fontSize: 13, fontWeight: "900", color: hasImg ? "#fff" : pal.text, lineHeight: 17, marginBottom: 7 }}>
             {recipe.name}
           </Text>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-              <Svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke={mutedColor} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 3, borderRadius: 99, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: badgeBg }}>
+              <Svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke={badgeText} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                 <Path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                 <Circle cx={9} cy={7} r={4} />
               </Svg>
-              <Text style={{ fontSize: 11, fontWeight: "600", color: mutedColor }}>{recipe.servings} pers.</Text>
+              <Text style={{ fontSize: 10, fontWeight: "700", color: badgeText }}>{recipe.servings} pers.</Text>
             </View>
             {recipe.ingredients.length > 0 && (
-              <>
-                <Text style={{ color: mutedColor, fontSize: 10 }}>·</Text>
-                <Text style={{ fontSize: 11, fontWeight: "600", color: mutedColor }}>{recipe.ingredients.length} ingr.</Text>
-              </>
+              <View style={{ borderRadius: 99, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: badgeBg }}>
+                <Text style={{ fontSize: 10, fontWeight: "700", color: badgeText }}>{recipe.ingredients.length} ingr.</Text>
+              </View>
             )}
             {recipe.isFavorite && (
-              <View style={{ marginLeft: "auto" }}>
-                <Svg width={11} height={11} viewBox="0 0 24 24" fill={hasImg ? "rgba(255,255,255,0.85)" : pal.accent} stroke="none">
+              <View style={{ marginLeft: "auto", width: 24, height: 24, borderRadius: 12, backgroundColor: badgeBg, alignItems: "center", justifyContent: "center" }}>
+                <Svg width={11} height={11} viewBox="0 0 24 24" fill={badgeText} stroke="none">
                   <Path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                 </Svg>
               </View>
