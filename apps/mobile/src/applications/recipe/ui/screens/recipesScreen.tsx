@@ -5,7 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Line, Polyline } from "react-native-svg";
-import { BottomModal, BottomModalScrollView } from "../../../shopping/ui/components/bottomModal";
+import { BottomModal } from "../../../shopping/ui/components/bottomModal";
 import { useRecipes } from "../../api/useRecipes";
 import type { Recipe } from "../../domain/entities/recipe";
 import { GridCard } from "../components/gridCard";
@@ -272,26 +272,18 @@ export function RecipesScreen() {
         </Svg>
       </Pressable>
 
-      <BottomModal isOpen={filterOpen} onClose={() => setFilterOpen(false)} height="75%">
+      <BottomModal isOpen={filterOpen} onClose={() => setFilterOpen(false)} height="auto">
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 16 }}>
             <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Filtres</Text>
-            <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
-              {(activeTags.length > 0 || timeFilter !== "any" || sort !== "recent") && (
-                <Pressable onPress={() => { setActiveTags([]); setTimeFilter("any"); setSort("recent"); }}>
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#E8571C" }}>Tout effacer</Text>
-                </Pressable>
-              )}
-              <Pressable onPress={() => setFilterOpen(false)}>
-                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <Line x1={18} y1={6} x2={6} y2={18} />
-                  <Line x1={6} y1={6} x2={18} y2={18} />
-                </Svg>
+            {(activeTags.length > 0 || timeFilter !== "any" || sort !== "recent") && (
+              <Pressable onPress={() => { setActiveTags([]); setTimeFilter("any"); setSort("recent"); }}>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: "#E8571C" }}>Tout effacer</Text>
               </Pressable>
-            </View>
+            )}
           </View>
 
-          <BottomModalScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
+          <View style={{ paddingBottom: 8 }}>
             {allTags.length > 0 && (
               <View style={{ marginBottom: 20 }}>
                 <Text style={{ fontSize: 11, fontWeight: "700", color: "#78716C99", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Régime</Text>
@@ -355,7 +347,7 @@ export function RecipesScreen() {
             <Button variant="primary" className="w-full rounded-2xl" onPress={() => setFilterOpen(false)}>
               <Button.Label>Appliquer</Button.Label>
             </Button>
-          </BottomModalScrollView>
+          </View>
         </View>
       </BottomModal>
     </SafeAreaView>
