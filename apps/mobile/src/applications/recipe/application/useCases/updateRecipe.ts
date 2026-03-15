@@ -11,6 +11,7 @@ export async function updateRecipe(id: string, input: RecipeInput): Promise<{ er
       prep_time_minutes: input.prepTimeMinutes,
       cook_time_minutes: input.cookTimeMinutes,
       dietary_tags: input.dietaryTags,
+      image_url: input.imageUrl,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id);

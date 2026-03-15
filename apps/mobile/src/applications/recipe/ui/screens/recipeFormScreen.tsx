@@ -1,12 +1,14 @@
+import * as ImagePicker from "expo-image-picker";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Line, Path, Polyline } from "react-native-svg";
-import { BottomModal, BottomModalScrollView } from "../../../shopping/ui/components/bottomModal";
+import { BottomModal } from "../../../shopping/ui/components/bottomModal";
 import { createRecipe } from "../../application/useCases/createRecipe";
 import type { RecipeIngredientInput } from "../../application/useCases/createRecipe";
 import { importRecipeFromUrl } from "../../application/useCases/importRecipeFromUrl";
 import { updateRecipe } from "../../application/useCases/updateRecipe";
+import { uploadRecipeImage } from "../../application/useCases/uploadRecipeImage";
 import type { Recipe } from "../../domain/entities/recipe";
 
 const DIETARY_OPTIONS = [
@@ -48,6 +50,10 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
     existingRecipe?.steps.map((s) => s.description) ?? [""]
   );
 
+  const [imageUri, setImageUri] = useState<string | null>(existingRecipe?.imageUrl ?? null);
+  const [imageUrl, setImageUrl] = useState<string | null>(existingRecipe?.imageUrl ?? null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [importUrl, setImportUrl] = useState("");
@@ -78,6 +84,23 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
     setImportUrl("");
   }
 
+  async function pickImage() {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+    if (result.canceled) return;
+    const uri = result.assets[0].uri;
+    setImageUri(uri);
+    setUploadingImage(true);
+    const uploaded = await uploadRecipeImage(uri);
+    setUploadingImage(false);
+    if (typeof uploaded === "object") { setError(uploaded.error); return; }
+    setImageUrl(uploaded);
+  }
+
   async function handleSubmit() {
     setSubmitting(true);
     setError(null);
@@ -88,6 +111,7 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
       prepTimeMinutes: prepTime ? parseInt(prepTime) : null,
       cookTimeMinutes: cookTime ? parseInt(cookTime) : null,
       dietaryTags,
+      imageUrl,
       ingredients: ingredients.filter((i) => i.name.trim()),
       steps: steps.filter((s) => s.trim()),
     };
@@ -210,6 +234,44 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
 
           {step === 1 && (
             <>
+              <Pressable
+                onPress={pickImage}
+                style={{
+                  height: 180, borderRadius: 16, overflow: "hidden",
+                  backgroundColor: "#F5F3EF",
+                  alignItems: "center", justifyContent: "center",
+                }}
+              >
+                {imageUri ? (
+                  <>
+                    <Image source={{ uri: imageUri }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} resizeMode="cover" />
+                    {uploadingImage && (
+                      <View style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.4)", alignItems: "center", justifyContent: "center" }}>
+                        <ActivityIndicator color="#fff" size="large" />
+                      </View>
+                    )}
+                    {!uploadingImage && (
+                      <View style={{ position: "absolute", top: 10, right: 10, width: 32, height: 32, borderRadius: 99, backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center" }}>
+                        <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                          <Path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                          <circle cx="12" cy="13" r="4" />
+                        </Svg>
+                      </View>
+                    )}
+                  </>
+                ) : (
+                  <View style={{ alignItems: "center", gap: 8 }}>
+                    <View style={{ width: 44, height: 44, borderRadius: 99, backgroundColor: "#E7E5E4", alignItems: "center", justifyContent: "center" }}>
+                      <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                        <Path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                        <circle cx="12" cy="13" r="4" />
+                      </Svg>
+                    </View>
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: "#A8A29E" }}>Ajouter une photo</Text>
+                  </View>
+                )}
+              </Pressable>
+
               <Field label="Nom *">
                 <TextInput
                   value={name}
