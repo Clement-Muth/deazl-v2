@@ -9,7 +9,6 @@ import { BottomModal } from "../../../shopping/ui/components/bottomModal";
 import { useRecipes } from "../../api/useRecipes";
 import type { Recipe } from "../../domain/entities/recipe";
 import { GridCard } from "../components/gridCard";
-import { HeroCard } from "../components/heroCard";
 import { ListCard } from "../components/listCard";
 import { DIETARY_LABELS } from "../components/recipeUtils";
 import { ThumbCard } from "../components/thumbCard";
@@ -79,13 +78,18 @@ export function RecipesScreen() {
 
   const favorites = useMemo(() => recipes.filter((r) => r.isFavorite), [recipes]);
 
-  const quickRecipes = useMemo(() => recipes.filter((r) => {
-    const t = (r.prepTimeMinutes ?? 0) + (r.cookTimeMinutes ?? 0);
-    return t > 0 && t <= 30;
-  }), [recipes]);
+  const quickRecipes = useMemo(() => {
+    const favIds = new Set(favorites.map((r) => r.id));
+    return recipes.filter((r) => {
+      const t = (r.prepTimeMinutes ?? 0) + (r.cookTimeMinutes ?? 0);
+      return t > 0 && t <= 30 && !favIds.has(r.id);
+    });
+  }, [recipes, favorites]);
 
-  const heroRecipe = !isFiltering && recipes.length > 0 ? recipes[0] : null;
-  const gridRecipes = !isFiltering ? recipes.slice(1) : [];
+  const remainingRecipes = useMemo(() => {
+    const shownIds = new Set([...favorites, ...quickRecipes].map((r) => r.id));
+    return recipes.filter((r) => !shownIds.has(r.id));
+  }, [recipes, favorites, quickRecipes]);
 
   function toggleTag(tag: string) {
     setActiveTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]);
@@ -201,12 +205,6 @@ export function RecipesScreen() {
               </View>
             ) : (
               <>
-                {heroRecipe && (
-                  <View style={{ marginBottom: 20 }}>
-                    <HeroCard recipe={heroRecipe} onPress={() => goToRecipe(heroRecipe.id)} />
-                  </View>
-                )}
-
                 {favorites.length > 0 && (
                   <View style={{ marginBottom: 20 }}>
                     <SectionLabel label="Mes favoris" />
@@ -229,11 +227,11 @@ export function RecipesScreen() {
                   </View>
                 )}
 
-                {gridRecipes.length > 0 && (
+                {remainingRecipes.length > 0 && (
                   <View style={{ marginBottom: 20 }}>
                     <SectionLabel label="Toutes les recettes" />
                     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, paddingHorizontal: 16 }}>
-                      {gridRecipes.map((recipe) => (
+                      {remainingRecipes.map((recipe) => (
                         <View key={recipe.id} style={{ width: GRID_CARD_WIDTH }}>
                           <GridCard recipe={recipe} onPress={() => goToRecipe(recipe.id)} />
                         </View>
