@@ -1,46 +1,18 @@
-import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
-import { LinearGradient } from "expo-linear-gradient";
+import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { BottomSheet, Button, Card, Chip, PressableFeedback, SearchField } from "heroui-native";
-import { useMemo, useState } from "react";
-import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from "react-native";
+import { Button, Chip, SearchField } from "heroui-native";
+import { useCallback, useMemo, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Svg, { Circle, Line, Path, Polygon, Polyline } from "react-native-svg";
+import Svg, { Circle, Line, Polyline } from "react-native-svg";
+import { BottomModal, BottomModalScrollView } from "../../../shopping/ui/components/bottomModal";
 import { useRecipes } from "../../api/useRecipes";
 import type { Recipe } from "../../domain/entities/recipe";
-
-const DIETARY_LABELS: Record<string, string> = {
-  vegetarian: "Végétarien",
-  vegan: "Vegan",
-  gluten_free: "Sans gluten",
-  lactose_free: "Sans lait",
-  halal: "Halal",
-  kosher: "Casher",
-  no_pork: "Sans porc",
-  no_seafood: "Sans mer",
-};
-
-const PALETTES = [
-  { bg: "#FFF7ED", accent: "#EA580C", text: "#9A3412" },
-  { bg: "#FEF3C7", accent: "#D97706", text: "#92400E" },
-  { bg: "#FDF2F8", accent: "#C026D3", text: "#701A75" },
-  { bg: "#EFF6FF", accent: "#2563EB", text: "#1E3A8A" },
-  { bg: "#F0FDF4", accent: "#16A34A", text: "#14532D" },
-  { bg: "#FFF1F2", accent: "#E11D48", text: "#881337" },
-];
-
-function paletteFor(name: string) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) & 0xffffffff;
-  return PALETTES[Math.abs(hash) % PALETTES.length];
-}
-
-function fmtTime(min: number) {
-  if (min < 60) return `${min}mn`;
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return m > 0 ? `${h}h${m}` : `${h}h`;
-}
+import { GridCard } from "../components/gridCard";
+import { HeroCard } from "../components/heroCard";
+import { ListCard } from "../components/listCard";
+import { DIETARY_LABELS } from "../components/recipeUtils";
+import { ThumbCard } from "../components/thumbCard";
 
 function normalize(s: string) {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -48,299 +20,6 @@ function normalize(s: string) {
 
 type SortOption = "recent" | "fast" | "slow";
 type QuickFilter = "favorites" | null;
-
-function HeroCard({ recipe, onPress }: { recipe: Recipe; onPress: () => void }) {
-  const pal = paletteFor(recipe.name);
-  const totalTime = (recipe.prepTimeMinutes ?? 0) + (recipe.cookTimeMinutes ?? 0);
-  const hasImg = !!recipe.imageUrl;
-
-  return (
-    <PressableFeedback
-      onPress={onPress}
-      style={{
-        marginHorizontal: 16,
-        height: 240,
-        borderRadius: 24,
-        overflow: "hidden",
-        backgroundColor: hasImg ? undefined : pal.bg,
-        shadowColor: "#1C1917",
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.16,
-        shadowRadius: 28,
-        elevation: 8,
-      }}
-    >
-      {hasImg ? (
-        <Image source={{ uri: recipe.imageUrl! }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} resizeMode="cover" />
-      ) : (
-        <Text style={{ position: "absolute", right: 16, top: "30%", fontSize: 140, fontWeight: "900", color: pal.accent, opacity: 0.09, lineHeight: 140 }}>
-          {recipe.name.charAt(0).toUpperCase()}
-        </Text>
-      )}
-
-      {hasImg ? (
-        <LinearGradient
-          colors={["transparent", "rgba(0,0,0,0.18)", "rgba(0,0,0,0.82)"]}
-          locations={[0, 0.5, 1]}
-          style={{ position: "absolute", inset: 0 }}
-        />
-      ) : (
-        <LinearGradient
-          colors={[`${pal.bg}00`, pal.bg]}
-          locations={[0, 0.65]}
-          start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-          style={{ position: "absolute", inset: 0 }}
-        />
-      )}
-
-      {totalTime > 0 && (
-        <View style={{
-          position: "absolute", top: 16, right: 16,
-          flexDirection: "row", alignItems: "center", gap: 4,
-          borderRadius: 99, paddingHorizontal: 10, paddingVertical: 6,
-          backgroundColor: hasImg ? "rgba(0,0,0,0.38)" : `${pal.accent}20`,
-        }}>
-          <Svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke={hasImg ? "#fff" : pal.accent} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-            <Circle cx={12} cy={12} r={10} />
-            <Polyline points="12 6 12 12 16 14" />
-          </Svg>
-          <Text style={{ fontSize: 11, fontWeight: "700", color: hasImg ? "#fff" : pal.accent }}>{fmtTime(totalTime)}</Text>
-        </View>
-      )}
-
-      <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 20 }}>
-        {recipe.dietaryTags.length > 0 && (
-          <View style={{ flexDirection: "row", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
-            {recipe.dietaryTags.slice(0, 2).map((tag) => (
-              <View key={tag} style={{
-                borderRadius: 99, paddingHorizontal: 8, paddingVertical: 2,
-                backgroundColor: hasImg ? "rgba(255,255,255,0.18)" : `${pal.accent}20`,
-              }}>
-                <Text style={{ fontSize: 9, fontWeight: "700", color: hasImg ? "rgba(255,255,255,0.9)" : pal.text, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                  {DIETARY_LABELS[tag] ?? tag}
-                </Text>
-              </View>
-            ))}
-          </View>
-        )}
-        <Text numberOfLines={2} style={{ fontSize: 20, fontWeight: "900", color: hasImg ? "#fff" : pal.text, letterSpacing: -0.5, lineHeight: 26, marginBottom: 8 }}>
-          {recipe.name}
-        </Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-            <Svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke={hasImg ? "rgba(255,255,255,0.65)" : pal.accent} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <Path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-              <Circle cx={9} cy={7} r={4} />
-            </Svg>
-            <Text style={{ fontSize: 12, fontWeight: "600", color: hasImg ? "rgba(255,255,255,0.65)" : pal.accent }}>{recipe.servings} pers.</Text>
-          </View>
-          {recipe.ingredients.length > 0 && (
-            <>
-              <Text style={{ color: hasImg ? "rgba(255,255,255,0.3)" : `${pal.accent}50` }}>·</Text>
-              <Text style={{ fontSize: 12, fontWeight: "600", color: hasImg ? "rgba(255,255,255,0.65)" : pal.accent }}>{recipe.ingredients.length} ingr.</Text>
-            </>
-          )}
-        </View>
-      </View>
-    </PressableFeedback>
-  );
-}
-
-function ThumbCard({ recipe, onPress }: { recipe: Recipe; onPress: () => void }) {
-  const pal = paletteFor(recipe.name);
-  const totalTime = (recipe.prepTimeMinutes ?? 0) + (recipe.cookTimeMinutes ?? 0);
-  const hasImg = !!recipe.imageUrl;
-
-  return (
-    <PressableFeedback
-      onPress={onPress}
-      style={{
-        width: 160, borderRadius: 16, overflow: "hidden",
-        backgroundColor: hasImg ? "#fff" : pal.bg,
-        shadowColor: "#1C1917", shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1, shadowRadius: 8, elevation: 3,
-        flexShrink: 0,
-      }}
-    >
-      <View style={{ height: 112, backgroundColor: pal.bg, overflow: "hidden" }}>
-        {hasImg ? (
-          <>
-            <Image source={{ uri: recipe.imageUrl! }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} resizeMode="cover" />
-            <LinearGradient colors={["transparent", "rgba(0,0,0,0.65)"]} locations={[0.45, 1]} style={{ position: "absolute", inset: 0 }} />
-          </>
-        ) : (
-          <Text style={{ position: "absolute", right: 4, top: "30%", fontSize: 68, fontWeight: "900", color: pal.accent, opacity: 0.11, lineHeight: 68 }}>
-            {recipe.name.charAt(0).toUpperCase()}
-          </Text>
-        )}
-        {totalTime > 0 && (
-          <View style={{
-            position: "absolute", bottom: 8, right: 8,
-            flexDirection: "row", alignItems: "center", gap: 2,
-            borderRadius: 99, paddingHorizontal: 6, paddingVertical: 2,
-            backgroundColor: hasImg ? "rgba(0,0,0,0.4)" : `${pal.accent}1a`,
-          }}>
-            <Svg width={8} height={8} viewBox="0 0 24 24" fill="none" stroke={hasImg ? "#fff" : pal.accent} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-              <Circle cx={12} cy={12} r={10} />
-              <Polyline points="12 6 12 12 16 14" />
-            </Svg>
-            <Text style={{ fontSize: 9, fontWeight: "700", color: hasImg ? "#fff" : pal.accent }}>{fmtTime(totalTime)}</Text>
-          </View>
-        )}
-        {hasImg && (
-          <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, paddingHorizontal: 10, paddingBottom: 8 }}>
-            <Text numberOfLines={2} style={{ fontSize: 11, fontWeight: "900", color: "#fff", lineHeight: 14 }}>{recipe.name}</Text>
-          </View>
-        )}
-      </View>
-      {!hasImg && (
-        <View style={{ paddingHorizontal: 10, paddingVertical: 8, gap: 2 }}>
-          <Text numberOfLines={2} style={{ fontSize: 11, fontWeight: "700", color: pal.text, lineHeight: 14 }}>{recipe.name}</Text>
-          <Text style={{ fontSize: 10, color: `${pal.accent}80` }}>{recipe.servings} pers.</Text>
-        </View>
-      )}
-      {hasImg && (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 6 }}>
-          <Svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="#A8A29E80" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-            <Path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-            <Circle cx={9} cy={7} r={4} />
-          </Svg>
-          <Text style={{ fontSize: 10, fontWeight: "600", color: "#78716C99" }}>{recipe.servings} pers.</Text>
-        </View>
-      )}
-    </PressableFeedback>
-  );
-}
-
-function GridCard({ recipe, onPress, matchRatio }: { recipe: Recipe; onPress: () => void; matchRatio?: number }) {
-  const pal = paletteFor(recipe.name);
-  const totalTime = (recipe.prepTimeMinutes ?? 0) + (recipe.cookTimeMinutes ?? 0);
-  const hasImg = !!recipe.imageUrl;
-
-  return (
-    <PressableFeedback
-      onPress={onPress}
-      style={{
-        flex: 1, borderRadius: 16, overflow: "hidden",
-        backgroundColor: hasImg ? undefined : pal.bg,
-        shadowColor: "#1C1917", shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1, shadowRadius: 10, elevation: 4,
-      }}
-    >
-      <View style={{ height: 176, justifyContent: "flex-end", overflow: "hidden" }}>
-        {hasImg ? (
-          <>
-            <Image source={{ uri: recipe.imageUrl! }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} resizeMode="cover" />
-            <LinearGradient colors={["transparent", "rgba(0,0,0,0.05)", "rgba(0,0,0,0.78)"]} locations={[0, 0.45, 1]} style={{ position: "absolute", inset: 0 }} />
-          </>
-        ) : (
-          <Text style={{ position: "absolute", right: 8, top: "30%", fontSize: 80, fontWeight: "900", color: pal.accent, opacity: 0.11, lineHeight: 80 }}>
-            {recipe.name.charAt(0).toUpperCase()}
-          </Text>
-        )}
-
-        {totalTime > 0 && (
-          <View style={{
-            position: "absolute", top: 10, right: 10,
-            flexDirection: "row", alignItems: "center", gap: 4,
-            borderRadius: 99, paddingHorizontal: 8, paddingVertical: 4,
-            backgroundColor: hasImg ? "rgba(0,0,0,0.38)" : `${pal.accent}1a`,
-          }}>
-            <Svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke={hasImg ? "#fff" : pal.accent} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-              <Circle cx={12} cy={12} r={10} />
-              <Polyline points="12 6 12 12 16 14" />
-            </Svg>
-            <Text style={{ fontSize: 10, fontWeight: "700", color: hasImg ? "#fff" : pal.accent }}>{fmtTime(totalTime)}</Text>
-          </View>
-        )}
-        {matchRatio !== undefined && (
-          <View style={{
-            position: "absolute", top: 10, left: 10,
-            flexDirection: "row", alignItems: "center", gap: 4,
-            borderRadius: 99, paddingHorizontal: 8, paddingVertical: 4,
-            backgroundColor: matchRatio > 0 ? "#f59e0b" : "rgba(0,0,0,0.35)",
-          }}>
-            <Text style={{ fontSize: 9, fontWeight: "700", color: "#fff" }}>{Math.round(matchRatio * 100)}%</Text>
-          </View>
-        )}
-
-        <View style={{
-          paddingHorizontal: 12, paddingBottom: 12, paddingTop: 40,
-        }}>
-          <Text numberOfLines={2} style={{ fontSize: 13, fontWeight: "900", color: hasImg ? "#fff" : pal.text, lineHeight: 17 }}>
-            {recipe.name}
-          </Text>
-        </View>
-      </View>
-
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: hasImg ? "#fff" : pal.bg }}>
-        <Svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="#A8A29E80" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-          <Path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-          <Circle cx={9} cy={7} r={4} />
-        </Svg>
-        <Text style={{ fontSize: 11, fontWeight: "600", color: "#78716C" }}>{recipe.servings}</Text>
-        {recipe.dietaryTags.length > 0 && (
-          <>
-            <Text style={{ color: "#A8A29E40" }}>·</Text>
-            <View style={{ borderRadius: 99, paddingHorizontal: 6, paddingVertical: 2, backgroundColor: `${pal.accent}15` }}>
-              <Text style={{ fontSize: 9, fontWeight: "700", color: pal.text, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                {DIETARY_LABELS[recipe.dietaryTags[0]] ?? recipe.dietaryTags[0]}
-              </Text>
-            </View>
-          </>
-        )}
-      </View>
-    </PressableFeedback>
-  );
-}
-
-function ListCard({ recipe, onPress }: { recipe: Recipe; onPress: () => void }) {
-  const pal = paletteFor(recipe.name);
-  const totalTime = (recipe.prepTimeMinutes ?? 0) + (recipe.cookTimeMinutes ?? 0);
-
-  return (
-    <Card>
-      <PressableFeedback onPress={onPress} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 12, paddingVertical: 12 }}>
-        <View style={{ width: 64, height: 64, borderRadius: 12, overflow: "hidden", backgroundColor: recipe.imageUrl ? undefined : pal.bg, flexShrink: 0 }}>
-          {recipe.imageUrl ? (
-            <Image source={{ uri: recipe.imageUrl }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
-          ) : (
-            <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-              <Text style={{ fontSize: 24, fontWeight: "900", color: pal.accent, opacity: 0.5 }}>{recipe.name.charAt(0).toUpperCase()}</Text>
-            </View>
-          )}
-        </View>
-        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-          <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "700", color: "#1C1917" }}>{recipe.name}</Text>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            {totalTime > 0 && (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                <Svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <Circle cx={12} cy={12} r={10} />
-                  <Polyline points="12 6 12 12 16 14" />
-                </Svg>
-                <Text style={{ fontSize: 11, color: "#78716C" }}>{fmtTime(totalTime)}</Text>
-              </View>
-            )}
-            {recipe.dietaryTags.slice(0, 2).map((tag) => (
-              <View key={tag} style={{ borderRadius: 99, paddingHorizontal: 6, paddingVertical: 2, backgroundColor: `${pal.accent}15` }}>
-                <Text style={{ fontSize: 9, fontWeight: "700", color: pal.text }}>
-                  {DIETARY_LABELS[tag] ?? tag}
-                </Text>
-              </View>
-            ))}
-          </View>
-          {recipe.description ? (
-            <Text numberOfLines={1} style={{ fontSize: 11, color: "#78716C99" }}>{recipe.description}</Text>
-          ) : null}
-        </View>
-        <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E40" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-          <Polyline points="9 18 15 12 9 6" />
-        </Svg>
-      </PressableFeedback>
-    </Card>
-  );
-}
 
 function SectionLabel({ label }: { label: string }) {
   return (
@@ -352,13 +31,15 @@ function SectionLabel({ label }: { label: string }) {
 
 export function RecipesScreen() {
   const router = useRouter();
-  const { recipes, loading } = useRecipes();
+  const { recipes, loading, refetch } = useRecipes();
   const [search, setSearch] = useState("");
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [timeFilter, setTimeFilter] = useState("any");
   const [sort, setSort] = useState<SortOption>("recent");
   const [filterOpen, setFilterOpen] = useState(false);
   const [quickFilter, setQuickFilter] = useState<QuickFilter>(null);
+
+  useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
@@ -432,11 +113,9 @@ export function RecipesScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#FAF9F6" }} edges={["top"]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
-        {/* Header */}
         <View style={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 8 }}>
           <Text style={{ fontSize: 28, fontWeight: "900", color: "#1C1917", letterSpacing: -0.5, marginBottom: 16 }}>Recettes</Text>
 
-          {/* Search row */}
           <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
             <View style={{ flex: 1 }}>
               <SearchField value={search} onChange={setSearch}>
@@ -475,7 +154,6 @@ export function RecipesScreen() {
             </Pressable>
           </View>
 
-          {/* Quick filters */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }} contentContainerStyle={{ gap: 6 }}>
             <Chip
               variant={quickFilter === "favorites" ? "primary" : "secondary"}
@@ -492,7 +170,6 @@ export function RecipesScreen() {
           </ScrollView>
         </View>
 
-        {/* Content */}
         {isFiltering ? (
           <View style={{ paddingHorizontal: 16, gap: 12 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
@@ -524,7 +201,7 @@ export function RecipesScreen() {
               </View>
             ) : (
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-                {filtered.map((recipe, i) => (
+                {filtered.map((recipe) => (
                   <View key={recipe.id} style={{ width: "47%" }}>
                     <GridCard recipe={recipe} onPress={() => goToRecipe(recipe.id)} />
                   </View>
@@ -577,7 +254,6 @@ export function RecipesScreen() {
         )}
       </ScrollView>
 
-      {/* FAB */}
       <Pressable
         onPress={() => router.push("/recipe/new" as never)}
         style={({ pressed }) => ({
@@ -596,93 +272,92 @@ export function RecipesScreen() {
         </Svg>
       </Pressable>
 
-      {/* Filter BottomSheet */}
-      <BottomSheet isOpen={filterOpen} onOpenChange={setFilterOpen}>
-        <BottomSheet.Portal>
-          <BottomSheet.Overlay />
-          <BottomSheet.Content snapPoints={["75%"]}>
-            <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 16 }}>
-              <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Filtres</Text>
-              <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
-                {(activeTags.length > 0 || timeFilter !== "any" || sort !== "recent") && (
-                  <Pressable onPress={() => { setActiveTags([]); setTimeFilter("any"); setSort("recent"); }}>
-                    <Text style={{ fontSize: 12, fontWeight: "600", color: "#E8571C" }}>Tout effacer</Text>
-                  </Pressable>
-                )}
-                <BottomSheet.Close />
-              </View>
-            </View>
-
-            <BottomSheetScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
-              {allTags.length > 0 && (
-                <View style={{ marginBottom: 20 }}>
-                  <Text style={{ fontSize: 11, fontWeight: "700", color: "#78716C99", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Régime</Text>
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                    {allTags.map((tag) => (
-                      <Pressable
-                        key={tag}
-                        onPress={() => toggleTag(tag)}
-                        style={{
-                          borderRadius: 99, paddingHorizontal: 14, paddingVertical: 8,
-                          backgroundColor: activeTags.includes(tag) ? "#E8571C" : "#F5F3EF",
-                        }}
-                      >
-                        <Text style={{ fontSize: 12, fontWeight: "700", color: activeTags.includes(tag) ? "#fff" : "#78716C" }}>
-                          {DIETARY_LABELS[tag] ?? tag}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                </View>
+      <BottomModal isOpen={filterOpen} onClose={() => setFilterOpen(false)} height="75%">
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 16 }}>
+            <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Filtres</Text>
+            <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
+              {(activeTags.length > 0 || timeFilter !== "any" || sort !== "recent") && (
+                <Pressable onPress={() => { setActiveTags([]); setTimeFilter("any"); setSort("recent"); }}>
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#E8571C" }}>Tout effacer</Text>
+                </Pressable>
               )}
-
-              <View style={{ marginBottom: 20 }}>
-                <Text style={{ fontSize: 11, fontWeight: "700", color: "#78716C99", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Temps total</Text>
-                <View style={{ flexDirection: "row", gap: 8 }}>
-                  {[["any", "Tout"], ["quick", "≤ 30 min"], ["medium", "≤ 60 min"]].map(([val, label]) => (
-                    <Pressable
-                      key={val}
-                      onPress={() => setTimeFilter(val)}
-                      style={{
-                        flex: 1, borderRadius: 16, paddingVertical: 10,
-                        alignItems: "center",
-                        backgroundColor: timeFilter === val ? "#E8571C" : "#F5F3EF",
-                      }}
-                    >
-                      <Text style={{ fontSize: 12, fontWeight: "700", color: timeFilter === val ? "#fff" : "#78716C" }}>{label}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-
-              <View style={{ marginBottom: 24 }}>
-                <Text style={{ fontSize: 11, fontWeight: "700", color: "#78716C99", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Trier par</Text>
-                <View style={{ flexDirection: "row", gap: 8 }}>
-                  {([["recent", "Plus récent"], ["fast", "Plus rapide"], ["slow", "Plus long"]] as [SortOption, string][]).map(([val, label]) => (
-                    <Pressable
-                      key={val}
-                      onPress={() => setSort(val)}
-                      style={{
-                        flex: 1, borderRadius: 16, paddingVertical: 10,
-                        alignItems: "center",
-                        backgroundColor: sort === val ? "#E8571C" : "#F5F3EF",
-                      }}
-                    >
-                      <Text style={{ fontSize: 12, fontWeight: "700", color: sort === val ? "#fff" : "#78716C" }}>{label}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-
-              <Button variant="primary" className="w-full rounded-2xl" onPress={() => setFilterOpen(false)}>
-                <Button.Label>Appliquer</Button.Label>
-              </Button>
-            </BottomSheetScrollView>
+              <Pressable onPress={() => setFilterOpen(false)}>
+                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <Line x1={18} y1={6} x2={6} y2={18} />
+                  <Line x1={6} y1={6} x2={18} y2={18} />
+                </Svg>
+              </Pressable>
             </View>
-          </BottomSheet.Content>
-        </BottomSheet.Portal>
-      </BottomSheet>
+          </View>
+
+          <BottomModalScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
+            {allTags.length > 0 && (
+              <View style={{ marginBottom: 20 }}>
+                <Text style={{ fontSize: 11, fontWeight: "700", color: "#78716C99", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Régime</Text>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                  {allTags.map((tag) => (
+                    <Pressable
+                      key={tag}
+                      onPress={() => toggleTag(tag)}
+                      style={{
+                        borderRadius: 99, paddingHorizontal: 14, paddingVertical: 8,
+                        backgroundColor: activeTags.includes(tag) ? "#E8571C" : "#F5F3EF",
+                      }}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: "700", color: activeTags.includes(tag) ? "#fff" : "#78716C" }}>
+                        {DIETARY_LABELS[tag] ?? tag}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            <View style={{ marginBottom: 20 }}>
+              <Text style={{ fontSize: 11, fontWeight: "700", color: "#78716C99", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Temps total</Text>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                {[["any", "Tout"], ["quick", "≤ 30 min"], ["medium", "≤ 60 min"]].map(([val, label]) => (
+                  <Pressable
+                    key={val}
+                    onPress={() => setTimeFilter(val)}
+                    style={{
+                      flex: 1, borderRadius: 16, paddingVertical: 10,
+                      alignItems: "center",
+                      backgroundColor: timeFilter === val ? "#E8571C" : "#F5F3EF",
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: "700", color: timeFilter === val ? "#fff" : "#78716C" }}>{label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            <View style={{ marginBottom: 24 }}>
+              <Text style={{ fontSize: 11, fontWeight: "700", color: "#78716C99", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Trier par</Text>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                {([["recent", "Plus récent"], ["fast", "Plus rapide"], ["slow", "Plus long"]] as [SortOption, string][]).map(([val, label]) => (
+                  <Pressable
+                    key={val}
+                    onPress={() => setSort(val)}
+                    style={{
+                      flex: 1, borderRadius: 16, paddingVertical: 10,
+                      alignItems: "center",
+                      backgroundColor: sort === val ? "#E8571C" : "#F5F3EF",
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: "700", color: sort === val ? "#fff" : "#78716C" }}>{label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            <Button variant="primary" className="w-full rounded-2xl" onPress={() => setFilterOpen(false)}>
+              <Button.Label>Appliquer</Button.Label>
+            </Button>
+          </BottomModalScrollView>
+        </View>
+      </BottomModal>
     </SafeAreaView>
   );
 }

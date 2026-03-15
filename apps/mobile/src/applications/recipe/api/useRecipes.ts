@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import type { Recipe } from "../domain/entities/recipe";
 import { getRecipes } from "../application/useCases/getRecipes";
 
@@ -7,12 +7,13 @@ export function useRecipes() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const refetch = useCallback(() => {
+    setLoading(true);
     getRecipes()
       .then((data) => { setRecipes(data); setError(null); })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
 
-  return { recipes, loading, error };
+  return { recipes, loading, error, refetch };
 }
