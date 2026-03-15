@@ -2,7 +2,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Svg, { Line, Path, Polyline } from "react-native-svg";
+import Svg, { Circle, Line, Path, Polyline } from "react-native-svg";
 import { BottomModal } from "../../../shopping/ui/components/bottomModal";
 import { createRecipe } from "../../application/useCases/createRecipe";
 import type { RecipeIngredientInput } from "../../application/useCases/createRecipe";
