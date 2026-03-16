@@ -1,7 +1,8 @@
+import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { Button, SearchField } from "heroui-native";
-import { BottomModal, BottomModalScrollView } from "../../../shopping/ui/components/bottomModal";
-import { useEffect, useMemo, useState } from "react";
+import { Button } from "heroui-native";
+import { BottomModal } from "../../../shopping/ui/components/bottomModal";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -10,14 +11,13 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Svg, { Circle, Line, Path, Rect } from "react-native-svg";
+import Svg, { Circle, Line, Path } from "react-native-svg";
 import { useAppTheme } from "../../../../shared/theme";
 import { supabase } from "../../../../lib/supabase";
 import { usePlanning } from "../../api/usePlanning";
 import { clearMealSlot } from "../../application/useCases/clearMealSlot";
 import { generateShoppingListFromPlan } from "../../application/useCases/generateShoppingListFromPlan";
 import { getStreak } from "../../application/useCases/getStreak";
-import { setMealSlot } from "../../application/useCases/setMealSlot";
 import { toggleMealDone } from "../../application/useCases/toggleMealDone";
 import type { MealPlanData, MealSlotData, MealType } from "../../domain/entities/planning";
 
@@ -60,10 +60,6 @@ function formatWeekRange(monday: Date): string {
   sunday.setDate(monday.getDate() + 6);
   const fmt = (d: Date) => d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
   return `${fmt(monday)} – ${fmt(sunday)}`;
-}
-
-function normalize(s: string): string {
-  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 }
 
 function getSlot(plan: MealPlanData, dayOfWeek: number, mealType: MealType): MealSlotData {
@@ -116,9 +112,7 @@ const COL_W = 90;
 const ROW_H = 80;
 const LABEL_W = 48;
 
-interface PickerState { dayOfWeek: number; mealType: MealType; }
 interface SlotActionState { dayOfWeek: number; mealType: MealType; recipeId: string; recipeName: string; }
-interface SimpleRecipe { id: string; name: string; }
 
 function WeekGrid({
   localPlan, weekDays, today, onCellPress,
@@ -217,59 +211,27 @@ export function PlanningScreen() {
   const router = useRouter();
   const [currentWeekMonday, setCurrentWeekMonday] = useState(() => getMondayOf(today));
   const { plan, loading, reload } = usePlanning(currentWeekMonday);
-  const [pickerState, setPickerState] = useState<PickerState | null>(null);
   const [slotAction, setSlotAction] = useState<SlotActionState | null>(null);
-  const [allRecipes, setAllRecipes] = useState<SimpleRecipe[]>([]);
-  const [recipesLoading, setRecipesLoading] = useState(false);
-  const [recipeSearch, setRecipeSearch] = useState("");
   const [generating, setGenerating] = useState(false);
   const [generateResult, setGenerateResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [localPlan, setLocalPlan] = useState<MealPlanData | null>(null);
   const [streak, setStreak] = useState(0);
 
   useEffect(() => { if (plan) setLocalPlan(plan); }, [plan]);
-
   useEffect(() => { getStreak().then(setStreak); }, []);
+  useFocusEffect(useCallback(() => { reload(); }, [reload]));
 
   useEffect(() => {
     if (!localPlan) return;
     const channel = supabase
       .channel(`meal_slots_mobile:${localPlan.id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "meal_slots", filter: `meal_plan_id=eq.${localPlan.id}` },
-        (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => {
-          if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {
-            const s = payload.new as { id: string; day_of_week: number; meal_type: string; recipe_id: string | null; servings: number };
-            const name = allRecipes.find((r) => r.id === s.recipe_id)?.name ?? null;
-            setLocalPlan((prev) => prev ? { ...prev, slots: prev.slots.map((slot) =>
-              slot.dayOfWeek === s.day_of_week && slot.mealType === (s.meal_type as MealType)
-                ? { ...slot, slotId: s.id, recipeId: s.recipe_id, recipeName: name, servings: s.servings }
-                : slot
-            )} : prev);
-          } else if (payload.eventType === "DELETE") {
-            const s = payload.old as { day_of_week: number; meal_type: string };
-            setLocalPlan((prev) => prev ? { ...prev, slots: prev.slots.map((slot) =>
-              slot.dayOfWeek === s.day_of_week && slot.mealType === (s.meal_type as MealType)
-                ? { ...slot, slotId: null, recipeId: null, recipeName: null }
-                : slot
-            )} : prev);
-          }
-        }
+        () => { reload(); }
       ).subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [localPlan?.id, allRecipes]);
-
-  useEffect(() => {
-    if (!pickerState) return;
-    setRecipesLoading(true);
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { setRecipesLoading(false); return; }
-      supabase.from("recipes").select("id, name").eq("user_id", user.id).order("name")
-        .then(({ data }) => { setAllRecipes((data ?? []) as SimpleRecipe[]); setRecipesLoading(false); });
-    });
-  }, [pickerState]);
+  }, [localPlan?.id]);
 
   const weekDays = useMemo(() => getWeekDays(currentWeekMonday), [currentWeekMonday]);
-  const pickerDate = pickerState ? weekDays[pickerState.dayOfWeek - 1] : null;
 
   const weekCoverage = useMemo(() => {
     if (!localPlan) return { filled: 0, total: 21 };
@@ -277,48 +239,17 @@ export function PlanningScreen() {
     return { filled: slots.filter(Boolean).length, total: slots.length };
   }, [localPlan, weekDays]);
 
-  const filteredRecipes = useMemo(() => {
-    if (!recipeSearch.trim()) return allRecipes;
-    const q = normalize(recipeSearch);
-    return allRecipes.filter((r) => normalize(r.name).includes(q));
-  }, [allRecipes, recipeSearch]);
-
-  const activeSlot = pickerState && localPlan
-    ? getSlot(localPlan, pickerState.dayOfWeek, pickerState.mealType)
-    : null;
-
   function handleCellPress(dayOfWeek: number, mealType: MealType, slot: MealSlotData | null) {
     if (slot?.recipeId && slot.recipeName) {
       setSlotAction({ dayOfWeek, mealType, recipeId: slot.recipeId, recipeName: slot.recipeName });
-    } else {
-      setPickerState({ dayOfWeek, mealType });
+    } else if (localPlan) {
+      router.push({ pathname: "/planning/pick-recipe", params: {
+        dayOfWeek: String(dayOfWeek),
+        mealType,
+        mealPlanId: localPlan.id,
+        dateStr: weekDays[dayOfWeek - 1].toISOString(),
+      } } as never);
     }
-  }
-
-  async function fillSlot(dayOfWeek: number, mealType: MealType, recipeId: string) {
-    if (!localPlan) return;
-    const recipeName = allRecipes.find((r) => r.id === recipeId)?.name ?? null;
-    setLocalPlan((prev) => prev ? { ...prev, slots: prev.slots.map((s) =>
-      s.dayOfWeek === dayOfWeek && s.mealType === mealType ? { ...s, recipeId, recipeName } : s
-    )} : prev);
-    try {
-      const { slotId } = await setMealSlot(localPlan.id, dayOfWeek, mealType, recipeId);
-      setLocalPlan((prev) => prev ? { ...prev, slots: prev.slots.map((s) =>
-        s.dayOfWeek === dayOfWeek && s.mealType === mealType ? { ...s, slotId } : s
-      )} : prev);
-    } catch { reload(); }
-  }
-
-  async function handleClearSlot() {
-    if (!pickerState || !activeSlot?.slotId) { setPickerState(null); return; }
-    const { dayOfWeek, mealType } = pickerState;
-    const slotId = activeSlot.slotId;
-    setPickerState(null);
-    setLocalPlan((prev) => prev ? { ...prev, slots: prev.slots.map((s) =>
-      s.dayOfWeek === dayOfWeek && s.mealType === mealType
-        ? { ...s, slotId: null, recipeId: null, recipeName: null } : s
-    )} : prev);
-    try { await clearMealSlot(slotId); } catch { reload(); }
   }
 
   async function handleToggleDone(slot: MealSlotData) {
@@ -329,14 +260,6 @@ export function PlanningScreen() {
     )} : prev);
     await toggleMealDone(slot.slotId, next);
     getStreak().then(setStreak);
-  }
-
-  async function handleSelectRecipe(recipeId: string) {
-    if (!pickerState) return;
-    const { dayOfWeek, mealType } = pickerState;
-    setPickerState(null);
-    setRecipeSearch("");
-    await fillSlot(dayOfWeek, mealType, recipeId);
   }
 
   async function handleGenerateShoppingList() {
@@ -494,7 +417,17 @@ export function PlanningScreen() {
               <Text style={{ fontSize: 15, fontWeight: "700", color: colors.accent }}>Voir la recette</Text>
             </Pressable>
             <Pressable
-              onPress={() => { if (slotAction) { const s = slotAction; setSlotAction(null); setPickerState({ dayOfWeek: s.dayOfWeek, mealType: s.mealType }); } }}
+              onPress={() => {
+                if (!slotAction || !localPlan) return;
+                const s = slotAction;
+                setSlotAction(null);
+                router.push({ pathname: "/planning/pick-recipe", params: {
+                  dayOfWeek: String(s.dayOfWeek),
+                  mealType: s.mealType,
+                  mealPlanId: localPlan.id,
+                  dateStr: weekDays[s.dayOfWeek - 1].toISOString(),
+                } } as never);
+              }}
               style={({ pressed }) => ({
                 flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 14,
                 backgroundColor: colors.bgSurface,
@@ -541,106 +474,6 @@ export function PlanningScreen() {
         </View>
       </BottomModal>
 
-      {/* ── Recipe picker BottomModal ── */}
-      <BottomModal
-        isOpen={pickerState !== null}
-        onClose={() => { setPickerState(null); setRecipeSearch(""); }}
-        height="70%"
-      >
-        <View style={{ flex: 1 }}>
-          <View style={{ paddingVertical: 4, marginBottom: 4 }}>
-            {pickerDate && (
-              <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 1 }}>
-                {pickerDate.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" })}
-              </Text>
-            )}
-            <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginTop: 2 }}>
-              {pickerState ? MEAL_LABELS[pickerState.mealType] : ""}
-            </Text>
-          </View>
-          <SearchField value={recipeSearch} onChange={setRecipeSearch}>
-            <SearchField.Group className="rounded-2xl">
-              <SearchField.SearchIcon />
-              <SearchField.Input placeholder="Rechercher une recette…" />
-              <SearchField.ClearButton />
-            </SearchField.Group>
-          </SearchField>
-
-          <BottomModalScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
-            {activeSlot?.recipeId && (
-              <>
-                <Pressable
-                  onPress={handleClearSlot}
-                  style={({ pressed }) => ({
-                    flexDirection: "row", alignItems: "center", gap: 10,
-                    borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12,
-                    backgroundColor: colors.dangerBg, marginBottom: 4,
-                    opacity: pressed ? 0.8 : 1,
-                  })}
-                >
-                  <View style={{ width: 30, height: 30, borderRadius: 10, backgroundColor: "#FECDD3", alignItems: "center", justifyContent: "center" }}>
-                    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#E11D48" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                      <Path d="M3 6h18" /><Path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><Path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                    </Svg>
-                  </View>
-                  <Text style={{ fontSize: 14, fontWeight: "700", color: "#E11D48" }}>Retirer la recette</Text>
-                </Pressable>
-                <View style={{ marginVertical: 8, height: 1, backgroundColor: colors.bgSurface }} />
-              </>
-            )}
-
-            {recipesLoading ? (
-              <View style={{ alignItems: "center", paddingVertical: 40 }}>
-                <ActivityIndicator color="#E8571C" />
-              </View>
-            ) : filteredRecipes.length === 0 ? (
-              <View style={{ alignItems: "center", paddingVertical: 40 }}>
-                <Text style={{ fontSize: 14, color: colors.textSubtle }}>
-                  {recipeSearch ? "Aucune recette trouvée" : "Aucune recette"}
-                </Text>
-              </View>
-            ) : (
-              filteredRecipes.map((recipe) => {
-                const isActive = activeSlot?.recipeId === recipe.id;
-                return (
-                  <Pressable
-                    key={recipe.id}
-                    onPress={() => handleSelectRecipe(recipe.id)}
-                    style={({ pressed }) => ({
-                      flexDirection: "row", alignItems: "center", gap: 12,
-                      borderRadius: 14, paddingHorizontal: 14, paddingVertical: 13,
-                      backgroundColor: isActive ? colors.accentBg : pressed ? colors.bgSubtle : "transparent",
-                      marginBottom: 2,
-                    })}
-                  >
-                    <View style={{
-                      width: 36, height: 36, borderRadius: 12,
-                      backgroundColor: isActive ? colors.accent : colors.bgSurface,
-                      alignItems: "center", justifyContent: "center", flexShrink: 0,
-                    }}>
-                      <Text style={{ fontSize: 14, fontWeight: "900", color: isActive ? "#fff" : colors.textSubtle }}>
-                        {recipe.name.charAt(0).toUpperCase()}
-                      </Text>
-                    </View>
-                    <Text numberOfLines={1} style={{
-                      flex: 1, fontSize: 14,
-                      fontWeight: isActive ? "700" : "500",
-                      color: isActive ? colors.accent : colors.text,
-                    }}>
-                      {recipe.name}
-                    </Text>
-                    {isActive && (
-                      <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                        <Path d="M20 6 9 17l-5-5" />
-                      </Svg>
-                    )}
-                  </Pressable>
-                );
-              })
-            )}
-          </BottomModalScrollView>
-        </View>
-      </BottomModal>
     </SafeAreaView>
   );
 }
