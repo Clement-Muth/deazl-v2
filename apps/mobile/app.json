@@ -2,7 +2,7 @@
   "expo": {
     "name": "Deazl",
     "slug": "deazl",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "deazl",
@@ -10,11 +10,11 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "fr.deazl.app",
-      "buildNumber": "3"
+      "buildNumber": "4"
     },
     "android": {
       "package": "fr.deazl.app",
-      "versionCode": 3,
+      "versionCode": 4,
       "androidStatusBar": {
         "barStyle": "dark-content",
         "backgroundColor": "#00000000"

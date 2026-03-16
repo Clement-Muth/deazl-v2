@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Dimensions, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Line, Path, Polyline } from "react-native-svg";
+import { useAppTheme } from "../../../../shared/theme";
 import { BottomModal } from "../../../shopping/ui/components/bottomModal";
 import { useRecipes } from "../../api/useRecipes";
 import type { Recipe } from "../../domain/entities/recipe";
@@ -22,14 +23,16 @@ const GRID_CARD_WIDTH = (Dimensions.get("window").width - 32 - 12) / 2;
 type SortOption = "recent" | "fast" | "slow";
 
 function SectionLabel({ label }: { label: string }) {
+  const { colors } = useAppTheme();
   return (
-    <Text style={{ fontSize: 11, fontWeight: "700", color: "#78716C99", textTransform: "uppercase", letterSpacing: 2.5, marginBottom: 10, paddingHorizontal: 16 }}>
+    <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textMuted + "99", textTransform: "uppercase", letterSpacing: 2.5, marginBottom: 10, paddingHorizontal: 16 }}>
       {label}
     </Text>
   );
 }
 
 export function RecipesScreen() {
+  const { colors } = useAppTheme();
   const router = useRouter();
   const { recipes, loading, refetch } = useRecipes();
   const [search, setSearch] = useState("");
@@ -105,17 +108,17 @@ export function RecipesScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#FAF9F6", alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator color="#E8571C" size="large" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator color={colors.accent} size="large" />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#FAF9F6" }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top"]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
         <View style={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 16 }}>
-          <Text style={{ fontSize: 28, fontWeight: "900", color: "#1C1917", letterSpacing: -0.5, marginBottom: 16 }}>Recettes</Text>
+          <Text style={{ fontSize: 28, fontWeight: "900", color: colors.text, letterSpacing: -0.5, marginBottom: 16 }}>Recettes</Text>
 
           <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
             <View style={{ flex: 1 }}>
@@ -132,7 +135,7 @@ export function RecipesScreen() {
               style={{
                 width: 48, height: 48, borderRadius: 16,
                 alignItems: "center", justifyContent: "center",
-                backgroundColor: activeFilterCount > 0 ? "#E8571C" : "#fff",
+                backgroundColor: activeFilterCount > 0 ? colors.accent : colors.bgCard,
                 shadowColor: "#1C1917", shadowOffset: { width: 0, height: 1 },
                 shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
               }}
@@ -146,10 +149,10 @@ export function RecipesScreen() {
                 <View style={{
                   position: "absolute", top: -4, right: -4,
                   width: 16, height: 16, borderRadius: 8,
-                  backgroundColor: "#fff", alignItems: "center", justifyContent: "center",
+                  backgroundColor: colors.bgCard, alignItems: "center", justifyContent: "center",
                   shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2,
                 }}>
-                  <Text style={{ fontSize: 9, fontWeight: "900", color: "#E8571C" }}>{activeFilterCount}</Text>
+                  <Text style={{ fontSize: 9, fontWeight: "900", color: colors.accent }}>{activeFilterCount}</Text>
                 </View>
               )}
             </Pressable>
@@ -159,24 +162,24 @@ export function RecipesScreen() {
         {isFiltering ? (
           <View style={{ paddingHorizontal: 16, gap: 12 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-              <Text style={{ fontSize: 14, fontWeight: "600", color: "#78716C" }}>
+              <Text style={{ fontSize: 14, fontWeight: "600", color: colors.textMuted }}>
                 {filtered.length} recette{filtered.length !== 1 ? "s" : ""}
               </Text>
               <Pressable onPress={clearFilters}>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: "#E8571C" }}>Effacer tout</Text>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.accent }}>Effacer tout</Text>
               </Pressable>
             </View>
             {filtered.length === 0 ? (
               <View style={{ alignItems: "center", paddingVertical: 64 }}>
-                <View style={{ width: 56, height: 56, borderRadius: 20, backgroundColor: "#F5F3EF", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+                <View style={{ width: 56, height: 56, borderRadius: 20, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
                   <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                     <Circle cx={11} cy={11} r={8} />
                     <Line x1={21} y1={21} x2={16.65} y2={16.65} />
                   </Svg>
                 </View>
-                <Text style={{ fontSize: 14, fontWeight: "700", color: "#1C1917", marginBottom: 8 }}>Aucune recette trouvée</Text>
+                <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text, marginBottom: 8 }}>Aucune recette trouvée</Text>
                 <Pressable onPress={clearFilters}>
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: "#E8571C" }}>Effacer les filtres</Text>
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: colors.accent }}>Effacer les filtres</Text>
                 </Pressable>
               </View>
             ) : isSearching ? (
@@ -200,8 +203,8 @@ export function RecipesScreen() {
             {recipes.length === 0 ? (
               <View style={{ alignItems: "center", paddingTop: 64, paddingHorizontal: 32 }}>
                 <Text style={{ fontSize: 40, marginBottom: 16 }}>🍽️</Text>
-                <Text style={{ fontSize: 16, fontWeight: "700", color: "#1C1917", marginBottom: 8, textAlign: "center" }}>Aucune recette</Text>
-                <Text style={{ fontSize: 14, color: "#78716C", textAlign: "center" }}>Ajoutez vos premières recettes en appuyant sur +.</Text>
+                <Text style={{ fontSize: 16, fontWeight: "700", color: colors.text, marginBottom: 8, textAlign: "center" }}>Aucune recette</Text>
+                <Text style={{ fontSize: 14, color: colors.textMuted, textAlign: "center" }}>Ajoutez vos premières recettes en appuyant sur +.</Text>
               </View>
             ) : (
               <>
@@ -250,9 +253,9 @@ export function RecipesScreen() {
         style={({ pressed }) => ({
           position: "absolute", bottom: 100, right: 20,
           width: 56, height: 56, borderRadius: 28,
-          backgroundColor: "#E8571C",
+          backgroundColor: colors.accent,
           alignItems: "center", justifyContent: "center",
-          shadowColor: "#E8571C", shadowOffset: { width: 0, height: 4 },
+          shadowColor: colors.accent, shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.35, shadowRadius: 12, elevation: 8,
           transform: [{ scale: pressed ? 0.92 : 1 }],
         })}
@@ -265,30 +268,30 @@ export function RecipesScreen() {
 
       <BottomModal isOpen={filterOpen} onClose={() => setFilterOpen(false)} height="auto">
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 16 }}>
-          <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Filtres</Text>
+          <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text }}>Filtres</Text>
           {activeFilterCount > 0 && (
             <Pressable onPress={clearFilters}>
-              <Text style={{ fontSize: 12, fontWeight: "600", color: "#E8571C" }}>Tout effacer</Text>
+              <Text style={{ fontSize: 12, fontWeight: "600", color: colors.accent }}>Tout effacer</Text>
             </Pressable>
           )}
         </View>
 
         <View style={{ paddingBottom: 8 }}>
           <View style={{ marginBottom: 20 }}>
-            <Text style={{ fontSize: 11, fontWeight: "700", color: "#78716C99", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Favoris</Text>
+            <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textMuted + "99", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Favoris</Text>
             <Pressable
               onPress={() => setFavoritesOnly((v) => !v)}
               style={{
                 flexDirection: "row", alignItems: "center", gap: 8,
                 borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10,
-                backgroundColor: favoritesOnly ? "#E8571C" : "#F5F3EF",
+                backgroundColor: favoritesOnly ? colors.accent : colors.bgSurface,
                 alignSelf: "flex-start",
               }}
             >
               <Svg width={12} height={12} viewBox="0 0 24 24" fill={favoritesOnly ? "#fff" : "#78716C"} stroke="none">
                 <Path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
               </Svg>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: favoritesOnly ? "#fff" : "#78716C" }}>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: favoritesOnly ? "#fff" : colors.textMuted }}>
                 Favoris uniquement
               </Text>
             </Pressable>
@@ -296,7 +299,7 @@ export function RecipesScreen() {
 
           {allTags.length > 0 && (
             <View style={{ marginBottom: 20 }}>
-              <Text style={{ fontSize: 11, fontWeight: "700", color: "#78716C99", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Régime</Text>
+              <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textMuted + "99", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Régime</Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {allTags.map((tag) => (
                   <Pressable
@@ -304,10 +307,10 @@ export function RecipesScreen() {
                     onPress={() => toggleTag(tag)}
                     style={{
                       borderRadius: 99, paddingHorizontal: 14, paddingVertical: 8,
-                      backgroundColor: activeTags.includes(tag) ? "#E8571C" : "#F5F3EF",
+                      backgroundColor: activeTags.includes(tag) ? colors.accent : colors.bgSurface,
                     }}
                   >
-                    <Text style={{ fontSize: 12, fontWeight: "700", color: activeTags.includes(tag) ? "#fff" : "#78716C" }}>
+                    <Text style={{ fontSize: 12, fontWeight: "700", color: activeTags.includes(tag) ? "#fff" : colors.textMuted }}>
                       {DIETARY_LABELS[tag] ?? tag}
                     </Text>
                   </Pressable>
@@ -317,7 +320,7 @@ export function RecipesScreen() {
           )}
 
           <View style={{ marginBottom: 20 }}>
-            <Text style={{ fontSize: 11, fontWeight: "700", color: "#78716C99", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Temps total</Text>
+            <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textMuted + "99", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Temps total</Text>
             <View style={{ flexDirection: "row", gap: 8 }}>
               {[["any", "Tout"], ["quick", "≤ 30 min"], ["medium", "≤ 60 min"]].map(([val, label]) => (
                 <Pressable
@@ -326,17 +329,17 @@ export function RecipesScreen() {
                   style={{
                     flex: 1, borderRadius: 16, paddingVertical: 10,
                     alignItems: "center",
-                    backgroundColor: timeFilter === val ? "#E8571C" : "#F5F3EF",
+                    backgroundColor: timeFilter === val ? colors.accent : colors.bgSurface,
                   }}
                 >
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: timeFilter === val ? "#fff" : "#78716C" }}>{label}</Text>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: timeFilter === val ? "#fff" : colors.textMuted }}>{label}</Text>
                 </Pressable>
               ))}
             </View>
           </View>
 
           <View style={{ marginBottom: 24 }}>
-            <Text style={{ fontSize: 11, fontWeight: "700", color: "#78716C99", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Trier par</Text>
+            <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textMuted + "99", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Trier par</Text>
             <View style={{ flexDirection: "row", gap: 8 }}>
               {([["recent", "Plus récent"], ["fast", "Plus rapide"], ["slow", "Plus long"]] as [SortOption, string][]).map(([val, label]) => (
                 <Pressable
@@ -345,10 +348,10 @@ export function RecipesScreen() {
                   style={{
                     flex: 1, borderRadius: 16, paddingVertical: 10,
                     alignItems: "center",
-                    backgroundColor: sort === val ? "#E8571C" : "#F5F3EF",
+                    backgroundColor: sort === val ? colors.accent : colors.bgSurface,
                   }}
                 >
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: sort === val ? "#fff" : "#78716C" }}>{label}</Text>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: sort === val ? "#fff" : colors.textMuted }}>{label}</Text>
                 </Pressable>
               ))}
             </View>

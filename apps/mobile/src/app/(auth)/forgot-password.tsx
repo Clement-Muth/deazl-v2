@@ -6,9 +6,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { requestPasswordReset } from "../../applications/user/application/useCases/requestPasswordReset";
 import { validateEmail } from "../../applications/user/ui/components/auth/authHelpers";
 import { AuthInput } from "../../applications/user/ui/components/auth/authInput";
+import { useAppTheme } from "../../shared/theme";
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+  const { colors } = useAppTheme();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -28,15 +30,15 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bgCard }}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24 }} keyboardShouldPersistTaps="handled">
 
           <View style={{ marginTop: 64, marginBottom: 40 }}>
-            <Text style={{ fontSize: 28, fontWeight: "800", color: "#1C1917", letterSpacing: -1, lineHeight: 34 }}>
+            <Text style={{ fontSize: 28, fontWeight: "800", color: colors.text, letterSpacing: -1, lineHeight: 34 }}>
               Mot de passe oublié
             </Text>
-            <Text style={{ fontSize: 14, color: "#78716C", marginTop: 8 }}>
+            <Text style={{ fontSize: 14, color: colors.textMuted, marginTop: 8 }}>
               Saisis ton email pour recevoir un lien de réinitialisation.
             </Text>
           </View>
@@ -61,7 +63,7 @@ export default function ForgotPasswordScreen() {
                 errorMessage={emailError ?? undefined}
               />
               {error && (
-                <Text style={{ fontSize: 13, color: "#DC2626", marginTop: 8 }}>{error}</Text>
+                <Text style={{ fontSize: 13, color: colors.danger, marginTop: 8 }}>{error}</Text>
               )}
               <Button
                 variant="primary"
@@ -76,7 +78,7 @@ export default function ForgotPasswordScreen() {
 
           <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 24, marginBottom: 32, gap: 4 }}>
             <Pressable onPress={() => router.back()}>
-              <Text style={{ fontSize: 14, fontWeight: "500", color: "#E8571C" }}>Retour à la connexion</Text>
+              <Text style={{ fontSize: 14, fontWeight: "500", color: colors.accent }}>Retour à la connexion</Text>
             </Pressable>
           </View>
 

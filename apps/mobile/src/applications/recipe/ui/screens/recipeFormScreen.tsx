@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Line, Path, Polyline } from "react-native-svg";
+import { useAppTheme } from "../../../../shared/theme";
 import { BottomModal } from "../../../shopping/ui/components/bottomModal";
 import { createRecipe } from "../../application/useCases/createRecipe";
 import type { RecipeIngredientInput } from "../../application/useCases/createRecipe";
@@ -34,6 +35,20 @@ interface Props {
 }
 
 export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
+  const { colors } = useAppTheme();
+  const inputStyle = {
+    borderRadius: 12,
+    backgroundColor: colors.bgCard,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: colors.text as string,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+  };
   const [step, setStep] = useState(1);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -43,6 +58,7 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
   const [prepTime, setPrepTime] = useState(existingRecipe?.prepTimeMinutes ? String(existingRecipe.prepTimeMinutes) : "");
   const [cookTime, setCookTime] = useState(existingRecipe?.cookTimeMinutes ? String(existingRecipe.cookTimeMinutes) : "");
   const [dietaryTags, setDietaryTags] = useState<string[]>(existingRecipe?.dietaryTags ?? []);
+  const [isPublic, setIsPublic] = useState(existingRecipe?.isPublic ?? false);
   const [ingredients, setIngredients] = useState<RecipeIngredientInput[]>(
     existingRecipe?.ingredients.map((i) => ({ name: i.customName ?? "", quantity: i.quantity, unit: i.unit })) ?? [{ name: "", quantity: 1, unit: "pièce" }]
   );
@@ -90,12 +106,13 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
       allowsEditing: true,
       aspect: [16, 9],
       quality: 0.8,
+      base64: true,
     });
-    if (result.canceled) return;
-    const uri = result.assets[0].uri;
-    setImageUri(uri);
+    if (result.canceled || !result.assets[0].base64) return;
+    const asset = result.assets[0];
+    setImageUri(asset.uri);
     setUploadingImage(true);
-    const uploaded = await uploadRecipeImage(uri);
+    const uploaded = await uploadRecipeImage(asset.base64, asset.mimeType ?? "image/jpeg");
     setUploadingImage(false);
     if (typeof uploaded === "object") { setError(uploaded.error); return; }
     setImageUrl(uploaded);
@@ -112,6 +129,7 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
       cookTimeMinutes: cookTime ? parseInt(cookTime) : null,
       dietaryTags,
       imageUrl,
+      isPublic,
       ingredients: ingredients.filter((i) => i.name.trim()),
       steps: steps.filter((s) => s.trim()),
     };
@@ -161,7 +179,7 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
   const isLastStep = step === TOTAL_STEPS;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#FAF9F6" }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top"]}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
 
         {/* Header */}
@@ -173,10 +191,10 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
               </Svg>
             </Pressable>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 11, fontWeight: "700", color: "#78716C99", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 1 }}>
+              <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textMuted + "99", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 1 }}>
                 {existingRecipe ? "Modifier" : "Nouvelle recette"} · {step}/{TOTAL_STEPS}
               </Text>
-              <Text style={{ fontSize: 20, fontWeight: "900", color: "#1C1917", letterSpacing: -0.3 }}>
+              <Text style={{ fontSize: 20, fontWeight: "900", color: colors.text, letterSpacing: -0.3 }}>
                 {STEPS_LABELS[step - 1]}
               </Text>
             </View>
@@ -184,16 +202,16 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
               {step === 1 && !existingRecipe && (
                 <Pressable
                   onPress={() => setImportSheet(true)}
-                  style={{ borderRadius: 12, backgroundColor: "#F5F3EF", paddingHorizontal: 12, paddingVertical: 8 }}
+                  style={{ borderRadius: 12, backgroundColor: colors.bgSurface, paddingHorizontal: 12, paddingVertical: 8 }}
                 >
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: "#78716C" }}>Import URL</Text>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: colors.textMuted }}>Import URL</Text>
                 </Pressable>
               )}
               {isLastStep ? (
                 <Pressable
                   onPress={handleSubmit}
                   disabled={submitting}
-                  style={{ borderRadius: 12, backgroundColor: "#E8571C", paddingHorizontal: 16, paddingVertical: 8, opacity: submitting ? 0.6 : 1 }}
+                  style={{ borderRadius: 12, backgroundColor: colors.accent, paddingHorizontal: 16, paddingVertical: 8, opacity: submitting ? 0.6 : 1 }}
                 >
                   {submitting
                     ? <ActivityIndicator color="#fff" size="small" />
@@ -203,7 +221,7 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
               ) : (
                 <Pressable
                   onPress={goNext}
-                  style={{ borderRadius: 12, backgroundColor: "#1C1917", paddingHorizontal: 16, paddingVertical: 8 }}
+                  style={{ borderRadius: 12, backgroundColor: colors.text, paddingHorizontal: 16, paddingVertical: 8 }}
                 >
                   <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}>Suivant</Text>
                 </Pressable>
@@ -218,7 +236,7 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
                 key={i}
                 style={{
                   flex: 1, height: 3, borderRadius: 99,
-                  backgroundColor: i < step ? "#E8571C" : "#E7E5E4",
+                  backgroundColor: i < step ? colors.accent : colors.border,
                 }}
               />
             ))}
@@ -227,8 +245,8 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
 
         <ScrollView ref={scrollRef} contentContainerStyle={{ padding: 16, gap: 20, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
           {error && (
-            <View style={{ borderRadius: 12, backgroundColor: "#FEE2E2", padding: 12 }}>
-              <Text style={{ fontSize: 13, color: "#DC2626", fontWeight: "600" }}>{error}</Text>
+            <View style={{ borderRadius: 12, backgroundColor: colors.dangerBg, padding: 12 }}>
+              <Text style={{ fontSize: 13, color: colors.danger, fontWeight: "600" }}>{error}</Text>
             </View>
           )}
 
@@ -238,7 +256,7 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
                 onPress={pickImage}
                 style={{
                   height: 180, borderRadius: 16, overflow: "hidden",
-                  backgroundColor: "#F5F3EF",
+                  backgroundColor: colors.bgSurface,
                   alignItems: "center", justifyContent: "center",
                 }}
               >
@@ -261,13 +279,13 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
                   </>
                 ) : (
                   <View style={{ alignItems: "center", gap: 8 }}>
-                    <View style={{ width: 44, height: 44, borderRadius: 99, backgroundColor: "#E7E5E4", alignItems: "center", justifyContent: "center" }}>
+                    <View style={{ width: 44, height: 44, borderRadius: 99, backgroundColor: colors.border, alignItems: "center", justifyContent: "center" }}>
                       <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                         <Path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                         <Circle cx={12} cy={13} r={4} />
                       </Svg>
                     </View>
-                    <Text style={{ fontSize: 13, fontWeight: "600", color: "#A8A29E" }}>Ajouter une photo</Text>
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: colors.textSubtle }}>Ajouter une photo</Text>
                   </View>
                 )}
               </Pressable>
@@ -277,7 +295,7 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
                   value={name}
                   onChangeText={setName}
                   placeholder="Ex: Poulet rôti aux herbes"
-                  placeholderTextColor="#A8A29E"
+                  placeholderTextColor={colors.textSubtle}
                   style={inputStyle}
                 />
               </Field>
@@ -286,7 +304,7 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
                   value={description}
                   onChangeText={setDescription}
                   placeholder="Une brève description…"
-                  placeholderTextColor="#A8A29E"
+                  placeholderTextColor={colors.textSubtle}
                   multiline
                   numberOfLines={3}
                   style={[inputStyle, { minHeight: 80, textAlignVertical: "top" }]}
@@ -297,10 +315,10 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
                   <TextInput value={servings} onChangeText={setServings} keyboardType="number-pad" style={inputStyle} />
                 </Field>
                 <Field label="Prép. (min)" style={{ flex: 1 }}>
-                  <TextInput value={prepTime} onChangeText={setPrepTime} keyboardType="number-pad" placeholder="0" placeholderTextColor="#A8A29E" style={inputStyle} />
+                  <TextInput value={prepTime} onChangeText={setPrepTime} keyboardType="number-pad" placeholder="0" placeholderTextColor={colors.textSubtle} style={inputStyle} />
                 </Field>
                 <Field label="Cuisson (min)" style={{ flex: 1 }}>
-                  <TextInput value={cookTime} onChangeText={setCookTime} keyboardType="number-pad" placeholder="0" placeholderTextColor="#A8A29E" style={inputStyle} />
+                  <TextInput value={cookTime} onChangeText={setCookTime} keyboardType="number-pad" placeholder="0" placeholderTextColor={colors.textSubtle} style={inputStyle} />
                 </Field>
               </View>
               <Field label="Régime alimentaire">
@@ -311,14 +329,38 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
                       <Pressable
                         key={opt.key}
                         onPress={() => setDietaryTags((prev) => prev.includes(opt.key) ? prev.filter((k) => k !== opt.key) : [...prev, opt.key])}
-                        style={{ borderRadius: 99, paddingHorizontal: 12, paddingVertical: 7, backgroundColor: active ? "#E8571C" : "#F5F3EF" }}
+                        style={{ borderRadius: 99, paddingHorizontal: 12, paddingVertical: 7, backgroundColor: active ? colors.accent : colors.bgSurface }}
                       >
-                        <Text style={{ fontSize: 12, fontWeight: "700", color: active ? "#fff" : "#78716C" }}>{opt.label}</Text>
+                        <Text style={{ fontSize: 12, fontWeight: "700", color: active ? "#fff" : colors.textMuted }}>{opt.label}</Text>
                       </Pressable>
                     );
                   })}
                 </View>
               </Field>
+              <Pressable
+                onPress={() => setIsPublic((v) => !v)}
+                style={{
+                  flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+                  borderRadius: 14, backgroundColor: colors.bgCard,
+                  paddingHorizontal: 16, paddingVertical: 14,
+                  shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 1,
+                }}
+              >
+                <View style={{ gap: 2 }}>
+                  <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text }}>Recette publique</Text>
+                  <Text style={{ fontSize: 12, color: colors.textSubtle }}>Visible par tous les utilisateurs</Text>
+                </View>
+                <View style={{
+                  width: 46, height: 26, borderRadius: 13,
+                  backgroundColor: isPublic ? colors.accent : colors.border,
+                  justifyContent: "center", paddingHorizontal: 2,
+                }}>
+                  <View style={{
+                    width: 22, height: 22, borderRadius: 11, backgroundColor: "#fff",
+                    alignSelf: isPublic ? "flex-end" : "flex-start",
+                  }} />
+                </View>
+              </Pressable>
             </>
           )}
 
@@ -333,13 +375,13 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
                     style={[inputStyle, { width: 52, textAlign: "center" }]}
                   />
                   <Pressable onPress={() => setUnitSheet(i)} style={[inputStyle, { width: 72, alignItems: "center", justifyContent: "center" }]}>
-                    <Text style={{ fontSize: 13, color: "#1C1917", fontWeight: "600" }}>{ing.unit}</Text>
+                    <Text style={{ fontSize: 13, color: colors.text, fontWeight: "600" }}>{ing.unit}</Text>
                   </Pressable>
                   <TextInput
                     value={ing.name}
                     onChangeText={(v) => updateIngredient(i, "name", v)}
                     placeholder="Ingrédient"
-                    placeholderTextColor="#A8A29E"
+                    placeholderTextColor={colors.textSubtle}
                     style={[inputStyle, { flex: 1 }]}
                   />
                   <Pressable onPress={() => removeIngredient(i)} style={{ padding: 4 }}>
@@ -355,7 +397,7 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
                   <Line x1={12} y1={5} x2={12} y2={19} />
                   <Line x1={5} y1={12} x2={19} y2={12} />
                 </Svg>
-                <Text style={{ fontSize: 13, fontWeight: "700", color: "#E8571C" }}>Ajouter un ingrédient</Text>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: colors.accent }}>Ajouter un ingrédient</Text>
               </Pressable>
             </>
           )}
@@ -364,14 +406,14 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
             <>
               {steps.map((s, i) => (
                 <View key={i} style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
-                  <View style={{ width: 26, height: 26, borderRadius: 99, backgroundColor: "#E8571C", alignItems: "center", justifyContent: "center", marginTop: 11, flexShrink: 0 }}>
+                  <View style={{ width: 26, height: 26, borderRadius: 99, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", marginTop: 11, flexShrink: 0 }}>
                     <Text style={{ fontSize: 11, fontWeight: "900", color: "#fff" }}>{i + 1}</Text>
                   </View>
                   <TextInput
                     value={s}
                     onChangeText={(v) => setSteps((prev) => prev.map((st, idx) => idx === i ? v : st))}
                     placeholder={`Étape ${i + 1}…`}
-                    placeholderTextColor="#A8A29E"
+                    placeholderTextColor={colors.textSubtle}
                     multiline
                     style={[inputStyle, { flex: 1, minHeight: 72, textAlignVertical: "top" }]}
                   />
@@ -388,7 +430,7 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
                   <Line x1={12} y1={5} x2={12} y2={19} />
                   <Line x1={5} y1={12} x2={19} y2={12} />
                 </Svg>
-                <Text style={{ fontSize: 13, fontWeight: "700", color: "#E8571C" }}>Ajouter une étape</Text>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: colors.accent }}>Ajouter une étape</Text>
               </Pressable>
             </>
           )}
@@ -397,23 +439,23 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
 
       {/* Import URL sheet */}
       <BottomModal isOpen={importSheet} onClose={() => setImportSheet(false)} height="auto">
-        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Importer depuis une URL</Text>
+        <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 16 }}>Importer depuis une URL</Text>
         <View style={{ gap: 12, paddingBottom: 8 }}>
           <TextInput
             value={importUrl}
             onChangeText={setImportUrl}
             placeholder="https://www.marmiton.org/…"
-            placeholderTextColor="#A8A29E"
+            placeholderTextColor={colors.textSubtle}
             autoCapitalize="none"
             keyboardType="url"
-            style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 13, fontSize: 14, color: "#1C1917" }}
+            style={{ borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 16, paddingVertical: 13, fontSize: 14, color: colors.text }}
           />
-          {importing && <ActivityIndicator color="#E8571C" />}
-          {error && <Text style={{ fontSize: 12, color: "#DC2626" }}>{error}</Text>}
+          {importing && <ActivityIndicator color={colors.accent} />}
+          {error && <Text style={{ fontSize: 12, color: colors.danger }}>{error}</Text>}
           <Pressable
             onPress={handleImport}
             disabled={importing || !importUrl.trim()}
-            style={{ borderRadius: 16, backgroundColor: "#E8571C", paddingVertical: 14, alignItems: "center", opacity: (importing || !importUrl.trim()) ? 0.6 : 1 }}
+            style={{ borderRadius: 16, backgroundColor: colors.accent, paddingVertical: 14, alignItems: "center", opacity: (importing || !importUrl.trim()) ? 0.6 : 1 }}
           >
             <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>{importing ? "Importation…" : "Importer"}</Text>
           </Pressable>
@@ -422,7 +464,7 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
 
       {/* Unit picker sheet */}
       <BottomModal isOpen={unitSheet !== null} onClose={() => setUnitSheet(null)} height="auto">
-        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Choisir une unité</Text>
+        <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 16 }}>Choisir une unité</Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, paddingBottom: 8 }}>
           {COMMON_UNITS.map((u) => (
             <Pressable
@@ -430,10 +472,10 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
               onPress={() => { if (unitSheet !== null) updateIngredient(unitSheet, "unit", u); setUnitSheet(null); }}
               style={{
                 borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10,
-                backgroundColor: unitSheet !== null && ingredients[unitSheet]?.unit === u ? "#E8571C" : "#F5F3EF",
+                backgroundColor: unitSheet !== null && ingredients[unitSheet]?.unit === u ? colors.accent : colors.bgSurface,
               }}
             >
-              <Text style={{ fontSize: 14, fontWeight: "600", color: unitSheet !== null && ingredients[unitSheet]?.unit === u ? "#fff" : "#1C1917" }}>{u}</Text>
+              <Text style={{ fontSize: 14, fontWeight: "600", color: unitSheet !== null && ingredients[unitSheet]?.unit === u ? "#fff" : colors.text }}>{u}</Text>
             </Pressable>
           ))}
         </View>
@@ -443,24 +485,11 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
 }
 
 function Field({ label, children, style }: { label: string; children: React.ReactNode; style?: object }) {
+  const { colors } = useAppTheme();
   return (
     <View style={[{ gap: 6 }, style]}>
-      <Text style={{ fontSize: 11, fontWeight: "700", color: "#78716C", textTransform: "uppercase", letterSpacing: 1 }}>{label}</Text>
+      <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1 }}>{label}</Text>
       {children}
     </View>
   );
 }
-
-const inputStyle = {
-  borderRadius: 12,
-  backgroundColor: "#fff",
-  paddingHorizontal: 14,
-  paddingVertical: 12,
-  fontSize: 14,
-  color: "#1C1917" as const,
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 1 },
-  shadowOpacity: 0.05,
-  shadowRadius: 3,
-  elevation: 1,
-};

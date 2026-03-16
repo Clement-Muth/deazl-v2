@@ -5,6 +5,7 @@ import { ActivityIndicator, Image, Pressable, Text, TextInput, View } from "reac
 import { Button } from "heroui-native";
 import { BottomModal, BottomModalScrollView } from "./bottomModal";
 import Svg, { Circle, Line, Path, Polyline } from "react-native-svg";
+import { useAppTheme } from "../../../../shared/theme";
 import { getAdditiveRisk, parseAdditiveTag } from "../../domain/additiveRisks";
 import type { AlternativeProduct } from "../../application/useCases/getProductAlternatives";
 import { getProductAlternatives } from "../../application/useCases/getProductAlternatives";
@@ -96,6 +97,7 @@ export function ItemDetailSheet({ item, isOpen, onClose, onReload }: ItemDetailS
   const [priceReportOpen, setPriceReportOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const { colors } = useAppTheme();
 
   useEffect(() => {
     if (!isOpen || !item) return;
@@ -152,10 +154,10 @@ export function ItemDetailSheet({ item, isOpen, onClose, onReload }: ItemDetailS
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: 12 }}>
             <View style={{ flex: 1, marginRight: 12 }}>
-              <Text style={{ fontSize: 17, fontWeight: "800", color: "#1C1917" }} numberOfLines={2}>
+              <Text style={{ fontSize: 17, fontWeight: "800", color: colors.text }} numberOfLines={2}>
                 {item.customName}
               </Text>
-              <Text style={{ fontSize: 12, color: "#A8A29E", marginTop: 2 }}>
+              <Text style={{ fontSize: 12, color: colors.textSubtle, marginTop: 2 }}>
                 {qty} {item.unit}
               </Text>
             </View>
@@ -163,7 +165,7 @@ export function ItemDetailSheet({ item, isOpen, onClose, onReload }: ItemDetailS
               onPress={() => setEditOpen(true)}
               style={({ pressed }) => ({
                 width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center",
-                backgroundColor: pressed ? "#F5F3EF" : "#FAF9F6",
+                backgroundColor: pressed ? colors.bgSurface : colors.bg,
               })}
             >
               <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -173,18 +175,18 @@ export function ItemDetailSheet({ item, isOpen, onClose, onReload }: ItemDetailS
             </Pressable>
           </View>
 
-          <View style={{ flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#F5F3EF", marginBottom: 0 }}>
+          <View style={{ flexDirection: "row", borderBottomWidth: 1, borderBottomColor: colors.bgSurface, marginBottom: 0 }}>
             {tabs.map(({ key, label }) => (
               <Pressable
                 key={key}
                 onPress={() => setTab(key)}
                 style={{ paddingBottom: 10, paddingRight: 20, position: "relative" }}
               >
-                <Text style={{ fontSize: 14, fontWeight: "600", color: tab === key ? "#1C1917" : "#A8A29E" }}>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: tab === key ? colors.text : colors.textSubtle }}>
                   {label}
                 </Text>
                 {tab === key && (
-                  <View style={{ position: "absolute", bottom: 0, left: 0, right: 20, height: 2, borderRadius: 2, backgroundColor: "#E8571C" }} />
+                  <View style={{ position: "absolute", bottom: 0, left: 0, right: 20, height: 2, borderRadius: 2, backgroundColor: colors.accent }} />
                 )}
               </Pressable>
             ))}
@@ -233,11 +235,12 @@ export function ItemDetailSheet({ item, isOpen, onClose, onReload }: ItemDetailS
 }
 
 function SectionHeader({ label, count, right }: { label: string; count?: string; right?: string }) {
+  const { colors } = useAppTheme();
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#F5F3EF" }}>
-      <Text style={{ flex: 1, fontSize: 11, fontWeight: "700", color: "#78716C", textTransform: "uppercase", letterSpacing: 1.2 }}>{label}</Text>
-      {count && <Text style={{ fontSize: 11, color: "#A8A29E" }}>{count}</Text>}
-      {right && <Text style={{ fontSize: 11, color: "#A8A29E" }}>{right}</Text>}
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.bgSurface }}>
+      <Text style={{ flex: 1, fontSize: 11, fontWeight: "700", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1.2 }}>{label}</Text>
+      {count && <Text style={{ fontSize: 11, color: colors.textSubtle }}>{count}</Text>}
+      {right && <Text style={{ fontSize: 11, color: colors.textSubtle }}>{right}</Text>}
     </View>
   );
 }
@@ -250,6 +253,8 @@ function DetailsTab({ item, product, loadingProduct, onGoToPrix, onAddPrice, onL
   onAddPrice: () => void;
   onLinkProduct: () => void;
 }) {
+  const { colors } = useAppTheme();
+
   if (loadingProduct) {
     return (
       <View style={{ alignItems: "center", paddingTop: 40 }}>
@@ -261,13 +266,13 @@ function DetailsTab({ item, product, loadingProduct, onGoToPrix, onAddPrice, onL
   if (!item.productId || !product) {
     return (
       <View style={{ alignItems: "center", paddingTop: 32, gap: 12 }}>
-        <View style={{ width: 56, height: 56, borderRadius: 20, backgroundColor: "#F5F3EF", alignItems: "center", justifyContent: "center" }}>
+        <View style={{ width: 56, height: 56, borderRadius: 20, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center" }}>
           <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
             <Path d="M21 21l-4.35-4.35M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z" />
           </Svg>
         </View>
-        <Text style={{ fontSize: 15, fontWeight: "700", color: "#1C1917" }}>Aucun produit lié</Text>
-        <Text style={{ fontSize: 13, color: "#78716C", textAlign: "center", maxWidth: 240 }}>
+        <Text style={{ fontSize: 15, fontWeight: "700", color: colors.text }}>Aucun produit lié</Text>
+        <Text style={{ fontSize: 13, color: colors.textMuted, textAlign: "center", maxWidth: 240 }}>
           Associez un produit du catalogue pour voir sa fiche nutritionnelle.
         </Text>
         <Pressable
@@ -280,7 +285,7 @@ function DetailsTab({ item, product, loadingProduct, onGoToPrix, onAddPrice, onL
           <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}>Associer un produit</Text>
         </Pressable>
         <Pressable onPress={onAddPrice}>
-          <Text style={{ fontSize: 13, color: "#A8A29E", textDecorationLine: "underline" }}>Ou ajouter un prix</Text>
+          <Text style={{ fontSize: 13, color: colors.textSubtle, textDecorationLine: "underline" }}>Ou ajouter un prix</Text>
         </Pressable>
       </View>
     );
@@ -311,27 +316,27 @@ function DetailsTab({ item, product, loadingProduct, onGoToPrix, onAddPrice, onL
     <View style={{ gap: 12 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
         {product.imageUrl ? (
-          <Image source={{ uri: product.imageUrl }} style={{ width: 64, height: 64, borderRadius: 18, backgroundColor: "#F5F3EF" }} resizeMode="contain" />
+          <Image source={{ uri: product.imageUrl }} style={{ width: 64, height: 64, borderRadius: 18, backgroundColor: colors.bgSurface }} resizeMode="contain" />
         ) : (
-          <View style={{ width: 64, height: 64, borderRadius: 18, backgroundColor: "#F5F3EF" }} />
+          <View style={{ width: 64, height: 64, borderRadius: 18, backgroundColor: colors.bgSurface }} />
         )}
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 15, fontWeight: "700", color: "#1C1917" }} numberOfLines={2}>{product.name}</Text>
-          {product.brand && <Text style={{ fontSize: 13, color: "#78716C", marginTop: 2 }}>{product.brand}</Text>}
+          <Text style={{ fontSize: 15, fontWeight: "700", color: colors.text }} numberOfLines={2}>{product.name}</Text>
+          {product.brand && <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>{product.brand}</Text>}
         </View>
         <Pressable
           onPress={onLinkProduct}
           style={({ pressed }) => ({
             paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10,
-            backgroundColor: pressed ? "#F5F3EF" : "#FAF9F6",
-            borderWidth: 1, borderColor: "#E8E5E1",
+            backgroundColor: pressed ? colors.bgSurface : colors.bg,
+            borderWidth: 1, borderColor: colors.border,
           })}
         >
-          <Text style={{ fontSize: 12, fontWeight: "600", color: "#78716C" }}>Changer</Text>
+          <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Changer</Text>
         </Pressable>
       </View>
 
-      <View style={{ borderRadius: 16, backgroundColor: "#F5F3EF", overflow: "hidden" }}>
+      <View style={{ borderRadius: 16, backgroundColor: colors.bgSurface, overflow: "hidden" }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 16, padding: 16 }}>
           <View style={{ width: 100, height: 100, alignItems: "center", justifyContent: "center" }}>
             <Svg width={100} height={100} viewBox="0 0 120 120" style={{ position: "absolute" }}>
@@ -344,29 +349,29 @@ function DetailsTab({ item, product, loadingProduct, onGoToPrix, onAddPrice, onL
             </Svg>
             <View style={{ alignItems: "center" }}>
               <Text style={{ fontSize: 30, fontWeight: "900", color: grade.color, lineHeight: 34 }}>{score}</Text>
-              <Text style={{ fontSize: 10, color: "#A8A29E" }}>/100</Text>
+              <Text style={{ fontSize: 10, color: colors.textSubtle }}>/100</Text>
             </View>
           </View>
 
           <View style={{ flex: 1, gap: 8 }}>
             <View>
               <Text style={{ fontSize: 17, fontWeight: "800", color: grade.color }}>{grade.label}</Text>
-              <Text style={{ fontSize: 11, color: "#A8A29E" }}>Score santé global</Text>
+              <Text style={{ fontSize: 11, color: colors.textSubtle }}>Score santé global</Text>
             </View>
 
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <Text style={{ fontSize: 12, color: "#78716C" }}>Nutrition</Text>
+              <Text style={{ fontSize: 12, color: colors.textMuted }}>Nutrition</Text>
               {product.nutriscoreGrade ? (
                 <View style={{ width: 22, height: 22, borderRadius: 6, backgroundColor: NUTRI_COLOR[product.nutriscoreGrade.toLowerCase()] ?? "#9CA3AF", alignItems: "center", justifyContent: "center" }}>
                   <Text style={{ fontSize: 10, fontWeight: "900", color: "#fff" }}>{product.nutriscoreGrade.toUpperCase()}</Text>
                 </View>
-              ) : <Text style={{ fontSize: 11, color: "#A8A29E" }}>—</Text>}
+              ) : <Text style={{ fontSize: 11, color: colors.textSubtle }}>—</Text>}
             </View>
 
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <Text style={{ fontSize: 12, color: "#78716C" }}>Additifs</Text>
+              <Text style={{ fontSize: 12, color: colors.textMuted }}>Additifs</Text>
               {additives.length === 0 ? (
-                <Text style={{ fontSize: 12, fontWeight: "600", color: "#16A34A" }}>Aucun</Text>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.green }}>Aucun</Text>
               ) : highCount > 0 ? (
                 <Text style={{ fontSize: 12, fontWeight: "600", color: "#EF4444" }}>{highCount} à éviter</Text>
               ) : (
@@ -375,24 +380,24 @@ function DetailsTab({ item, product, loadingProduct, onGoToPrix, onAddPrice, onL
             </View>
 
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <Text style={{ fontSize: 12, color: "#78716C" }}>Transformation</Text>
+              <Text style={{ fontSize: 12, color: colors.textMuted }}>Transformation</Text>
               {product.novaGroup ? (
                 <View style={{ width: 22, height: 22, borderRadius: 6, backgroundColor: NOVA_COLOR[product.novaGroup] ?? "#9CA3AF", alignItems: "center", justifyContent: "center" }}>
                   <Text style={{ fontSize: 10, fontWeight: "900", color: "#fff" }}>{product.novaGroup}</Text>
                 </View>
-              ) : <Text style={{ fontSize: 11, color: "#A8A29E" }}>—</Text>}
+              ) : <Text style={{ fontSize: 11, color: colors.textSubtle }}>—</Text>}
             </View>
           </View>
         </View>
 
         {product.novaGroup && (
-          <View style={{ borderTopWidth: 1, borderTopColor: "#E8E5E1", paddingHorizontal: 16, paddingVertical: 10 }}>
-            <Text style={{ fontSize: 12, color: "#78716C" }}>{NOVA_LABEL[product.novaGroup]}</Text>
+          <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingHorizontal: 16, paddingVertical: 10 }}>
+            <Text style={{ fontSize: 12, color: colors.textMuted }}>{NOVA_LABEL[product.novaGroup]}</Text>
           </View>
         )}
       </View>
 
-      <View style={{ borderRadius: 16, backgroundColor: "#fff", overflow: "hidden", shadowColor: "#1C1917", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}>
+      <View style={{ borderRadius: 16, backgroundColor: colors.bgCard, overflow: "hidden", shadowColor: colors.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}>
         <SectionHeader label="Additifs" count={additives.length > 0 ? `${additives.length} détecté${additives.length > 1 ? "s" : ""}` : undefined} />
         {additives.length === 0 ? (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 14 }}>
@@ -401,15 +406,15 @@ function DetailsTab({ item, product, loadingProduct, onGoToPrix, onAddPrice, onL
                 <Polyline points="20 6 9 17 4 12" />
               </Svg>
             </View>
-            <Text style={{ fontSize: 14, fontWeight: "600", color: "#15803D" }}>Aucun additif détecté</Text>
+            <Text style={{ fontSize: 14, fontWeight: "600", color: colors.green }}>Aucun additif détecté</Text>
           </View>
         ) : (
           additives.map((a, i) => (
-            <View key={a.code} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 12, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: "#F5F3EF" }}>
+            <View key={a.code} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 12, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: colors.bgSurface }}>
               <View style={{ width: 4, height: 32, borderRadius: 2, backgroundColor: RISK_COLOR[a.risk], flexShrink: 0 }} />
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, fontWeight: "600", color: "#1C1917" }} numberOfLines={1}>{a.name}</Text>
-                <Text style={{ fontSize: 10, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase" }}>{a.code}</Text>
+                <Text style={{ fontSize: 13, fontWeight: "600", color: colors.text }} numberOfLines={1}>{a.name}</Text>
+                <Text style={{ fontSize: 10, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase" }}>{a.code}</Text>
               </View>
               <View style={{ borderRadius: 99, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: RISK_BG[a.risk] }}>
                 <Text style={{ fontSize: 11, fontWeight: "700", color: RISK_TEXT[a.risk] }}>{RISK_LABEL[a.risk]}</Text>
@@ -420,7 +425,7 @@ function DetailsTab({ item, product, loadingProduct, onGoToPrix, onAddPrice, onL
       </View>
 
       {allergens.length > 0 && (
-        <View style={{ borderRadius: 16, backgroundColor: "#fff", overflow: "hidden", shadowColor: "#1C1917", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}>
+        <View style={{ borderRadius: 16, backgroundColor: colors.bgCard, overflow: "hidden", shadowColor: colors.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}>
           <SectionHeader label="Allergènes" />
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, paddingHorizontal: 14, paddingVertical: 12 }}>
             {allergens.map((a) => (
@@ -433,14 +438,14 @@ function DetailsTab({ item, product, loadingProduct, onGoToPrix, onAddPrice, onL
       )}
 
       {hasNutriments && (
-        <View style={{ borderRadius: 16, backgroundColor: "#fff", overflow: "hidden", shadowColor: "#1C1917", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}>
+        <View style={{ borderRadius: 16, backgroundColor: colors.bgCard, overflow: "hidden", shadowColor: colors.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}>
           <SectionHeader label="Valeurs nutritionnelles" right="/ 100g" />
           {NUTRI_ROWS.filter((row) => product.nutriments![row.key] !== null).map((row, i) => (
-            <View key={row.label} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 14, paddingVertical: 10, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: "#F5F3EF" }}>
-              <Text style={{ fontSize: 13, color: row.sub ? "#A8A29E" : "#1C1917", fontWeight: row.sub ? "400" : "500", paddingLeft: row.sub ? 12 : 0 }}>
+            <View key={row.label} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 14, paddingVertical: 10, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: colors.bgSurface }}>
+              <Text style={{ fontSize: 13, color: row.sub ? colors.textSubtle : colors.text, fontWeight: row.sub ? "400" : "500", paddingLeft: row.sub ? 12 : 0 }}>
                 {row.label}
               </Text>
-              <Text style={{ fontSize: 13, fontWeight: "600", color: row.warn(product.nutriments![row.key] as number) ? "#F97316" : "#1C1917" }}>
+              <Text style={{ fontSize: 13, fontWeight: "600", color: row.warn(product.nutriments![row.key] as number) ? "#F97316" : colors.text }}>
                 {fmt(product.nutriments![row.key] as number)} {row.unit}
               </Text>
             </View>
@@ -449,9 +454,9 @@ function DetailsTab({ item, product, loadingProduct, onGoToPrix, onAddPrice, onL
       )}
 
       {product.ingredientsText && (
-        <View style={{ borderRadius: 16, backgroundColor: "#fff", overflow: "hidden", shadowColor: "#1C1917", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}>
+        <View style={{ borderRadius: 16, backgroundColor: colors.bgCard, overflow: "hidden", shadowColor: colors.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}>
           <SectionHeader label="Ingrédients" />
-          <Text style={{ fontSize: 12, color: "#78716C", paddingHorizontal: 14, paddingVertical: 12, lineHeight: 18 }}>
+          <Text style={{ fontSize: 12, color: colors.textMuted, paddingHorizontal: 14, paddingVertical: 12, lineHeight: 18 }}>
             {product.ingredientsText}
           </Text>
         </View>
@@ -466,16 +471,18 @@ function PrixTab({ item, cheapest, qty, onAddPrice }: {
   qty: number;
   onAddPrice: () => void;
 }) {
+  const { colors } = useAppTheme();
+
   if (item.allStorePrices.length === 0) {
     return (
       <View style={{ alignItems: "center", paddingTop: 32, gap: 12 }}>
-        <View style={{ width: 56, height: 56, borderRadius: 20, backgroundColor: "#F5F3EF", alignItems: "center", justifyContent: "center" }}>
+        <View style={{ width: 56, height: 56, borderRadius: 20, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center" }}>
           <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
             <Path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
           </Svg>
         </View>
-        <Text style={{ fontSize: 15, fontWeight: "700", color: "#1C1917" }}>Aucun prix disponible</Text>
-        <Text style={{ fontSize: 13, color: "#78716C", textAlign: "center", maxWidth: 240 }}>
+        <Text style={{ fontSize: 15, fontWeight: "700", color: colors.text }}>Aucun prix disponible</Text>
+        <Text style={{ fontSize: 13, color: colors.textMuted, textAlign: "center", maxWidth: 240 }}>
           Les prix sont partagés par la communauté. Aucun prix trouvé pour cet article.
         </Text>
         <Pressable
@@ -495,36 +502,36 @@ function PrixTab({ item, cheapest, qty, onAddPrice }: {
 
   return (
     <View style={{ gap: 10 }}>
-      <Text style={{ fontSize: 11, color: "#A8A29E", fontWeight: "500" }}>
+      <Text style={{ fontSize: 11, color: colors.textSubtle, fontWeight: "500" }}>
         Estimation pour {qty} {item.unit} · Prix communautaires
       </Text>
       {sorted.map((sp) => {
         const isCheapest = cheapest?.storeId === sp.storeId && sorted.length > 1;
         return (
-          <View key={sp.storeId} style={{ flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 16, backgroundColor: isCheapest ? "#F0FDF4" : "#F5F3EF", paddingHorizontal: 14, paddingVertical: 12, borderWidth: isCheapest ? 1.5 : 0, borderColor: isCheapest ? "#BBF7D0" : "transparent" }}>
-            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: isCheapest ? "#DCFCE7" : "#fff", alignItems: "center", justifyContent: "center" }}>
+          <View key={sp.storeId} style={{ flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 16, backgroundColor: isCheapest ? colors.greenBg : colors.bgSurface, paddingHorizontal: 14, paddingVertical: 12, borderWidth: isCheapest ? 1.5 : 0, borderColor: isCheapest ? "#BBF7D0" : "transparent" }}>
+            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: isCheapest ? "#DCFCE7" : colors.bgCard, alignItems: "center", justifyContent: "center" }}>
               <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={isCheapest ? "#16A34A" : "#A8A29E"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                 <Path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
                 <Polyline points="9 22 9 12 15 12 15 22" />
               </Svg>
             </View>
             <View style={{ flex: 1, gap: 2 }}>
-              <Text style={{ fontSize: 14, fontWeight: "700", color: isCheapest ? "#15803D" : "#1C1917" }}>{sp.storeName}</Text>
-              {isCheapest && <Text style={{ fontSize: 11, fontWeight: "600", color: "#16A34A" }}>Le moins cher ✓</Text>}
+              <Text style={{ fontSize: 14, fontWeight: "700", color: isCheapest ? "#15803D" : colors.text }}>{sp.storeName}</Text>
+              {isCheapest && <Text style={{ fontSize: 11, fontWeight: "600", color: colors.green }}>Le moins cher ✓</Text>}
               {sp.confidence !== "exact" && (
                 <Text style={{ fontSize: 10, color: "#92400E", fontWeight: "500" }}>
                   {sp.confidence === "brand_city" ? "Moy. ville" : "Moy. nationale"}
                 </Text>
               )}
             </View>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: isCheapest ? "#16A34A" : "#1C1917" }}>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: isCheapest ? colors.green : colors.text }}>
               {sp.estimatedCost.toFixed(2)} €
             </Text>
           </View>
         );
       })}
       {sorted.length > 1 && cheapest && (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 16, backgroundColor: "#F0FDF4", paddingHorizontal: 14, paddingVertical: 12 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 16, backgroundColor: colors.greenBg, paddingHorizontal: 14, paddingVertical: 12 }}>
           <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#DCFCE7", alignItems: "center", justifyContent: "center" }}>
             <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <Path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
@@ -539,14 +546,14 @@ function PrixTab({ item, cheapest, qty, onAddPrice }: {
         onPress={onAddPrice}
         style={({ pressed }) => ({
           flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-          borderRadius: 14, borderWidth: 1.5, borderColor: "#FDBA74",
-          paddingVertical: 12, backgroundColor: pressed ? "#FFF7ED" : "transparent",
+          borderRadius: 14, borderWidth: 1.5, borderColor: colors.accentBgBorder,
+          paddingVertical: 12, backgroundColor: pressed ? colors.accentBg : "transparent",
         })}
       >
         <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
           <Path d="M12 5v14M5 12h14" />
         </Svg>
-        <Text style={{ fontSize: 14, fontWeight: "700", color: "#E8571C" }}>Ajouter un prix</Text>
+        <Text style={{ fontSize: 14, fontWeight: "700", color: colors.accent }}>Ajouter un prix</Text>
       </Pressable>
     </View>
   );
@@ -573,6 +580,7 @@ function LinkProductSheet({ item, isOpen, onClose, onSuccess }: {
   const [linkError, setLinkError] = useState<string | null>(null);
   const [permission, requestPermission] = useCameraPermissions();
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { colors } = useAppTheme();
 
   useEffect(() => {
     if (!isOpen || !item) return;
@@ -644,38 +652,38 @@ function LinkProductSheet({ item, isOpen, onClose, onSuccess }: {
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: 14 }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 17, fontWeight: "800", color: "#1C1917" }}>Associer un produit</Text>
-            <Text style={{ fontSize: 12, color: "#A8A29E", marginTop: 2 }}>{item.customName}</Text>
+            <Text style={{ fontSize: 17, fontWeight: "800", color: colors.text }}>Associer un produit</Text>
+            <Text style={{ fontSize: 12, color: colors.textSubtle, marginTop: 2 }}>{item.customName}</Text>
           </View>
         </View>
 
-        <View style={{ flexDirection: "row", backgroundColor: "#F5F3EF", borderRadius: 14, padding: 4, marginBottom: 14, gap: 4 }}>
+        <View style={{ flexDirection: "row", backgroundColor: colors.bgSurface, borderRadius: 14, padding: 4, marginBottom: 14, gap: 4 }}>
           <Pressable
             onPress={() => { setMode("search"); setScanned(false); setScanError(null); }}
-            style={{ flex: 1, paddingVertical: 9, borderRadius: 11, alignItems: "center", backgroundColor: mode === "search" ? "#fff" : "transparent", shadowColor: mode === "search" ? "#1C1917" : "transparent", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: mode === "search" ? 2 : 0 }}
+            style={{ flex: 1, paddingVertical: 9, borderRadius: 11, alignItems: "center", backgroundColor: mode === "search" ? colors.bgCard : "transparent", shadowColor: mode === "search" ? colors.shadow : "transparent", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: mode === "search" ? 2 : 0 }}
           >
-            <Text style={{ fontSize: 13, fontWeight: "700", color: mode === "search" ? "#1C1917" : "#A8A29E" }}>Rechercher</Text>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: mode === "search" ? colors.text : colors.textSubtle }}>Rechercher</Text>
           </Pressable>
           <Pressable
             onPress={handleSwitchToScan}
-            style={{ flex: 1, paddingVertical: 9, borderRadius: 11, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6, backgroundColor: mode === "scan" ? "#fff" : "transparent", shadowColor: mode === "scan" ? "#1C1917" : "transparent", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: mode === "scan" ? 2 : 0 }}
+            style={{ flex: 1, paddingVertical: 9, borderRadius: 11, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6, backgroundColor: mode === "scan" ? colors.bgCard : "transparent", shadowColor: mode === "scan" ? colors.shadow : "transparent", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: mode === "scan" ? 2 : 0 }}
           >
             <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={mode === "scan" ? "#1C1917" : "#A8A29E"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <Path d="M3 9V6a2 2 0 0 1 2-2h3" /><Path d="M15 4h3a2 2 0 0 1 2 2v3" /><Path d="M21 15v3a2 2 0 0 1-2 2h-3" /><Path d="M9 20H6a2 2 0 0 1-2-2v-3" /><Line x1={7} y1={12} x2={17} y2={12} />
             </Svg>
-            <Text style={{ fontSize: 13, fontWeight: "700", color: mode === "scan" ? "#1C1917" : "#A8A29E" }}>Scanner</Text>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: mode === "scan" ? colors.text : colors.textSubtle }}>Scanner</Text>
           </Pressable>
         </View>
 
         {linkError && (
-          <View style={{ backgroundColor: "#FEF2F2", borderRadius: 12, padding: 12, marginBottom: 10 }}>
-            <Text style={{ fontSize: 13, color: "#DC2626" }}>{linkError}</Text>
+          <View style={{ backgroundColor: colors.dangerBg, borderRadius: 12, padding: 12, marginBottom: 10 }}>
+            <Text style={{ fontSize: 13, color: colors.danger }}>{linkError}</Text>
           </View>
         )}
 
         {mode === "search" ? (
           <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#F5F3EF", borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 12 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: colors.bgSurface, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 12 }}>
               <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                 <Circle cx={11} cy={11} r={8} /><Line x1={21} y1={21} x2={16.65} y2={16.65} />
               </Svg>
@@ -683,8 +691,8 @@ function LinkProductSheet({ item, isOpen, onClose, onSuccess }: {
                 value={query}
                 onChangeText={handleSearch}
                 placeholder="Nom du produit…"
-                placeholderTextColor="#A8A29E"
-                style={{ flex: 1, fontSize: 15, color: "#1C1917" }}
+                placeholderTextColor={colors.textSubtle}
+                style={{ flex: 1, fontSize: 15, color: colors.text }}
                 returnKeyType="search"
               />
               {searching && <ActivityIndicator size="small" color="#E8571C" />}
@@ -692,23 +700,23 @@ function LinkProductSheet({ item, isOpen, onClose, onSuccess }: {
             <BottomModalScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40, gap: 8 }}>
               {results.length === 0 && !searching && query.trim() ? (
                 <View style={{ alignItems: "center", paddingTop: 32 }}>
-                  <Text style={{ fontSize: 14, color: "#A8A29E" }}>Aucun résultat pour «{query}»</Text>
+                  <Text style={{ fontSize: 14, color: colors.textSubtle }}>Aucun résultat pour «{query}»</Text>
                 </View>
               ) : results.map((product) => (
                 <Pressable
                   key={product.offId}
                   onPress={() => linkProduct(product)}
                   disabled={linking}
-                  style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: pressed ? "#FFF7ED" : "#F5F3EF", borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10 })}
+                  style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: pressed ? colors.accentBg : colors.bgSurface, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10 })}
                 >
                   {product.imageUrl ? (
-                    <Image source={{ uri: product.imageUrl }} style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: "#E8E5E1" }} resizeMode="contain" />
+                    <Image source={{ uri: product.imageUrl }} style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: colors.border }} resizeMode="contain" />
                   ) : (
-                    <View style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: "#E8E5E1" }} />
+                    <View style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: colors.border }} />
                   )}
                   <View style={{ flex: 1, gap: 2 }}>
-                    <Text style={{ fontSize: 14, fontWeight: "600", color: "#1C1917" }} numberOfLines={1}>{product.name}</Text>
-                    {product.brand && <Text style={{ fontSize: 12, color: "#A8A29E" }} numberOfLines={1}>{product.brand}</Text>}
+                    <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text }} numberOfLines={1}>{product.name}</Text>
+                    {product.brand && <Text style={{ fontSize: 12, color: colors.textSubtle }} numberOfLines={1}>{product.brand}</Text>}
                   </View>
                   {product.nutriscoreGrade && (
                     <View style={{ width: 28, height: 28, borderRadius: 7, backgroundColor: NUTRISCORE_COLORS[product.nutriscoreGrade] ?? "#9CA3AF", alignItems: "center", justifyContent: "center" }}>
@@ -732,8 +740,8 @@ function LinkProductSheet({ item, isOpen, onClose, onSuccess }: {
               <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color="#E8571C" /></View>
             ) : !permission.granted ? (
               <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 32 }}>
-                <Text style={{ fontSize: 14, fontWeight: "700", color: "#1C1917", textAlign: "center" }}>Accès à la caméra requis</Text>
-                <Text style={{ fontSize: 13, color: "#78716C", textAlign: "center" }}>Pour scanner des codes-barres, autorisez Deazl à accéder à votre caméra.</Text>
+                <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text, textAlign: "center" }}>Accès à la caméra requis</Text>
+                <Text style={{ fontSize: 13, color: colors.textMuted, textAlign: "center" }}>Pour scanner des codes-barres, autorisez Deazl à accéder à votre caméra.</Text>
               </View>
             ) : (
               <>
@@ -763,10 +771,10 @@ function LinkProductSheet({ item, isOpen, onClose, onSuccess }: {
                   )}
                 </View>
                 {scanError && (
-                  <View style={{ backgroundColor: "#FEF2F2", borderRadius: 14, padding: 14, gap: 8 }}>
-                    <Text style={{ fontSize: 13, color: "#DC2626", fontWeight: "600" }}>{scanError}</Text>
-                    <Pressable onPress={() => { setScanned(false); setScanError(null); }} style={({ pressed }) => ({ alignSelf: "flex-start", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, backgroundColor: pressed ? "#FEE2E2" : "#F5F3EF" })}>
-                      <Text style={{ fontSize: 13, fontWeight: "700", color: "#1C1917" }}>Réessayer</Text>
+                  <View style={{ backgroundColor: colors.dangerBg, borderRadius: 14, padding: 14, gap: 8 }}>
+                    <Text style={{ fontSize: 13, color: colors.danger, fontWeight: "600" }}>{scanError}</Text>
+                    <Pressable onPress={() => { setScanned(false); setScanError(null); }} style={({ pressed }) => ({ alignSelf: "flex-start", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, backgroundColor: pressed ? colors.dangerBg : colors.bgSurface })}>
+                      <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text }}>Réessayer</Text>
                     </Pressable>
                   </View>
                 )}
@@ -780,18 +788,20 @@ function LinkProductSheet({ item, isOpen, onClose, onSuccess }: {
 }
 
 function AlternativesTab({ alternatives, loadingAlts }: { alternatives: AlternativeProduct[]; loadingAlts: boolean }) {
+  const { colors } = useAppTheme();
+
   if (loadingAlts) {
     return (
       <View style={{ gap: 10 }}>
-        <Text style={{ fontSize: 11, color: "#A8A29E", fontWeight: "500" }}>Recherche d'alternatives…</Text>
+        <Text style={{ fontSize: 11, color: colors.textSubtle, fontWeight: "500" }}>Recherche d'alternatives…</Text>
         {[1, 2, 3].map((i) => (
-          <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#F5F3EF", borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12 }}>
-            <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: "#E8E5E1" }} />
+          <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.bgSurface, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12 }}>
+            <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: colors.border }} />
             <View style={{ flex: 1, gap: 6 }}>
-              <View style={{ height: 12, width: "70%", borderRadius: 6, backgroundColor: "#E8E5E1" }} />
-              <View style={{ height: 10, width: "45%", borderRadius: 5, backgroundColor: "#E8E5E1" }} />
+              <View style={{ height: 12, width: "70%", borderRadius: 6, backgroundColor: colors.border }} />
+              <View style={{ height: 10, width: "45%", borderRadius: 5, backgroundColor: colors.border }} />
             </View>
-            <View style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: "#E8E5E1" }} />
+            <View style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: colors.border }} />
           </View>
         ))}
       </View>
@@ -800,13 +810,13 @@ function AlternativesTab({ alternatives, loadingAlts }: { alternatives: Alternat
   if (alternatives.length === 0) {
     return (
       <View style={{ alignItems: "center", paddingTop: 32, gap: 12 }}>
-        <View style={{ width: 56, height: 56, borderRadius: 20, backgroundColor: "#F0FDF4", alignItems: "center", justifyContent: "center" }}>
+        <View style={{ width: 56, height: 56, borderRadius: 20, backgroundColor: colors.greenBg, alignItems: "center", justifyContent: "center" }}>
           <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
             <Polyline points="20 6 9 17 4 12" />
           </Svg>
         </View>
-        <Text style={{ fontSize: 15, fontWeight: "700", color: "#1C1917" }}>Aucune alternative trouvée</Text>
-        <Text style={{ fontSize: 13, color: "#78716C", textAlign: "center", maxWidth: 240 }}>
+        <Text style={{ fontSize: 15, fontWeight: "700", color: colors.text }}>Aucune alternative trouvée</Text>
+        <Text style={{ fontSize: 13, color: colors.textMuted, textAlign: "center", maxWidth: 240 }}>
           Pas de meilleure option connue dans cette catégorie.
         </Text>
       </View>
@@ -814,18 +824,18 @@ function AlternativesTab({ alternatives, loadingAlts }: { alternatives: Alternat
   }
   return (
     <View style={{ gap: 10 }}>
-      <Text style={{ fontSize: 11, color: "#A8A29E", fontWeight: "500" }}>Meilleur Nutri-Score dans la même catégorie</Text>
-      <View style={{ borderRadius: 16, backgroundColor: "#fff", overflow: "hidden", shadowColor: "#1C1917", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}>
+      <Text style={{ fontSize: 11, color: colors.textSubtle, fontWeight: "500" }}>Meilleur Nutri-Score dans la même catégorie</Text>
+      <View style={{ borderRadius: 16, backgroundColor: colors.bgCard, overflow: "hidden", shadowColor: colors.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}>
         {alternatives.map((alt, i) => (
-          <View key={alt.offId} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 12, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: "#F5F3EF" }}>
+          <View key={alt.offId} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 12, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: colors.bgSurface }}>
             {alt.imageUrl ? (
-              <Image source={{ uri: alt.imageUrl }} style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: "#F5F3EF" }} resizeMode="contain" />
+              <Image source={{ uri: alt.imageUrl }} style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: colors.bgSurface }} resizeMode="contain" />
             ) : (
-              <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: "#F5F3EF" }} />
+              <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: colors.bgSurface }} />
             )}
             <View style={{ flex: 1, gap: 2 }}>
-              <Text style={{ fontSize: 14, fontWeight: "600", color: "#1C1917" }} numberOfLines={1}>{alt.name}</Text>
-              {alt.brand && <Text style={{ fontSize: 12, color: "#A8A29E" }} numberOfLines={1}>{alt.brand}</Text>}
+              <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text }} numberOfLines={1}>{alt.name}</Text>
+              {alt.brand && <Text style={{ fontSize: 12, color: colors.textSubtle }} numberOfLines={1}>{alt.brand}</Text>}
             </View>
             {alt.nutriscoreGrade && (
               <View style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: NUTRI_COLOR[alt.nutriscoreGrade] ?? "#9CA3AF", alignItems: "center", justifyContent: "center" }}>
@@ -849,6 +859,7 @@ function EditItemSheet({ item, isOpen, onClose, onSuccess }: {
   const [quantity, setQuantity] = useState("1");
   const [unit, setUnit] = useState("");
   const [saving, setSaving] = useState(false);
+  const { colors } = useAppTheme();
 
   useEffect(() => {
     if (!isOpen || !item) return;
@@ -874,36 +885,36 @@ function EditItemSheet({ item, isOpen, onClose, onSuccess }: {
   return (
     <BottomModal isOpen={isOpen} onClose={onClose} height="48%">
       <View style={{ paddingBottom: 16 }}>
-        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Modifier l'article</Text>
+        <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text }}>Modifier l'article</Text>
       </View>
       <View style={{ gap: 12 }}>
         <TextInput
           value={name}
           onChangeText={setName}
           placeholder="Nom de l'article…"
-          placeholderTextColor="#A8A29E"
-          style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#1C1917" }}
+          placeholderTextColor={colors.textSubtle}
+          style={{ borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: colors.text }}
           returnKeyType="next"
         />
         <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
           <View style={{ gap: 6 }}>
-            <Text style={{ fontSize: 11, fontWeight: "600", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 0.8 }}>Qté</Text>
+            <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 0.8 }}>Qté</Text>
             <TextInput
               value={quantity}
               onChangeText={setQuantity}
               placeholder="1"
               keyboardType="numeric"
-              placeholderTextColor="#A8A29E"
-              style={{ width: 72, borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 12, paddingVertical: 12, fontSize: 16, fontWeight: "700", color: "#1C1917", textAlign: "center" }}
+              placeholderTextColor={colors.textSubtle}
+              style={{ width: 72, borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 12, paddingVertical: 12, fontSize: 16, fontWeight: "700", color: colors.text, textAlign: "center" }}
             />
           </View>
           <View style={{ flex: 1, gap: 6 }}>
-            <Text style={{ fontSize: 11, fontWeight: "600", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 0.8 }}>Unité</Text>
+            <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 0.8 }}>Unité</Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
               {UNITS.map((u) => (
                 <Pressable key={u} onPress={() => setUnit(u)}
-                  style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 99, backgroundColor: unit === u ? "#E8571C" : "#F5F3EF" }}>
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: unit === u ? "#fff" : "#78716C" }}>{u}</Text>
+                  style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 99, backgroundColor: unit === u ? colors.accent : colors.bgSurface }}>
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: unit === u ? "#fff" : colors.textMuted }}>{u}</Text>
                 </Pressable>
               ))}
             </View>

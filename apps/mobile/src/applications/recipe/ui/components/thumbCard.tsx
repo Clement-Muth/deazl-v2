@@ -3,9 +3,11 @@ import { PressableFeedback } from "heroui-native";
 import { Image, Text, View } from "react-native";
 import Svg, { Circle, Path, Polyline } from "react-native-svg";
 import type { Recipe } from "../../domain/entities/recipe";
+import { useAppTheme } from "../../../../shared/theme";
 import { fmtTime, paletteFor } from "./recipeUtils";
 
 export function ThumbCard({ recipe, onPress }: { recipe: Recipe; onPress: () => void }) {
+  const { colors } = useAppTheme();
   const pal = paletteFor(recipe.name);
   const totalTime = (recipe.prepTimeMinutes ?? 0) + (recipe.cookTimeMinutes ?? 0);
   const hasImg = !!recipe.imageUrl;

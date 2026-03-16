@@ -5,9 +5,13 @@ import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Animated, Image, Pressable, Text, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Line, Path, Polygon, Polyline, Rect } from "react-native-svg";
+import { useAppTheme } from "../../../../shared/theme";
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import { addRecipeToShoppingList } from "../../application/useCases/addRecipeToShoppingList";
 import { deleteRecipe } from "../../application/useCases/deleteRecipe";
+import { duplicateRecipe } from "../../application/useCases/duplicateRecipe";
 import { getRecipeById } from "../../application/useCases/getRecipeById";
+import { toggleRecipePublic } from "../../application/useCases/toggleRecipePublic";
 import { scheduleRecipe } from "../../../planning/application/useCases/scheduleRecipe";
 import type { MealType } from "../../../planning/domain/entities/planning";
 import { linkProductToIngredient } from "../../application/useCases/linkProductToIngredient";
@@ -53,10 +57,12 @@ interface RecipeDetailScreenProps {
 }
 
 export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetailScreenProps) {
+  const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
   const [servings, setServings] = useState(4);
   const [cookModeOpen, setCookModeOpen] = useState(false);
   const [cookStep, setCookStep] = useState(0);
@@ -69,6 +75,9 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [addingToList, setAddingToList] = useState(false);
+  const [addedToList, setAddedToList] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
 
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -89,6 +98,7 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
       setRecipe(r);
       if (r) {
         setIsFavorite(r.isFavorite);
+        setIsPublic(r.isPublic);
         setServings(r.servings);
       }
     }).finally(() => setLoading(false));
@@ -99,6 +109,34 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
     setIsFavorite(next);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     await toggleFavorite(id, next);
+  }
+
+  async function handleAddToShoppingList() {
+    setAddingToList(true);
+    await addRecipeToShoppingList(id, servings);
+    setAddingToList(false);
+    setAddedToList(true);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setTimeout(() => setAddedToList(false), 2500);
+  }
+
+  async function handleDuplicate() {
+    setActionsOpen(false);
+    setDuplicating(true);
+    const result = await duplicateRecipe(id);
+    setDuplicating(false);
+    if (typeof result === "string") {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      onEdit?.(result);
+    }
+  }
+
+  async function handleTogglePublic() {
+    const next = !isPublic;
+    setIsPublic(next);
+    setActionsOpen(false);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await toggleRecipePublic(id, next);
   }
 
   function toggleIngredient(ingredientId: string) {
@@ -168,16 +206,16 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#FFFAF5", alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator color="#E8571C" size="large" />
+      <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator color={colors.accent} size="large" />
       </View>
     );
   }
 
   if (!recipe) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#FFFAF5", alignItems: "center", justifyContent: "center" }}>
-        <Text style={{ color: "#78716C" }}>Recette introuvable.</Text>
+      <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center" }}>
+        <Text style={{ color: colors.textMuted }}>Recette introuvable.</Text>
       </View>
     );
   }
@@ -190,13 +228,13 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
   const hasStats = prepTime > 0 || cookTime > 0;
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#FFFAF5" }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       {/* Sticky compact header — fades in after scrolling past hero */}
       <Animated.View
         style={{
           position: "absolute", top: 0, left: 0, right: 0, zIndex: 50,
           opacity: headerOpacity,
-          backgroundColor: "#FFFAF5",
+          backgroundColor: colors.bg,
           borderBottomWidth: 1, borderBottomColor: "#F0EDEA",
           paddingTop: insets.top,
         }}
@@ -204,16 +242,16 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
         <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, gap: 12 }}>
           <PressableFeedback
             onPress={onBack}
-            style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "#F5F3EF", alignItems: "center", justifyContent: "center" }}
+            style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center" }}
           >
             <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#1C1917" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
               <Polyline points="15 18 9 12 15 6" />
             </Svg>
           </PressableFeedback>
-          <Text style={{ flex: 1, fontSize: 15, fontWeight: "700", color: "#1C1917" }} numberOfLines={1}>{recipe.name}</Text>
+          <Text style={{ flex: 1, fontSize: 15, fontWeight: "700", color: colors.text }} numberOfLines={1}>{recipe.name}</Text>
           <PressableFeedback
             onPress={handleToggleFavorite}
-            style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "#F5F3EF", alignItems: "center", justifyContent: "center" }}
+            style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center" }}
           >
             <Svg width={16} height={16} viewBox="0 0 24 24" fill={isFavorite ? "#E8571C" : "none"} stroke={isFavorite ? "#E8571C" : "#1C1917"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <Path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
@@ -326,7 +364,7 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
         </View>
 
         {/* White content card — overlaps hero slightly */}
-        <View style={{ marginTop: -32, borderTopLeftRadius: 32, borderTopRightRadius: 32, backgroundColor: "#FFFAF5", overflow: "hidden" }}>
+        <View style={{ marginTop: -32, borderTopLeftRadius: 32, borderTopRightRadius: 32, backgroundColor: colors.bg, overflow: "hidden" }}>
 
           {/* Stats strip */}
           {hasStats && (
@@ -334,21 +372,21 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
               <View style={{ flexDirection: "row", paddingTop: 24, paddingBottom: 20 }}>
                 {prepTime > 0 && (
                   <View style={{ flex: 1, alignItems: "center" }}>
-                    <Text style={{ fontSize: 22, fontWeight: "900", color: "#1C1917" }}>{fmtTime(prepTime)}</Text>
-                    <Text style={{ fontSize: 10, fontWeight: "600", color: "#A8A29E", marginTop: 3, textTransform: "uppercase", letterSpacing: 0.8 }}>Préparation</Text>
+                    <Text style={{ fontSize: 22, fontWeight: "900", color: colors.text }}>{fmtTime(prepTime)}</Text>
+                    <Text style={{ fontSize: 10, fontWeight: "600", color: colors.textSubtle, marginTop: 3, textTransform: "uppercase", letterSpacing: 0.8 }}>Préparation</Text>
                   </View>
                 )}
-                {prepTime > 0 && cookTime > 0 && <View style={{ width: 1, backgroundColor: "#E8E5E0", marginVertical: 4 }} />}
+                {prepTime > 0 && cookTime > 0 && <View style={{ width: 1, backgroundColor: colors.border, marginVertical: 4 }} />}
                 {cookTime > 0 && (
                   <View style={{ flex: 1, alignItems: "center" }}>
-                    <Text style={{ fontSize: 22, fontWeight: "900", color: "#1C1917" }}>{fmtTime(cookTime)}</Text>
-                    <Text style={{ fontSize: 10, fontWeight: "600", color: "#A8A29E", marginTop: 3, textTransform: "uppercase", letterSpacing: 0.8 }}>Cuisson</Text>
+                    <Text style={{ fontSize: 22, fontWeight: "900", color: colors.text }}>{fmtTime(cookTime)}</Text>
+                    <Text style={{ fontSize: 10, fontWeight: "600", color: colors.textSubtle, marginTop: 3, textTransform: "uppercase", letterSpacing: 0.8 }}>Cuisson</Text>
                   </View>
                 )}
-                {(prepTime > 0 || cookTime > 0) && <View style={{ width: 1, backgroundColor: "#E8E5E0", marginVertical: 4 }} />}
+                {(prepTime > 0 || cookTime > 0) && <View style={{ width: 1, backgroundColor: colors.border, marginVertical: 4 }} />}
                 <View style={{ flex: 1, alignItems: "center" }}>
-                  <Text style={{ fontSize: 22, fontWeight: "900", color: "#1C1917" }}>{recipe.servings}</Text>
-                  <Text style={{ fontSize: 10, fontWeight: "600", color: "#A8A29E", marginTop: 3, textTransform: "uppercase", letterSpacing: 0.8 }}>Portions</Text>
+                  <Text style={{ fontSize: 22, fontWeight: "900", color: colors.text }}>{recipe.servings}</Text>
+                  <Text style={{ fontSize: 10, fontWeight: "600", color: colors.textSubtle, marginTop: 3, textTransform: "uppercase", letterSpacing: 0.8 }}>Portions</Text>
                 </View>
               </View>
               <View style={{ height: 1, backgroundColor: "#F0EDEA", marginHorizontal: 20 }} />
@@ -369,11 +407,11 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
           {recipe.ingredients.length > 0 && (
             <View style={{ paddingTop: 28 }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, marginBottom: 16 }}>
-                <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 1.5 }}>
+                <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 1.5 }}>
                   Ingrédients
                 </Text>
                 {/* Inline servings adjuster */}
-                <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#F5F3EF", borderRadius: 12, overflow: "hidden" }}>
+                <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.bgSurface, borderRadius: 12, overflow: "hidden" }}>
                   <Pressable
                     onPress={() => setServings(s => Math.max(1, s - 1))}
                     style={{ paddingHorizontal: 14, paddingVertical: 8 }}
@@ -383,7 +421,7 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
                       <Line x1={5} y1={12} x2={19} y2={12} />
                     </Svg>
                   </Pressable>
-                  <Text style={{ fontSize: 13, fontWeight: "700", color: "#1C1917", minWidth: 38, textAlign: "center" }}>{servings} pers.</Text>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text, minWidth: 38, textAlign: "center" }}>{servings} pers.</Text>
                   <Pressable
                     onPress={() => setServings(s => s + 1)}
                     style={{ paddingHorizontal: 14, paddingVertical: 8 }}
@@ -428,14 +466,14 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
                               </Text>
                             ) : null}
                             {displayName}
-                            {ing.isOptional ? <Text style={{ color: "#A8A29E", fontSize: 13 }}> (opt.)</Text> : null}
+                            {ing.isOptional ? <Text style={{ color: colors.textSubtle, fontSize: 13 }}> (opt.)</Text> : null}
                           </Text>
                         </Pressable>
                         <Pressable
                           onPress={() => openLinkSheet(ing)}
                           style={{
                             width: 30, height: 30, borderRadius: 8,
-                            backgroundColor: isLinked ? "#FFF7ED" : "#F5F3EF",
+                            backgroundColor: isLinked ? colors.accentBg : colors.bgSurface,
                             alignItems: "center", justifyContent: "center",
                           }}
                         >
@@ -446,7 +484,7 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
                         </Pressable>
                       </View>
                       {i < recipe.ingredients.length - 1 && (
-                        <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
+                        <View style={{ height: 1, backgroundColor: colors.bgSurface }} />
                       )}
                     </View>
                   );
@@ -458,7 +496,7 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
           {/* Steps — connected timeline layout */}
           {recipe.steps.length > 0 && (
             <View style={{ paddingTop: 36, paddingHorizontal: 20, paddingBottom: 28 }}>
-              <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 24 }}>
+              <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 24 }}>
                 Préparation
               </Text>
               {recipe.steps.map((step, i) => (
@@ -484,23 +522,46 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
           )}
 
           {/* Bottom spacing for sticky button */}
-          <View style={{ height: recipe.steps.length > 0 ? 100 : 40 }} />
+          <View style={{ height: 100 }} />
         </View>
       </Animated.ScrollView>
 
-      {/* Sticky Cook Mode button */}
-      {recipe.steps.length > 0 && (
-        <View style={{
-          position: "absolute", bottom: 0, left: 0, right: 0,
-          backgroundColor: "#FFFAF5",
-          borderTopWidth: 1, borderTopColor: "#F0EDEA",
-          paddingHorizontal: 20,
-          paddingTop: 12,
-          paddingBottom: Math.max(insets.bottom, 16),
-        }}>
+      {/* Sticky bottom bar */}
+      <View style={{
+        position: "absolute", bottom: 0, left: 0, right: 0,
+        backgroundColor: colors.bg,
+        borderTopWidth: 1, borderTopColor: colors.border,
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        paddingBottom: Math.max(insets.bottom, 16),
+        flexDirection: "row",
+        gap: 10,
+      }}>
+        <Button
+          variant="outline"
+          className="flex-1 rounded-2xl"
+          isDisabled={addingToList}
+          onPress={handleAddToShoppingList}
+        >
+          {addedToList ? (
+            <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={colors.green} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+              <Polyline points="20 6 9 17 4 12" />
+            </Svg>
+          ) : (
+            <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+              <Path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+              <Line x1={3} y1={6} x2={21} y2={6} />
+              <Path d="M16 10a4 4 0 0 1-8 0" />
+            </Svg>
+          )}
+          <Button.Label style={{ color: addedToList ? colors.green : colors.text }}>
+            {addingToList ? "Ajout…" : addedToList ? "Ajouté ✓" : "Courses"}
+          </Button.Label>
+        </Button>
+        {recipe.steps.length > 0 && (
           <Button
             variant="primary"
-            className="w-full rounded-2xl"
+            className="flex-1 rounded-2xl"
             onPress={() => { setCookStep(0); setCookModeOpen(true); }}
           >
             <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
@@ -508,8 +569,8 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
             </Svg>
             <Button.Label>Mode Cuisine</Button.Label>
           </Button>
-        </View>
-      )}
+        )}
+      </View>
 
       {/* Product linking BottomSheet */}
       <BottomSheet isOpen={linkingIngredient !== null} onOpenChange={open => !open && closeLinkSheet()}>
@@ -519,8 +580,8 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingBottom: 12 }}>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 1.5 }}>Lier un produit</Text>
-                  <Text style={{ fontSize: 15, fontWeight: "700", color: "#1C1917", marginTop: 2 }} numberOfLines={1}>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 1.5 }}>Lier un produit</Text>
+                  <Text style={{ fontSize: 15, fontWeight: "700", color: colors.text, marginTop: 2 }} numberOfLines={1}>
                     {linkingIngredient?.productName ?? linkingIngredient?.customName ?? ""}
                   </Text>
                 </View>
@@ -564,11 +625,11 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
                   </View>
                 ) : productResults.length === 0 && productSearch.trim() ? (
                   <View style={{ alignItems: "center", paddingVertical: 32 }}>
-                    <Text style={{ fontSize: 14, color: "#A8A29E" }}>Aucun produit trouvé</Text>
+                    <Text style={{ fontSize: 14, color: colors.textSubtle }}>Aucun produit trouvé</Text>
                   </View>
                 ) : productResults.length === 0 ? (
                   <View style={{ alignItems: "center", paddingVertical: 32 }}>
-                    <Text style={{ fontSize: 14, color: "#A8A29E" }}>Tapez un nom de produit pour rechercher</Text>
+                    <Text style={{ fontSize: 14, color: colors.textSubtle }}>Tapez un nom de produit pour rechercher</Text>
                   </View>
                 ) : (
                   productResults.map(product => (
@@ -578,11 +639,11 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
                       style={({ pressed }) => ({
                         flexDirection: "row", alignItems: "center", gap: 12,
                         borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
-                        backgroundColor: linkingIngredient?.productId === product.id ? "#FFF7ED" : pressed ? "#FAFAF9" : "transparent",
+                        backgroundColor: linkingIngredient?.productId === product.id ? colors.accentBg : pressed ? colors.bgSubtle : "transparent",
                         marginBottom: 2,
                       })}
                     >
-                      <View style={{ width: 40, height: 40, borderRadius: 10, overflow: "hidden", backgroundColor: "#F5F3EF", flexShrink: 0, alignItems: "center", justifyContent: "center" }}>
+                      <View style={{ width: 40, height: 40, borderRadius: 10, overflow: "hidden", backgroundColor: colors.bgSurface, flexShrink: 0, alignItems: "center", justifyContent: "center" }}>
                         {product.imageUrl ? (
                           <Image source={{ uri: product.imageUrl }} style={{ width: 40, height: 40 }} resizeMode="contain" />
                         ) : (
@@ -590,8 +651,8 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
                         )}
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "600", color: linkingIngredient?.productId === product.id ? "#E8571C" : "#1C1917" }}>{product.name}</Text>
-                        {product.brand && <Text numberOfLines={1} style={{ fontSize: 12, color: "#A8A29E", marginTop: 1 }}>{product.brand}</Text>}
+                        <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "600", color: linkingIngredient?.productId === product.id ? colors.accent : colors.text }}>{product.name}</Text>
+                        {product.brand && <Text numberOfLines={1} style={{ fontSize: 12, color: colors.textSubtle, marginTop: 1 }}>{product.brand}</Text>}
                       </View>
                       {linkingIngredient?.productId === product.id && (
                         <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
@@ -608,25 +669,25 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
       </BottomSheet>
 
       {/* Cook Mode BottomSheet */}
-      <BottomSheet isOpen={cookModeOpen} onOpenChange={v => !v && setCookModeOpen(false)}>
+      <BottomSheet isOpen={cookModeOpen && recipe.steps.length > 0} onOpenChange={v => !v && setCookModeOpen(false)}>
         <BottomSheet.Portal>
           <BottomSheet.Overlay />
           <BottomSheet.Content snapPoints={["88%"]}>
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16 }}>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 1.5 }}>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 1.5 }}>
                     Étape {cookStep + 1} / {recipe.steps.length}
                   </Text>
-                  <Text style={{ fontSize: 16, fontWeight: "800", color: "#1C1917", marginTop: 2 }} numberOfLines={1}>{recipe.name}</Text>
+                  <Text style={{ fontSize: 16, fontWeight: "800", color: colors.text, marginTop: 2 }} numberOfLines={1}>{recipe.name}</Text>
                 </View>
                 <BottomSheet.Close />
               </View>
 
               {/* Progress bar */}
-              <View style={{ height: 3, backgroundColor: "#F5F3EF", marginHorizontal: 20, borderRadius: 99 }}>
+              <View style={{ height: 3, backgroundColor: colors.bgSurface, marginHorizontal: 20, borderRadius: 99 }}>
                 <View style={{
-                  height: 3, borderRadius: 99, backgroundColor: "#E8571C",
+                  height: 3, borderRadius: 99, backgroundColor: colors.accent,
                   width: `${((cookStep + 1) / recipe.steps.length) * 100}%`,
                 }} />
               </View>
@@ -634,13 +695,13 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
               {/* Step content */}
               <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 36, paddingBottom: 20 }}>
                 <View style={{
-                  width: 64, height: 64, borderRadius: 32, backgroundColor: "#E8571C",
+                  width: 64, height: 64, borderRadius: 32, backgroundColor: colors.accent,
                   alignItems: "center", justifyContent: "center", marginBottom: 28,
                 }}>
-                  <Text style={{ fontSize: 28, fontWeight: "900", color: "#fff" }}>{recipe.steps[cookStep].stepNumber}</Text>
+                  <Text style={{ fontSize: 28, fontWeight: "900", color: "#fff" }}>{recipe.steps[cookStep]?.stepNumber}</Text>
                 </View>
-                <Text style={{ fontSize: 20, color: "#1C1917", lineHeight: 32, fontWeight: "400", flex: 1 }}>
-                  {recipe.steps[cookStep].description}
+                <Text style={{ fontSize: 20, color: colors.text, lineHeight: 32, fontWeight: "400", flex: 1 }}>
+                  {recipe.steps[cookStep]?.description}
                 </Text>
               </View>
 
@@ -672,31 +733,65 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
       <BottomSheet isOpen={actionsOpen} onOpenChange={(v) => !v && setActionsOpen(false)}>
         <BottomSheet.Portal>
           <BottomSheet.Overlay />
-          <BottomSheet.Content snapPoints={["38%"]}>
+          <BottomSheet.Content snapPoints={["58%"]}>
             <View style={{ paddingVertical: 8, gap: 4 }}>
               <Pressable
                 onPress={() => { setActionsOpen(false); setScheduleOpen(true); }}
                 style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 20, paddingVertical: 16, opacity: pressed ? 0.7 : 1 })}
               >
-                <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                   <Rect x={3} y={4} width={18} height={18} rx={2} ry={2} />
                   <Line x1={16} y1={2} x2={16} y2={6} />
                   <Line x1={8} y1={2} x2={8} y2={6} />
                   <Line x1={3} y1={10} x2={21} y2={10} />
                   <Path d="M8 14h.01M12 14h.01M16 14h.01" />
                 </Svg>
-                <Text style={{ fontSize: 16, fontWeight: "600", color: "#E8571C" }}>Planifier cette recette</Text>
+                <Text style={{ fontSize: 16, fontWeight: "600", color: colors.accent }}>Planifier cette recette</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleTogglePublic}
+                style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 20, paddingVertical: 16, opacity: pressed ? 0.7 : 1 })}
+              >
+                <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  {isPublic ? (
+                    <>
+                      <Circle cx={12} cy={12} r={10} />
+                      <Line x1={2} y1={12} x2={22} y2={12} />
+                      <Path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                    </>
+                  ) : (
+                    <>
+                      <Rect x={3} y={11} width={18} height={11} rx={2} ry={2} />
+                      <Path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </>
+                  )}
+                </Svg>
+                <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text }}>
+                  {isPublic ? "Rendre privée" : "Rendre publique"}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={handleDuplicate}
+                style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 20, paddingVertical: 16, opacity: (pressed || duplicating) ? 0.7 : 1 })}
+              >
+                <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <Rect x={9} y={9} width={13} height={13} rx={2} ry={2} />
+                  <Path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </Svg>
+                <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text }}>
+                  {duplicating ? "Duplication…" : "Dupliquer la recette"}
+                </Text>
               </Pressable>
               {onEdit && (
                 <Pressable
                   onPress={() => { setActionsOpen(false); onEdit(id); }}
                   style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 20, paddingVertical: 16, opacity: pressed ? 0.7 : 1 })}
                 >
-                  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#1C1917" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                     <Path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                     <Path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                   </Svg>
-                  <Text style={{ fontSize: 16, fontWeight: "600", color: "#1C1917" }}>Modifier la recette</Text>
+                  <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text }}>Modifier la recette</Text>
                 </Pressable>
               )}
               {onDelete && (
@@ -704,12 +799,12 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
                   onPress={() => { setActionsOpen(false); setConfirmDelete(true); }}
                   style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 20, paddingVertical: 16, opacity: pressed ? 0.7 : 1 })}
                 >
-                  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.danger} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                     <Polyline points="3 6 5 6 21 6" />
                     <Path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
                     <Path d="M10 11v6M14 11v6M9 6V4h6v2" />
                   </Svg>
-                  <Text style={{ fontSize: 16, fontWeight: "600", color: "#DC2626" }}>Supprimer la recette</Text>
+                  <Text style={{ fontSize: 16, fontWeight: "600", color: colors.danger }}>Supprimer la recette</Text>
                 </Pressable>
               )}
             </View>
@@ -728,12 +823,12 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
           <BottomSheet.Overlay />
           <BottomSheet.Content snapPoints={["32%"]}>
             <View style={{ alignItems: "center", paddingVertical: 16, gap: 6 }}>
-              <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>Supprimer la recette ?</Text>
-              <Text style={{ fontSize: 13, color: "#78716C", textAlign: "center" }}>Cette action est irréversible.</Text>
+              <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text }}>Supprimer la recette ?</Text>
+              <Text style={{ fontSize: 13, color: colors.textMuted, textAlign: "center" }}>Cette action est irréversible.</Text>
             </View>
             <View style={{ gap: 8 }}>
               <Button variant="ghost" onPress={handleDelete} isDisabled={deleting} className="w-full rounded-2xl">
-                <Button.Label style={{ color: "#DC2626" }}>{deleting ? "Suppression…" : "Supprimer"}</Button.Label>
+                <Button.Label style={{ color: colors.danger }}>{deleting ? "Suppression…" : "Supprimer"}</Button.Label>
               </Button>
               <Button variant="secondary" onPress={() => setConfirmDelete(false)} className="w-full rounded-2xl">
                 <Button.Label>Annuler</Button.Label>
@@ -764,6 +859,7 @@ function getWeekDays(): Date[] {
 }
 
 function ScheduleSheet({ recipeId, isOpen, onClose }: { recipeId: string; isOpen: boolean; onClose: () => void }) {
+  const { colors } = useAppTheme();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const weekDays = getWeekDays();
@@ -793,13 +889,13 @@ function ScheduleSheet({ recipeId, isOpen, onClose }: { recipeId: string; isOpen
         <BottomSheet.Overlay />
         <BottomSheet.Content snapPoints={["52%"]}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingBottom: 16 }}>
-            <Text style={{ fontSize: 17, fontWeight: "800", color: "#1C1917" }}>Planifier cette recette</Text>
+            <Text style={{ fontSize: 17, fontWeight: "800", color: colors.text }}>Planifier cette recette</Text>
             <BottomSheet.Close />
           </View>
 
           <View style={{ gap: 16 }}>
             <View style={{ gap: 8 }}>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: "#78716C", textTransform: "uppercase", letterSpacing: 1 }}>Jour</Text>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1 }}>Jour</Text>
               <View style={{ flexDirection: "row", gap: 4 }}>
                 {weekDays.map((day, i) => {
                   const isPast = day < today;
@@ -810,14 +906,14 @@ function ScheduleSheet({ recipeId, isOpen, onClose }: { recipeId: string; isOpen
                       onPress={() => !isPast && setSelectedDay(i)}
                       style={{
                         flex: 1, borderRadius: 12, paddingVertical: 10, alignItems: "center", gap: 2,
-                        backgroundColor: isSelected ? "#E8571C" : isPast ? "#FAFAF8" : "#F5F3EF",
+                        backgroundColor: isSelected ? colors.accent : isPast ? colors.bgSubtle : colors.bgSurface,
                         opacity: isPast ? 0.4 : 1,
                       }}
                     >
-                      <Text style={{ fontSize: 9, fontWeight: "700", color: isSelected ? "#fff" : "#A8A29E", textTransform: "uppercase" }}>
+                      <Text style={{ fontSize: 9, fontWeight: "700", color: isSelected ? "#fff" : colors.textSubtle, textTransform: "uppercase" }}>
                         {DAY_LABELS[i]}
                       </Text>
-                      <Text style={{ fontSize: 14, fontWeight: "800", color: isSelected ? "#fff" : "#1C1917" }}>
+                      <Text style={{ fontSize: 14, fontWeight: "800", color: isSelected ? "#fff" : colors.text }}>
                         {day.getDate()}
                       </Text>
                     </Pressable>
@@ -827,7 +923,7 @@ function ScheduleSheet({ recipeId, isOpen, onClose }: { recipeId: string; isOpen
             </View>
 
             <View style={{ gap: 8 }}>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: "#78716C", textTransform: "uppercase", letterSpacing: 1 }}>Repas</Text>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1 }}>Repas</Text>
               <View style={{ flexDirection: "row", gap: 8 }}>
                 {MEAL_TYPES.map((mt) => (
                   <Pressable
@@ -835,10 +931,10 @@ function ScheduleSheet({ recipeId, isOpen, onClose }: { recipeId: string; isOpen
                     onPress={() => setSelectedMeal(mt)}
                     style={{
                       flex: 1, borderRadius: 12, paddingVertical: 12, alignItems: "center",
-                      backgroundColor: selectedMeal === mt ? "#E8571C" : "#F5F3EF",
+                      backgroundColor: selectedMeal === mt ? colors.accent : colors.bgSurface,
                     }}
                   >
-                    <Text style={{ fontSize: 12, fontWeight: "700", color: selectedMeal === mt ? "#fff" : "#44403C" }}>
+                    <Text style={{ fontSize: 12, fontWeight: "700", color: selectedMeal === mt ? "#fff" : colors.textMuted }}>
                       {MEAL_LABELS[mt]}
                     </Text>
                   </Pressable>
@@ -851,7 +947,7 @@ function ScheduleSheet({ recipeId, isOpen, onClose }: { recipeId: string; isOpen
               disabled={scheduling || done}
               style={({ pressed }) => ({
                 borderRadius: 16, paddingVertical: 16, alignItems: "center",
-                backgroundColor: done ? "#16A34A" : pressed ? "#D14A18" : "#E8571C",
+                backgroundColor: done ? colors.green : pressed ? colors.accentPress : colors.accent,
               })}
             >
               {scheduling ? (

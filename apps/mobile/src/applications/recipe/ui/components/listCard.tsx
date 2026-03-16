@@ -2,9 +2,11 @@ import { Card, PressableFeedback } from "heroui-native";
 import { Image, Text, View } from "react-native";
 import Svg, { Circle, Path, Polyline } from "react-native-svg";
 import type { Recipe } from "../../domain/entities/recipe";
+import { useAppTheme } from "../../../../shared/theme";
 import { DIETARY_LABELS, fmtTime, paletteFor } from "./recipeUtils";
 
 export function ListCard({ recipe, onPress }: { recipe: Recipe; onPress: () => void }) {
+  const { colors } = useAppTheme();
   const pal = paletteFor(recipe.name);
   const totalTime = (recipe.prepTimeMinutes ?? 0) + (recipe.cookTimeMinutes ?? 0);
 
@@ -21,15 +23,15 @@ export function ListCard({ recipe, onPress }: { recipe: Recipe; onPress: () => v
           )}
         </View>
         <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-          <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "700", color: "#1C1917" }}>{recipe.name}</Text>
+          <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>{recipe.name}</Text>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             {totalTime > 0 && (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                <Svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <Svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke={colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                   <Circle cx={12} cy={12} r={10} />
                   <Polyline points="12 6 12 12 16 14" />
                 </Svg>
-                <Text style={{ fontSize: 11, color: "#78716C" }}>{fmtTime(totalTime)}</Text>
+                <Text style={{ fontSize: 11, color: colors.textMuted }}>{fmtTime(totalTime)}</Text>
               </View>
             )}
             {recipe.dietaryTags.slice(0, 2).map((tag) => (
@@ -41,7 +43,7 @@ export function ListCard({ recipe, onPress }: { recipe: Recipe; onPress: () => v
             ))}
           </View>
           {recipe.description ? (
-            <Text numberOfLines={1} style={{ fontSize: 11, color: "#78716C99" }}>{recipe.description}</Text>
+            <Text numberOfLines={1} style={{ fontSize: 11, color: colors.textMuted + "99" }}>{recipe.description}</Text>
           ) : null}
         </View>
         <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E40" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">

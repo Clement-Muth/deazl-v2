@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { BottomModal, BottomModalScrollView } from "./bottomModal";
 import Svg, { Path, Polyline, Line, Circle } from "react-native-svg";
+import { useAppTheme } from "../../../../shared/theme";
 import type { OFFProductResult } from "../../application/useCases/searchOffProducts";
 import { getOffProductByBarcode, searchOffProducts } from "../../application/useCases/searchOffProducts";
 import { reportProductPrice } from "../../application/useCases/reportProductPrice";
@@ -155,6 +156,8 @@ export function PriceReportSheet({ item, isOpen, onClose, onSuccess }: PriceRepo
     onClose();
   }
 
+  const { colors } = useAppTheme();
+
   if (!item) return null;
 
   return (
@@ -162,10 +165,10 @@ export function PriceReportSheet({ item, isOpen, onClose, onSuccess }: PriceRepo
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingBottom: 14 }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 17, fontWeight: "800", color: "#1C1917" }}>
+            <Text style={{ fontSize: 17, fontWeight: "800", color: colors.text }}>
               {step === "find" ? "Trouver le produit" : "Ajouter un prix"}
             </Text>
-            <Text style={{ fontSize: 12, color: "#A8A29E", marginTop: 2 }}>
+            <Text style={{ fontSize: 12, color: colors.textSubtle, marginTop: 2 }}>
               {item.customName}
             </Text>
           </View>
@@ -232,19 +235,21 @@ function FindStep({
   onRetryScan: () => void;
   onSelectProduct: (p: OFFProductResult) => void;
 }) {
+  const { colors } = useAppTheme();
+
   return (
     <View style={{ flex: 1 }}>
-      <View style={{ flexDirection: "row", backgroundColor: "#F5F3EF", borderRadius: 14, padding: 4, marginBottom: 14, gap: 4 }}>
+      <View style={{ flexDirection: "row", backgroundColor: colors.bgSurface, borderRadius: 14, padding: 4, marginBottom: 14, gap: 4 }}>
         <Pressable
           onPress={onSwitchToSearch}
           style={{
             flex: 1, paddingVertical: 9, borderRadius: 11, alignItems: "center",
-            backgroundColor: findMode === "search" ? "#fff" : "transparent",
-            shadowColor: findMode === "search" ? "#1C1917" : "transparent",
+            backgroundColor: findMode === "search" ? colors.bgCard : "transparent",
+            shadowColor: findMode === "search" ? colors.shadow : "transparent",
             shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: findMode === "search" ? 2 : 0,
           }}
         >
-          <Text style={{ fontSize: 13, fontWeight: "700", color: findMode === "search" ? "#1C1917" : "#A8A29E" }}>
+          <Text style={{ fontSize: 13, fontWeight: "700", color: findMode === "search" ? colors.text : colors.textSubtle }}>
             Rechercher
           </Text>
         </Pressable>
@@ -252,8 +257,8 @@ function FindStep({
           onPress={onSwitchToScan}
           style={{
             flex: 1, paddingVertical: 9, borderRadius: 11, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6,
-            backgroundColor: findMode === "scan" ? "#fff" : "transparent",
-            shadowColor: findMode === "scan" ? "#1C1917" : "transparent",
+            backgroundColor: findMode === "scan" ? colors.bgCard : "transparent",
+            shadowColor: findMode === "scan" ? colors.shadow : "transparent",
             shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: findMode === "scan" ? 2 : 0,
           }}
         >
@@ -264,7 +269,7 @@ function FindStep({
             <Path d="M9 20H6a2 2 0 0 1-2-2v-3" />
             <Line x1={7} y1={12} x2={17} y2={12} />
           </Svg>
-          <Text style={{ fontSize: 13, fontWeight: "700", color: findMode === "scan" ? "#1C1917" : "#A8A29E" }}>
+          <Text style={{ fontSize: 13, fontWeight: "700", color: findMode === "scan" ? colors.text : colors.textSubtle }}>
             Scanner
           </Text>
         </Pressable>
@@ -272,7 +277,7 @@ function FindStep({
 
       {findMode === "search" ? (
         <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#F5F3EF", borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 12 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: colors.bgSurface, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 12 }}>
             <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <Circle cx={11} cy={11} r={8} />
               <Line x1={21} y1={21} x2={16.65} y2={16.65} />
@@ -281,8 +286,8 @@ function FindStep({
               value={searchQuery}
               onChangeText={onSearch}
               placeholder="Nom du produit…"
-              placeholderTextColor="#A8A29E"
-              style={{ flex: 1, fontSize: 15, color: "#1C1917" }}
+              placeholderTextColor={colors.textSubtle}
+              style={{ flex: 1, fontSize: 15, color: colors.text }}
               returnKeyType="search"
             />
             {searching && <ActivityIndicator size="small" color="#E8571C" />}
@@ -291,7 +296,7 @@ function FindStep({
           <BottomModalScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
             {searchResults.length === 0 && !searching && searchQuery.trim() ? (
               <View style={{ alignItems: "center", paddingTop: 32, gap: 8 }}>
-                <Text style={{ fontSize: 14, color: "#A8A29E" }}>Aucun résultat pour «{searchQuery}»</Text>
+                <Text style={{ fontSize: 14, color: colors.textSubtle }}>Aucun résultat pour «{searchQuery}»</Text>
               </View>
             ) : (
               <View style={{ gap: 8 }}>
@@ -326,6 +331,8 @@ function ScanStep({
   onBarcode: (e: { data: string }) => void;
   onRetry: () => void;
 }) {
+  const { colors } = useAppTheme();
+
   if (!permission) {
     return <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color="#E8571C" /></View>;
   }
@@ -333,16 +340,16 @@ function ScanStep({
   if (!permission.granted) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 32 }}>
-        <View style={{ width: 56, height: 56, borderRadius: 20, backgroundColor: "#F5F3EF", alignItems: "center", justifyContent: "center" }}>
+        <View style={{ width: 56, height: 56, borderRadius: 20, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center" }}>
           <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
             <Path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
             <Circle cx={12} cy={13} r={4} />
           </Svg>
         </View>
-        <Text style={{ fontSize: 14, fontWeight: "700", color: "#1C1917", textAlign: "center" }}>
+        <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text, textAlign: "center" }}>
           Accès à la caméra requis
         </Text>
-        <Text style={{ fontSize: 13, color: "#78716C", textAlign: "center" }}>
+        <Text style={{ fontSize: 13, color: colors.textMuted, textAlign: "center" }}>
           Pour scanner des codes-barres, autorisez Deazl à accéder à votre caméra.
         </Text>
       </View>
@@ -380,10 +387,10 @@ function ScanStep({
       </View>
 
       {scanError && (
-        <View style={{ backgroundColor: "#FEF2F2", borderRadius: 14, padding: 14, gap: 8 }}>
-          <Text style={{ fontSize: 13, color: "#DC2626", fontWeight: "600" }}>{scanError}</Text>
-          <Pressable onPress={onRetry} style={({ pressed }) => ({ alignSelf: "flex-start", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, backgroundColor: pressed ? "#FEE2E2" : "#F5F3EF" })}>
-            <Text style={{ fontSize: 13, fontWeight: "700", color: "#1C1917" }}>Réessayer</Text>
+        <View style={{ backgroundColor: colors.dangerBg, borderRadius: 14, padding: 14, gap: 8 }}>
+          <Text style={{ fontSize: 13, color: colors.danger, fontWeight: "600" }}>{scanError}</Text>
+          <Pressable onPress={onRetry} style={({ pressed }) => ({ alignSelf: "flex-start", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, backgroundColor: pressed ? colors.dangerBg : colors.bgSurface })}>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text }}>Réessayer</Text>
           </Pressable>
         </View>
       )}
@@ -392,6 +399,7 @@ function ScanStep({
 }
 
 function ProductRow({ product, onPress }: { product: OFFProductResult; onPress: () => void }) {
+  const { colors } = useAppTheme();
   return (
     <Pressable
       onPress={onPress}
@@ -399,24 +407,24 @@ function ProductRow({ product, onPress }: { product: OFFProductResult; onPress: 
         flexDirection: "row",
         alignItems: "center",
         gap: 12,
-        backgroundColor: pressed ? "#FFF7ED" : "#F5F3EF",
+        backgroundColor: pressed ? colors.accentBg : colors.bgSurface,
         borderRadius: 14,
         paddingHorizontal: 12,
         paddingVertical: 10,
       })}
     >
       {product.imageUrl ? (
-        <Image source={{ uri: product.imageUrl }} style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: "#E8E5E1" }} resizeMode="contain" />
+        <Image source={{ uri: product.imageUrl }} style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: colors.border }} resizeMode="contain" />
       ) : (
-        <View style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: "#E8E5E1", alignItems: "center", justifyContent: "center" }}>
+        <View style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: colors.border, alignItems: "center", justifyContent: "center" }}>
           <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
             <Path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
           </Svg>
         </View>
       )}
       <View style={{ flex: 1, gap: 2 }}>
-        <Text style={{ fontSize: 14, fontWeight: "600", color: "#1C1917" }} numberOfLines={1}>{product.name}</Text>
-        {product.brand && <Text style={{ fontSize: 12, color: "#A8A29E" }} numberOfLines={1}>{product.brand}</Text>}
+        <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text }} numberOfLines={1}>{product.name}</Text>
+        {product.brand && <Text style={{ fontSize: 12, color: colors.textSubtle }} numberOfLines={1}>{product.brand}</Text>}
       </View>
       {product.nutriscoreGrade && (
         <View style={{ width: 28, height: 28, borderRadius: 7, backgroundColor: NUTRISCORE_COLORS[product.nutriscoreGrade] ?? "#9CA3AF", alignItems: "center", justifyContent: "center" }}>
@@ -450,6 +458,8 @@ function PriceStep({
   onUnitChange: (v: string) => void;
   onSubmit: () => void;
 }) {
+  const { colors } = useAppTheme();
+
   return (
     <BottomModalScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40, gap: 16 }}>
       <Pressable
@@ -462,25 +472,25 @@ function PriceStep({
           paddingHorizontal: 12,
           paddingVertical: 7,
           borderRadius: 10,
-          backgroundColor: pressed ? "#F5F3EF" : "#FAF9F6",
+          backgroundColor: pressed ? colors.bgSurface : colors.bg,
           marginBottom: 4,
         })}
       >
         <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
           <Path d="M15 18l-6-6 6-6" />
         </Svg>
-        <Text style={{ fontSize: 13, fontWeight: "600", color: "#78716C" }}>Changer de produit</Text>
+        <Text style={{ fontSize: 13, fontWeight: "600", color: colors.textMuted }}>Changer de produit</Text>
       </Pressable>
 
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#F5F3EF", borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.bgSurface, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12 }}>
         {product.imageUrl ? (
-          <Image source={{ uri: product.imageUrl }} style={{ width: 52, height: 52, borderRadius: 12, backgroundColor: "#E8E5E1" }} resizeMode="contain" />
+          <Image source={{ uri: product.imageUrl }} style={{ width: 52, height: 52, borderRadius: 12, backgroundColor: colors.border }} resizeMode="contain" />
         ) : (
-          <View style={{ width: 52, height: 52, borderRadius: 12, backgroundColor: "#E8E5E1" }} />
+          <View style={{ width: 52, height: 52, borderRadius: 12, backgroundColor: colors.border }} />
         )}
         <View style={{ flex: 1, gap: 2 }}>
-          <Text style={{ fontSize: 15, fontWeight: "700", color: "#1C1917" }} numberOfLines={2}>{product.name}</Text>
-          {product.brand && <Text style={{ fontSize: 12, color: "#78716C" }}>{product.brand}</Text>}
+          <Text style={{ fontSize: 15, fontWeight: "700", color: colors.text }} numberOfLines={2}>{product.name}</Text>
+          {product.brand && <Text style={{ fontSize: 12, color: colors.textMuted }}>{product.brand}</Text>}
         </View>
         {product.nutriscoreGrade && (
           <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: NUTRISCORE_COLORS[product.nutriscoreGrade] ?? "#9CA3AF", alignItems: "center", justifyContent: "center" }}>
@@ -490,10 +500,10 @@ function PriceStep({
       </View>
 
       <View style={{ gap: 8 }}>
-        <Text style={{ fontSize: 13, fontWeight: "700", color: "#1C1917" }}>Magasin</Text>
+        <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text }}>Magasin</Text>
         {stores.length === 0 ? (
-          <View style={{ backgroundColor: "#F5F3EF", borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14 }}>
-            <Text style={{ fontSize: 13, color: "#A8A29E", textAlign: "center" }}>
+          <View style={{ backgroundColor: colors.bgSurface, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14 }}>
+            <Text style={{ fontSize: 13, color: colors.textSubtle, textAlign: "center" }}>
               Ajoutez des magasins dans votre profil pour contribuer les prix.
             </Text>
           </View>
@@ -507,12 +517,12 @@ function PriceStep({
                   flexDirection: "row",
                   alignItems: "center",
                   gap: 12,
-                  backgroundColor: selectedStoreId === store.id ? "#FFF7ED" : "#F5F3EF",
+                  backgroundColor: selectedStoreId === store.id ? colors.accentBg : colors.bgSurface,
                   borderRadius: 14,
                   paddingHorizontal: 14,
                   paddingVertical: 12,
                   borderWidth: selectedStoreId === store.id ? 1.5 : 0,
-                  borderColor: selectedStoreId === store.id ? "#FDBA74" : "transparent",
+                  borderColor: selectedStoreId === store.id ? colors.accentBgBorder : "transparent",
                 }}
               >
                 <View style={{
@@ -527,8 +537,8 @@ function PriceStep({
                   )}
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: "600", color: "#1C1917" }}>{store.name}</Text>
-                  {store.city && <Text style={{ fontSize: 12, color: "#A8A29E" }}>{store.city}</Text>}
+                  <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text }}>{store.name}</Text>
+                  {store.city && <Text style={{ fontSize: 12, color: colors.textSubtle }}>{store.city}</Text>}
                 </View>
               </Pressable>
             ))}
@@ -537,31 +547,31 @@ function PriceStep({
       </View>
 
       <View style={{ gap: 8 }}>
-        <Text style={{ fontSize: 13, fontWeight: "700", color: "#1C1917" }}>Prix</Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#F5F3EF", borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14 }}>
+        <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text }}>Prix</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.bgSurface, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14 }}>
           <TextInput
             value={priceInput}
             onChangeText={onPriceChange}
             placeholder="0.00"
             keyboardType="decimal-pad"
-            placeholderTextColor="#A8A29E"
-            style={{ flex: 1, fontSize: 24, fontWeight: "800", color: "#1C1917" }}
+            placeholderTextColor={colors.textSubtle}
+            style={{ flex: 1, fontSize: 24, fontWeight: "800", color: colors.text }}
           />
-          <Text style={{ fontSize: 20, fontWeight: "700", color: "#A8A29E" }}>€</Text>
+          <Text style={{ fontSize: 20, fontWeight: "700", color: colors.textSubtle }}>€</Text>
         </View>
       </View>
 
       <View style={{ gap: 8 }}>
-        <Text style={{ fontSize: 13, fontWeight: "700", color: "#1C1917" }}>Pour</Text>
+        <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text }}>Pour</Text>
         <View style={{ flexDirection: "row", gap: 8 }}>
-          <View style={{ flex: 1, backgroundColor: "#F5F3EF", borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14 }}>
+          <View style={{ flex: 1, backgroundColor: colors.bgSurface, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14 }}>
             <TextInput
               value={qtyInput}
               onChangeText={onQtyChange}
               placeholder="1"
               keyboardType="decimal-pad"
-              placeholderTextColor="#A8A29E"
-              style={{ fontSize: 16, fontWeight: "600", color: "#1C1917" }}
+              placeholderTextColor={colors.textSubtle}
+              style={{ fontSize: 16, fontWeight: "600", color: colors.text }}
             />
           </View>
           <View style={{ flexDirection: "row", flexWrap: "wrap", flex: 2, gap: 6 }}>
@@ -571,10 +581,10 @@ function PriceStep({
                 onPress={() => onUnitChange(u)}
                 style={{
                   paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10,
-                  backgroundColor: unit === u ? "#E8571C" : "#F5F3EF",
+                  backgroundColor: unit === u ? colors.accent : colors.bgSurface,
                 }}
               >
-                <Text style={{ fontSize: 13, fontWeight: "700", color: unit === u ? "#fff" : "#78716C" }}>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: unit === u ? "#fff" : colors.textMuted }}>
                   {u}
                 </Text>
               </Pressable>
@@ -584,8 +594,8 @@ function PriceStep({
       </View>
 
       {submitError && (
-        <View style={{ backgroundColor: "#FEF2F2", borderRadius: 12, padding: 12 }}>
-          <Text style={{ fontSize: 13, color: "#DC2626" }}>{submitError}</Text>
+        <View style={{ backgroundColor: colors.dangerBg, borderRadius: 12, padding: 12 }}>
+          <Text style={{ fontSize: 13, color: colors.danger }}>{submitError}</Text>
         </View>
       )}
 
@@ -595,8 +605,8 @@ function PriceStep({
         style={({ pressed }) => ({
           borderRadius: 16,
           backgroundColor: (!priceInput || !selectedStoreId || stores.length === 0)
-            ? "#F5F3EF"
-            : pressed ? "#D14A18" : "#E8571C",
+            ? colors.bgSurface
+            : pressed ? "#D14A18" : colors.accent,
           paddingVertical: 16,
           alignItems: "center",
         })}
@@ -606,7 +616,7 @@ function PriceStep({
         ) : (
           <Text style={{
             fontSize: 16, fontWeight: "800",
-            color: (!priceInput || !selectedStoreId || stores.length === 0) ? "#A8A29E" : "#fff",
+            color: (!priceInput || !selectedStoreId || stores.length === 0) ? colors.textSubtle : "#fff",
           }}>
             Ajouter le prix
           </Text>

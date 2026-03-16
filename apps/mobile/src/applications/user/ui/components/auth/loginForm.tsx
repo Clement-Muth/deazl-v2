@@ -6,11 +6,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { signIn } from "../../../application/useCases/signIn";
 import { signInWithGoogle } from "../../../application/useCases/signInWithGoogle";
+import { useAppTheme } from "../../../../../shared/theme";
 import { mapAuthError, validateEmail, validatePassword } from "./authHelpers";
 import { AuthInput } from "./authInput";
 
 export function LoginForm() {
   const router = useRouter();
+  const { colors } = useAppTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -38,15 +40,15 @@ export function LoginForm() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24 }} keyboardShouldPersistTaps="handled">
 
           <View style={{ marginTop: 64, marginBottom: 40 }}>
-            <Text style={{ fontSize: 46, fontWeight: "900", color: "#1C1917", letterSpacing: -3, lineHeight: 50 }}>
-              Deazl<Text style={{ color: "#E8571C" }}>.</Text>
+            <Text style={{ fontSize: 46, fontWeight: "900", color: colors.text, letterSpacing: -3, lineHeight: 50 }}>
+              Deazl<Text style={{ color: colors.accent }}>.</Text>
             </Text>
-            <Text style={{ fontSize: 13, color: "#78716C", marginTop: 8 }}>
+            <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 8 }}>
               Smart meal planning & grocery management
             </Text>
           </View>
@@ -73,7 +75,7 @@ export function LoginForm() {
                 errorMessage={passwordError ?? undefined}
               />
               <Pressable onPress={() => router.push("/(auth)/forgot-password")} style={{ alignSelf: "flex-end", marginTop: 6 }}>
-                <Text style={{ fontSize: 13, color: "#E8571C", fontWeight: "500" }}>Mot de passe oublié ?</Text>
+                <Text style={{ fontSize: 13, color: colors.accent, fontWeight: "500" }}>Mot de passe oublié ?</Text>
               </Pressable>
             </View>
           </View>
@@ -89,7 +91,7 @@ export function LoginForm() {
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginVertical: 8 }}>
             <Separator className="flex-1" />
-            <Text style={{ fontSize: 12, color: "#78716C" }}>ou</Text>
+            <Text style={{ fontSize: 12, color: colors.textMuted }}>ou</Text>
             <Separator className="flex-1" />
           </View>
 
@@ -104,9 +106,9 @@ export function LoginForm() {
           </Button>
 
           <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 24, marginBottom: 32, gap: 4 }}>
-            <Text style={{ fontSize: 14, color: "#78716C" }}>Pas encore de compte ?</Text>
+            <Text style={{ fontSize: 14, color: colors.textMuted }}>Pas encore de compte ?</Text>
             <Pressable onPress={() => router.push("/(auth)/register")}>
-              <Text style={{ fontSize: 14, fontWeight: "500", color: "#E8571C" }}>S'inscrire</Text>
+              <Text style={{ fontSize: 14, fontWeight: "500", color: colors.accent }}>S'inscrire</Text>
             </Pressable>
           </View>
 

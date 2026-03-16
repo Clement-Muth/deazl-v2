@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Dimensions, Keyboard, Modal, Platform, Pressable, View } from "react-native";
+import { useAppTheme } from "../../../../shared/theme";
 import { PortalHost } from "heroui-native/portal";
 import { Gesture, GestureDetector, GestureHandlerRootView, ScrollView as GHScrollView } from "react-native-gesture-handler";
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
@@ -49,6 +50,7 @@ interface BottomModalProps {
 }
 
 export function BottomModal({ isOpen, onClose, height = "55%", children, portalHostName }: BottomModalProps) {
+  const { colors } = useAppTheme();
   const [visible, setVisible] = useState(false);
   const translateY = useSharedValue(SCREEN_HEIGHT);
   const backdropOpacity = useSharedValue(0);
@@ -186,7 +188,7 @@ export function BottomModal({ isOpen, onClose, height = "55%", children, portalH
                   position: "absolute",
                   left: 0,
                   right: 0,
-                  backgroundColor: "#fff",
+                  backgroundColor: colors.bgCard,
                   borderTopLeftRadius: 40,
                   borderTopRightRadius: 40,
                   paddingHorizontal: 20,
@@ -202,7 +204,7 @@ export function BottomModal({ isOpen, onClose, height = "55%", children, portalH
               <GestureDetector gesture={panGesture}>
                 <View style={isAuto ? undefined : { flex: 1 }}>
                   <View style={{ alignSelf: "stretch", alignItems: "center", paddingVertical: 10, marginHorizontal: -20 }}>
-                    <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: "#E0DDD7" }} />
+                    <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.handle }} />
                   </View>
                   <View style={isAuto ? undefined : { flex: 1 }}>
                     {children}
