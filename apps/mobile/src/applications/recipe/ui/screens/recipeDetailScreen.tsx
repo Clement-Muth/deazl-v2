@@ -1,11 +1,13 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
+import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { LinearGradient } from "expo-linear-gradient";
 import { Button, PressableFeedback, SearchField } from "heroui-native";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Animated, Image, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Animated, Dimensions, Image, Pressable, Text, TextInput, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Line, Path, Polygon, Polyline, Rect } from "react-native-svg";
-import { useAppTheme } from "../../../../shared/theme";
+import { useAppTheme, type AppColors } from "../../../../shared/theme";
 import { BottomModal, BottomModalScrollView } from "../../../shopping/ui/components/bottomModal";
 import { addRecipeToShoppingList } from "../../application/useCases/addRecipeToShoppingList";
 import { getUserIngredientPreferences } from "../../../user/application/useCases/getUserIngredientPreferences";
@@ -13,6 +15,7 @@ import type { IngredientPreference } from "../../../user/application/useCases/ge
 import { getRecipeEstimatedCost } from "../../application/useCases/getRecipeEstimatedCost";
 import type { RecipeCostResult } from "../../application/useCases/getRecipeEstimatedCost";
 import { normalizeIngredientName } from "../../../shopping/domain/normalizeIngredientName";
+import { getIngredientEmoji } from "../utils/ingredientEmoji";
 import { deleteRecipe } from "../../application/useCases/deleteRecipe";
 import { duplicateRecipe } from "../../application/useCases/duplicateRecipe";
 import { getRecipeById } from "../../application/useCases/getRecipeById";
@@ -22,7 +25,15 @@ import type { MealType } from "../../../planning/domain/entities/planning";
 import { linkProductToIngredient } from "../../application/useCases/linkProductToIngredient";
 import { searchProducts } from "../../application/useCases/searchProducts";
 import { toggleFavorite } from "../../application/useCases/toggleFavorite";
-import type { CatalogProduct, Recipe, RecipeIngredient } from "../../domain/entities/recipe";
+import { getCookLog } from "../../application/useCases/getCookLog";
+import type { CookLog } from "../../application/useCases/getCookLog";
+import { getRecipeNotes } from "../../application/useCases/getRecipeNotes";
+import { getRecipeNutrition } from "../../application/useCases/getRecipeNutrition";
+import type { RecipeNutrition } from "../../application/useCases/getRecipeNutrition";
+import { getRecipeQuality } from "../../application/useCases/getRecipeQuality";
+import type { RecipeQuality } from "../../application/useCases/getRecipeQuality";
+import { saveRecipeNotes } from "../../application/useCases/saveRecipeNotes";
+import type { CatalogProduct, Recipe, RecipeIngredient, RecipeStep } from "../../domain/entities/recipe";
 
 const HERO_HEIGHT = 420;
 
@@ -53,10 +64,407 @@ function fmtCost(c: number): string {
   return `${c.toFixed(2).replace(".", ",")}€`;
 }
 
+function fmtLastCooked(date: Date): string {
+  const diffDays = Math.floor((Date.now() - date.getTime()) / 86_400_000);
+  if (diffDays === 0) return "aujourd'hui";
+  if (diffDays === 1) return "hier";
+  if (diffDays < 7) return `il y a ${diffDays} jours`;
+  if (diffDays < 30) return `il y a ${Math.floor(diffDays / 7)} sem.`;
+  return date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+}
+
 function fmtQty(qty: number, multiplier: number): string {
   const v = qty * multiplier;
   if (v === Math.floor(v)) return String(Math.floor(v));
   return v.toFixed(1).replace(/\.0$/, "");
+}
+
+const SCREEN_WIDTH = Dimensions.get("window").width;
+const GRID_PADDING = 20;
+const GRID_GAP = 10;
+const GRID_COLS = 3;
+const CARD_WIDTH = (SCREEN_WIDTH - GRID_PADDING * 2 - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS;
+
+const CATEGORY_COLORS = ["#E8571C", "#16A34A", "#0284C7", "#7C3AED", "#0D9488", "#CA8A04"];
+
+function categoryColor(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
+  return CATEGORY_COLORS[Math.abs(h) % CATEGORY_COLORS.length];
+}
+
+function groupStepsBySection(steps: RecipeStep[]): Array<{ section: string | null; items: RecipeStep[] }> {
+  const groups: Array<{ section: string | null; items: RecipeStep[] }> = [];
+  for (const step of steps) {
+    const last = groups[groups.length - 1];
+    if (last && last.section === (step.section ?? null)) {
+      last.items.push(step);
+    } else {
+      groups.push({ section: step.section ?? null, items: [step] });
+    }
+  }
+  return groups;
+}
+
+function groupIngredientsBySection(ingredients: RecipeIngredient[]): Array<{ section: string | null; items: RecipeIngredient[] }> {
+  const groups: Array<{ section: string | null; items: RecipeIngredient[] }> = [];
+  for (const ing of ingredients) {
+    const last = groups[groups.length - 1];
+    if (last && last.section === (ing.section ?? null)) {
+      last.items.push(ing);
+    } else {
+      groups.push({ section: ing.section ?? null, items: [ing] });
+    }
+  }
+  return groups;
+}
+
+interface IngredientGridProps {
+  ingredients: RecipeIngredient[];
+  multiplier: number;
+  checkedIngredients: Set<string>;
+  onToggle: (id: string) => void;
+  colors: AppColors;
+  recipeCost: RecipeCostResult | null;
+}
+
+function IngredientGrid({ ingredients, multiplier, checkedIngredients, onToggle, colors, recipeCost }: IngredientGridProps) {
+  const groups = groupIngredientsBySection(ingredients);
+  return (
+    <View style={{ paddingHorizontal: GRID_PADDING }}>
+      {groups.map((group, gi) => (
+        <View key={group.section ?? `__unsectioned_${gi}`}>
+          {group.section && (
+            <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 1.2, marginTop: gi > 0 ? 20 : 0, marginBottom: 12 }}>
+              {group.section}
+            </Text>
+          )}
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: GRID_GAP }}>
+            {group.items.map((ing) => {
+        const isChecked = checkedIngredients.has(ing.id);
+        const displayName = ing.productName ?? ing.customName ?? "";
+        const emoji = getIngredientEmoji(ing.customName ?? ing.productName ?? "");
+        const color = categoryColor(displayName);
+        const ingCost = recipeCost?.ingredientCosts.get(ing.id);
+        const adjustedIngCost = ingCost?.estimatedCost != null ? ingCost.estimatedCost * multiplier : null;
+        return (
+          <Pressable
+            key={ing.id}
+            onPress={() => onToggle(ing.id)}
+            style={{
+              width: CARD_WIDTH,
+              backgroundColor: colors.bgSurface,
+              borderRadius: 16,
+              paddingVertical: 14,
+              paddingHorizontal: 8,
+              alignItems: "center",
+              gap: 4,
+              opacity: isChecked ? 0.45 : 1,
+            }}
+          >
+            {emoji ? (
+              <Text style={{ fontSize: 30, lineHeight: 36 }}>{emoji}</Text>
+            ) : (
+              <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: color + "22", alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ fontSize: 16, fontWeight: "800", color }}>{displayName.trim().charAt(0).toUpperCase()}</Text>
+              </View>
+            )}
+            <Text style={{ fontSize: 11, fontWeight: "600", color: colors.text, textAlign: "center", lineHeight: 15, textDecorationLine: isChecked ? "line-through" : "none" }} numberOfLines={2}>
+              {displayName}
+            </Text>
+            {ing.quantity > 0 && (
+              <Text style={{ fontSize: 11, fontWeight: "700", color: isChecked ? colors.textSubtle : "#E8571C" }} numberOfLines={1}>
+                {fmtQty(ing.quantity, multiplier)}{ing.unit ? ` ${ing.unit}` : ""}
+              </Text>
+            )}
+            {adjustedIngCost != null && (
+              <Text style={{ fontSize: 10, fontWeight: "600", color: colors.textSubtle }} numberOfLines={1}>
+                {fmtCost(adjustedIngCost)}
+              </Text>
+            )}
+            {isChecked && (
+              <View style={{ position: "absolute", top: 8, right: 8, width: 18, height: 18, borderRadius: 9, backgroundColor: "#E8571C", alignItems: "center", justifyContent: "center" }}>
+                <Svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3.5} strokeLinecap="round" strokeLinejoin="round">
+                  <Polyline points="20 6 9 17 4 12" />
+                </Svg>
+              </View>
+            )}
+          </Pressable>
+            );
+          })}
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+
+const AJR = { energyKcal: 2000, fat: 70, saturatedFat: 20, carbohydrates: 260, sugars: 90, proteins: 50, fiber: 25, salt: 6 };
+
+function ajrPercent(value: number, ref: number): number {
+  return Math.round((value / ref) * 100);
+}
+
+type NutrientPolarity = "warn" | "good" | "neutral";
+
+function ajrColor(pct: number, polarity: NutrientPolarity): string {
+  if (polarity === "good") {
+    if (pct >= 30) return "#16A34A";
+    return "transparent";
+  }
+  if (polarity === "warn") {
+    if (pct > 30) return "#DC2626";
+    if (pct > 15) return "#D97706";
+  }
+  return "transparent";
+}
+
+function NutritionCell({ label, value, unit, ajrRef, polarity = "neutral", colors }: { label: string; value: number; unit: string; ajrRef: number; polarity?: NutrientPolarity; colors: AppColors }) {
+  const pct = ajrPercent(value, ajrRef);
+  const accentColor = ajrColor(pct, polarity);
+  const hasAccent = accentColor !== "transparent";
+  const cellW = (SCREEN_WIDTH - 40 - 9) / 4;
+  return (
+    <View style={{ width: cellW, backgroundColor: colors.bgSurface, borderRadius: 14, overflow: "hidden" }}>
+      <View style={{ paddingHorizontal: 8, paddingTop: 12, paddingBottom: 10, alignItems: "center" }}>
+        <Text style={{ fontSize: 18, fontWeight: "900", color: colors.text, letterSpacing: -0.5 }}>
+          {value}<Text style={{ fontSize: 11, fontWeight: "700" }}>{unit}</Text>
+        </Text>
+        <Text style={{ fontSize: 10, fontWeight: "600", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 0.6, marginTop: 4, textAlign: "center" }}>{label}</Text>
+      </View>
+      <View style={{ backgroundColor: colors.bgCard, paddingVertical: 5, alignItems: "center" }}>
+        <Text style={{ fontSize: 11, fontWeight: "800", color: hasAccent ? accentColor : colors.textSubtle }}>{pct}%</Text>
+      </View>
+    </View>
+  );
+}
+
+function NutritionGrid({ nutrition, colors }: { nutrition: RecipeNutrition; colors: AppColors }) {
+  const isPartial = nutrition.coveredCount < nutrition.totalCount;
+  return (
+    <View style={{ paddingHorizontal: 20, paddingTop: 32, paddingBottom: 8 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+        <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 1.5 }}>
+          Nutrition par portion
+        </Text>
+        {isPartial && (
+          <Text style={{ fontSize: 11, color: colors.textSubtle }}>
+            {nutrition.coveredCount}/{nutrition.totalCount} ingrédients
+          </Text>
+        )}
+      </View>
+      <View style={{ flexDirection: "row", gap: 3, marginBottom: 3 }}>
+        <NutritionCell label="Calories" value={nutrition.energyKcal} unit="kcal" ajrRef={AJR.energyKcal} polarity="warn" colors={colors} />
+        <NutritionCell label="Lipides" value={nutrition.fat} unit="g" ajrRef={AJR.fat} polarity="warn" colors={colors} />
+        <NutritionCell label="Glucides" value={nutrition.carbohydrates} unit="g" ajrRef={AJR.carbohydrates} polarity="neutral" colors={colors} />
+        <NutritionCell label="Protéines" value={nutrition.proteins} unit="g" ajrRef={AJR.proteins} polarity="good" colors={colors} />
+      </View>
+      <View style={{ flexDirection: "row", gap: 3 }}>
+        <NutritionCell label="Lip. sat." value={nutrition.saturatedFat} unit="g" ajrRef={AJR.saturatedFat} polarity="warn" colors={colors} />
+        <NutritionCell label="Sucres" value={nutrition.sugars} unit="g" ajrRef={AJR.sugars} polarity="warn" colors={colors} />
+        <NutritionCell label="Sel" value={nutrition.salt} unit="g" ajrRef={AJR.salt} polarity="warn" colors={colors} />
+        <NutritionCell label="Fibres" value={nutrition.fiber} unit="g" ajrRef={AJR.fiber} polarity="good" colors={colors} />
+      </View>
+      <Text style={{ fontSize: 10, color: colors.textSubtle, marginTop: 8 }}>
+        % des apports journaliers de référence (adulte, 2000 kcal)
+      </Text>
+    </View>
+  );
+}
+
+const ALLERGEN_LABELS: Record<string, string> = {
+  "en:gluten": "Gluten", "en:milk": "Lait", "en:eggs": "Œufs",
+  "en:nuts": "Fruits à coque", "en:peanuts": "Arachides", "en:soybeans": "Soja",
+  "en:fish": "Poisson", "en:crustaceans": "Crustacés", "en:molluscs": "Mollusques",
+  "en:celery": "Céleri", "en:mustard": "Moutarde", "en:sesame-seeds": "Sésame",
+  "en:sulphur-dioxide-and-sulphites": "Sulfites", "en:lupin": "Lupin",
+};
+
+const ADDITIVE_NAMES: Record<string, string> = {
+  e100: "Curcumine", e101: "Riboflavine (B2)", e102: "Tartrazine", e104: "Jaune de quinoléine",
+  e110: "Jaune orangé S", e120: "Cochenille", e122: "Azorubine", e123: "Amarante",
+  e124: "Ponceau 4R", e129: "Rouge Allura AC", e131: "Bleu patenté V", e132: "Indigotine",
+  e133: "Bleu brillant FCF", e140: "Chlorophylles", e150a: "Caramel nature",
+  e150b: "Caramel sulfite caustique", e150c: "Caramel ammoniacal", e150d: "Caramel sulfite d'ammonium",
+  e160a: "Carotènes", e160b: "Rocou", e160c: "Extrait de paprika", e162: "Rouge de betterave",
+  e171: "Dioxyde de titane", e172: "Oxydes de fer", e200: "Acide sorbique",
+  e202: "Sorbate de potassium", e203: "Sorbate de calcium", e210: "Acide benzoïque",
+  e211: "Benzoate de sodium", e212: "Benzoate de potassium", e220: "Dioxyde de soufre",
+  e221: "Sulfite de sodium", e222: "Bisulfite de sodium", e223: "Métabisulfite de sodium",
+  e224: "Métabisulfite de potassium", e249: "Nitrite de potassium", e250: "Nitrite de sodium",
+  e251: "Nitrate de sodium", e252: "Nitrate de potassium", e260: "Acide acétique",
+  e261: "Acétate de potassium", e262: "Acétates de sodium", e263: "Acétate de calcium",
+  e270: "Acide lactique", e280: "Acide propionique", e281: "Propionate de sodium",
+  e282: "Propionate de calcium", e283: "Propionate de potassium", e290: "Dioxyde de carbone",
+  e296: "Acide malique", e297: "Acide fumarique", e300: "Acide ascorbique (vitamine C)",
+  e301: "Ascorbate de sodium", e302: "Ascorbate de calcium", e304: "Esters d'acides gras de l'acide ascorbique",
+  e306: "Tocophérols (vitamine E)", e307: "Alpha-tocophérol", e310: "Gallate de propyle",
+  e316: "Érythorbate de sodium", e317: "Érythorbate de potassium", e319: "TBHQ",
+  e320: "BHA", e321: "BHT", e322: "Lécithines", e325: "Lactate de sodium",
+  e326: "Lactate de potassium", e327: "Lactate de calcium", e330: "Acide citrique",
+  e331: "Citrate de sodium", e332: "Citrate de potassium", e333: "Citrate de calcium",
+  e334: "Acide tartrique", e335: "Tartrate de sodium", e336: "Tartrate de potassium",
+  e337: "Tartrate de sodium-potassium", e338: "Acide phosphorique", e339: "Phosphate de sodium",
+  e340: "Phosphate de potassium", e341: "Phosphate de calcium", e343: "Phosphate de magnésium",
+  e350: "Malate de sodium", e351: "Malate de potassium", e352: "Malate de calcium",
+  e385: "EDTA calcique disodique", e400: "Acide alginique", e401: "Alginate de sodium",
+  e402: "Alginate de potassium", e404: "Alginate de calcium", e405: "Alginate de propylène glycol",
+  e406: "Agar-agar", e407: "Carraghénane", e410: "Farine de caroube",
+  e412: "Gomme de guar", e413: "Gomme adragante", e414: "Gomme arabique",
+  e415: "Gomme xanthane", e416: "Gomme karaya", e417: "Gomme tara",
+  e418: "Gomme gellane", e420: "Sorbitol", e421: "Mannitol", e422: "Glycérol",
+  e425: "Konjac", e440: "Pectines", e442: "Phosphatides d'ammonium",
+  e450: "Diphosphates", e451: "Triphosphates", e452: "Polyphosphates",
+  e460: "Cellulose microcristalline", e461: "Méthylcellulose", e463: "Hydroxypropylcellulose",
+  e464: "Hydroxypropylméthylcellulose", e465: "Méthyléthylcellulose", e466: "Carboxyméthylcellulose",
+  e471: "Mono- et diglycérides d'acides gras", e472a: "Esters acétiques", e472b: "Esters lactiques",
+  e472c: "Esters citriques", e472e: "Esters monoacétyltartriques", e473: "Sucroesters",
+  e474: "Sucroglycérides", e475: "Esters polyglycériques", e476: "Polyricinooléate de polyglycérol",
+  e477: "Esters propylénoglycol", e481: "Stéaroyl-2-lactylate de sodium",
+  e482: "Stéaroyl-2-lactylate de calcium", e491: "Monostéarate de sorbitane",
+  e500: "Carbonate de sodium", e501: "Carbonate de potassium", e503: "Carbonate d'ammonium",
+  e504: "Carbonate de magnésium", e508: "Chlorure de potassium", e509: "Chlorure de calcium",
+  e516: "Sulfate de calcium", e551: "Dioxyde de silicium", e570: "Acides gras",
+  e575: "Glucono-delta-lactone", e621: "Glutamate monosodique", e622: "Glutamate de monopotassium",
+  e627: "Guanylate disodique", e631: "Inosinate disodique", e635: "Ribonucléotides disodiques",
+  e900: "Diméticone", e901: "Cire d'abeille", e903: "Cire de carnauba",
+  e904: "Shellac", e920: "L-cystéine", e927b: "Carbamide", e938: "Argon",
+  e939: "Hélium", e941: "Azote", e942: "Protoxyde d'azote", e943a: "Butane",
+  e948: "Oxygène", e950: "Acésulfame K", e951: "Aspartame", e952: "Cyclamate de sodium",
+  e954: "Saccharine", e955: "Sucralose", e959: "Néohespéridine DC", e960: "Stéviol",
+  e961: "Néotame", e962: "Sel d'aspartame-acésulfame", e965: "Maltitol",
+  e966: "Lactitol", e967: "Xylitol", e968: "Érythritol",
+};
+
+function formatAdditive(tag: string): { code: string; name: string | null } {
+  const match = tag.match(/en:e(\d+\w*)/i);
+  if (!match) return { code: tag.replace("en:", "").toUpperCase(), name: null };
+  const code = `E${match[1].toUpperCase()}`;
+  const name = ADDITIVE_NAMES[`e${match[1].toLowerCase()}`] ?? null;
+  return { code, name };
+}
+
+const ADDITIVES_VISIBLE = 5;
+
+const QUALITY_CONFIG = {
+  excellent: { label: "Excellent", color: "#16A34A", bg: "#DCFCE7", textColor: "#14532D" },
+  bon: { label: "Bon", color: "#65A30D", bg: "#ECFCCB", textColor: "#365314" },
+  surveiller: { label: "À surveiller", color: "#EA580C", bg: "#FFF7ED", textColor: "#7C2D12" },
+  mauvais: { label: "Mauvais", color: "#DC2626", bg: "#FEF2F2", textColor: "#7F1D1D" },
+};
+
+function RecipeQualitySection({ quality, colors }: { quality: RecipeQuality; colors: AppColors }) {
+  const [showAllAdditives, setShowAllAdditives] = useState(false);
+  const knownAllergens = quality.allergens.filter((t) => ALLERGEN_LABELS[t]);
+
+  const nova4 = quality.ultraProcessed.filter((i) => i.novaGroup === 4);
+  const nova3 = quality.ultraProcessed.filter((i) => i.novaGroup === 3);
+
+  const visibleAdditives = showAllAdditives
+    ? quality.additives
+    : quality.additives.slice(0, ADDITIVES_VISIBLE);
+  const hiddenCount = quality.additives.length - ADDITIVES_VISIBLE;
+
+  const config = QUALITY_CONFIG[quality.level];
+
+  const rows: Array<{ key: string; node: React.ReactNode }> = [];
+
+  rows.push({
+    key: "__level",
+    node: (
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 13 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: config.color }} />
+          <Text style={{ fontSize: 15, fontWeight: "700", color: colors.text }}>{config.label}</Text>
+        </View>
+        <Text style={{ fontSize: 12, color: colors.textSubtle }}>
+          {quality.coveredCount}/{quality.totalCount} ingrédients
+        </Text>
+      </View>
+    ),
+  });
+
+  if (knownAllergens.length > 0) {
+    rows.push({
+      key: "__allergens",
+      node: (
+        <View style={{ paddingVertical: 13, gap: 8 }}>
+          <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textSubtle }}>Allergènes</Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+            {knownAllergens.map((tag) => (
+              <View key={tag} style={{ borderRadius: 99, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: colors.border }}>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>{ALLERGEN_LABELS[tag]}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ),
+    });
+  }
+
+  for (const group of [{ items: nova4, novaGroup: 4 }, { items: nova3, novaGroup: 3 }]) {
+    if (group.items.length === 0) continue;
+    const badgeColor = group.novaGroup === 4 ? "#DC2626" : "#EA580C";
+    rows.push({
+      key: `__nova${group.novaGroup}`,
+      node: (
+        <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10, paddingVertical: 13 }}>
+          <View style={{ backgroundColor: badgeColor, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, marginTop: 2 }}>
+            <Text style={{ fontSize: 10, fontWeight: "800", color: "#fff" }}>NOVA {group.novaGroup}</Text>
+          </View>
+          <Text style={{ fontSize: 14, color: colors.textMuted, flex: 1, lineHeight: 20 }}>
+            {group.items.map((i) => i.name).join(", ")}
+          </Text>
+        </View>
+      ),
+    });
+  }
+
+  for (const tag of visibleAdditives) {
+    const { code, name } = formatAdditive(tag);
+    rows.push({
+      key: tag,
+      node: (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 11 }}>
+          <Text style={{ fontSize: 12, fontWeight: "700", color: colors.textSubtle, width: 44 }}>{code}</Text>
+          <Text style={{ fontSize: 14, color: name ? colors.textMuted : colors.textSubtle, flex: 1 }}>
+            {name ?? "—"}
+          </Text>
+        </View>
+      ),
+    });
+  }
+
+  return (
+    <View style={{ paddingHorizontal: 20, paddingTop: 28, paddingBottom: 8 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+        <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 1.5 }}>
+          Qualité
+        </Text>
+        {quality.additives.length > 0 && (
+          <Text style={{ fontSize: 11, color: colors.textSubtle }}>
+            {quality.additives.length} additif{quality.additives.length > 1 ? "s" : ""}
+          </Text>
+        )}
+      </View>
+
+      {rows.map((row, i) => (
+        <View key={row.key}>
+          {row.node}
+          {i < rows.length - 1 && <View style={{ height: 1, backgroundColor: colors.bgSurface }} />}
+        </View>
+      ))}
+
+      {!showAllAdditives && hiddenCount > 0 && (
+        <Pressable onPress={() => setShowAllAdditives(true)} style={{ paddingVertical: 12 }}>
+          <Text style={{ fontSize: 13, fontWeight: "600", color: colors.accent }}>
+            Voir {hiddenCount} additif{hiddenCount > 1 ? "s" : ""} de plus
+          </Text>
+        </Pressable>
+      )}
+    </View>
+  );
 }
 
 interface RecipeDetailScreenProps {
@@ -90,9 +498,32 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
   const [duplicating, setDuplicating] = useState(false);
   const [ingredientPrefs, setIngredientPrefs] = useState<Map<string, IngredientPreference>>(new Map());
   const [recipeCost, setRecipeCost] = useState<RecipeCostResult | null>(null);
+  const [recipeNutrition, setRecipeNutrition] = useState<RecipeNutrition | null>(null);
+  const [recipeQuality, setRecipeQuality] = useState<RecipeQuality | null>(null);
+
+  const [cookLog, setCookLog] = useState<CookLog | null>(null);
+  const [notes, setNotes] = useState("");
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [notesDraft, setNotesDraft] = useState("");
+  const [notesSaving, setNotesSaving] = useState(false);
+
+  const [ingredientsView, setIngredientsView] = useState<"list" | "grid">("list");
 
   const [headerVisible, setHeaderVisible] = useState(false);
   const scrollY = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    AsyncStorage.getItem("@deazl/ingredients_view").then(v => {
+      if (v === "grid" || v === "list") setIngredientsView(v);
+    });
+  }, []);
+
+  function toggleIngredientsView() {
+    const next = ingredientsView === "list" ? "grid" : "list";
+    setIngredientsView(next);
+    AsyncStorage.setItem("@deazl/ingredients_view", next);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }
 
   useEffect(() => {
     const id = scrollY.addListener(({ value }) => {
@@ -117,17 +548,32 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
     Promise.all([
       getRecipeById(id),
       getUserIngredientPreferences(),
-    ]).then(([r, prefs]) => {
+      getCookLog(id),
+      getRecipeNotes(id),
+    ]).then(([r, prefs, log, savedNotes]) => {
       setRecipe(r);
       setIngredientPrefs(prefs);
+      setCookLog(log);
+      setNotes(savedNotes);
       if (r) {
         setIsFavorite(r.isFavorite);
         setIsPublic(r.isPublic);
         setServings(r.servings);
         getRecipeEstimatedCost(r.ingredients, r.servings).then(setRecipeCost);
+        getRecipeNutrition(r.ingredients, r.servings).then(setRecipeNutrition);
+        getRecipeQuality(r.ingredients).then(setRecipeQuality);
       }
     }).finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (cookModeOpen) {
+      activateKeepAwakeAsync();
+    } else {
+      deactivateKeepAwake();
+    }
+    return () => { deactivateKeepAwake(); };
+  }, [cookModeOpen]);
 
   async function handleToggleFavorite() {
     const next = !isFavorite;
@@ -236,6 +682,19 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
     closeLinkSheet();
   }
 
+  function openNotesSheet() {
+    setNotesDraft(notes);
+    setNotesOpen(true);
+  }
+
+  async function handleSaveNotes() {
+    setNotesSaving(true);
+    await saveRecipeNotes(id, notesDraft);
+    setNotes(notesDraft);
+    setNotesSaving(false);
+    setNotesOpen(false);
+  }
+
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center" }}>
@@ -257,7 +716,8 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
   const multiplier = recipe.servings > 0 ? servings / recipe.servings : 1;
   const prepTime = recipe.prepTimeMinutes ?? 0;
   const cookTime = recipe.cookTimeMinutes ?? 0;
-  const hasStats = prepTime > 0 || cookTime > 0;
+  const cookCount = cookLog?.count ?? 0;
+  const hasStats = prepTime > 0 || cookTime > 0 || cookCount > 0;
 
   const adjustedTotalCost = recipeCost?.totalCost != null
     ? recipeCost.totalCost * multiplier
@@ -273,7 +733,7 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
           position: "absolute", top: 0, left: 0, right: 0, zIndex: 50,
           opacity: headerOpacity,
           backgroundColor: colors.bg,
-          borderBottomWidth: 1, borderBottomColor: "#F0EDEA",
+          borderBottomWidth: 1, borderBottomColor: colors.border,
           paddingTop: insets.top,
         }}
       >
@@ -282,7 +742,7 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
             onPress={onBack}
             style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center" }}
           >
-            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#1C1917" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
               <Polyline points="15 18 9 12 15 6" />
             </Svg>
           </PressableFeedback>
@@ -291,7 +751,7 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
             onPress={handleToggleFavorite}
             style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center" }}
           >
-            <Svg width={16} height={16} viewBox="0 0 24 24" fill={isFavorite ? "#E8571C" : "none"} stroke={isFavorite ? "#E8571C" : "#1C1917"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill={isFavorite ? "#E8571C" : "none"} stroke={isFavorite ? "#E8571C" : colors.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <Path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
             </Svg>
           </PressableFeedback>
@@ -371,7 +831,7 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
           </SafeAreaView>
 
           {/* Hero title + meta — fades out on scroll */}
-          <Animated.View style={{ position: "absolute", bottom: 88, left: 20, right: 20, opacity: heroContentOpacity }}>
+          <Animated.View style={{ position: "absolute", bottom: 60, left: 20, right: 20, opacity: heroContentOpacity }}>
             <Text style={{ fontSize: 30, fontWeight: "900", color: "#fff", letterSpacing: -0.5, lineHeight: 36, marginBottom: 14 }}>
               {recipe.name}
             </Text>
@@ -426,8 +886,17 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
                   <Text style={{ fontSize: 22, fontWeight: "900", color: colors.text }}>{recipe.servings}</Text>
                   <Text style={{ fontSize: 10, fontWeight: "600", color: colors.textSubtle, marginTop: 3, textTransform: "uppercase", letterSpacing: 0.8 }}>Portions</Text>
                 </View>
+                {cookCount > 0 && (
+                  <>
+                    <View style={{ width: 1, backgroundColor: colors.border, marginVertical: 4 }} />
+                    <View style={{ flex: 1, alignItems: "center" }}>
+                      <Text style={{ fontSize: 22, fontWeight: "900", color: colors.text }}>{cookCount}</Text>
+                      <Text style={{ fontSize: 10, fontWeight: "600", color: colors.textSubtle, marginTop: 3, textTransform: "uppercase", letterSpacing: 0.8 }}>Cuisinée</Text>
+                    </View>
+                  </>
+                )}
               </View>
-              <View style={{ height: 1, backgroundColor: "#F0EDEA", marginHorizontal: 20 }} />
+              <View style={{ height: 1, backgroundColor: colors.border, marginHorizontal: 20 }} />
             </>
           )}
 
@@ -435,7 +904,7 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
 
           {/* Cost estimate band */}
           {recipeCost && recipeCost.totalCount > 0 && (
-            <View style={{ marginHorizontal: 20, marginBottom: 8 }}>
+            <View style={{ marginHorizontal: 20, marginTop: 16, marginBottom: 8 }}>
               <View style={{
                 flexDirection: "row", alignItems: "center", justifyContent: "space-between",
                 backgroundColor: costPerServing != null ? colors.accentBg : colors.bgSurface,
@@ -478,11 +947,12 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
             </View>
           )}
 
+
           {/* Description */}
           {recipe.description ? (
             <View style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 20 }}>
-              <Text style={{ fontSize: 15, color: "#57534E", lineHeight: 24 }}>{recipe.description}</Text>
-              <View style={{ height: 1, backgroundColor: "#F0EDEA", marginTop: 20 }} />
+              <Text style={{ fontSize: 15, color: colors.textMuted, lineHeight: 24 }}>{recipe.description}</Text>
+              <View style={{ height: 1, backgroundColor: colors.border, marginTop: 20 }} />
             </View>
           ) : null}
 
@@ -493,106 +963,156 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
                 <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 1.5 }}>
                   Ingrédients
                 </Text>
-                {/* Inline servings adjuster */}
-                <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.bgSurface, borderRadius: 12, overflow: "hidden" }}>
-                  <Pressable
-                    onPress={() => setServings(s => Math.max(1, s - 1))}
-                    style={{ paddingHorizontal: 14, paddingVertical: 8 }}
-                    hitSlop={8}
-                  >
-                    <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2.5} strokeLinecap="round">
-                      <Line x1={5} y1={12} x2={19} y2={12} />
-                    </Svg>
-                  </Pressable>
-                  <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text, minWidth: 38, textAlign: "center" }}>{servings} pers.</Text>
-                  <Pressable
-                    onPress={() => setServings(s => s + 1)}
-                    style={{ paddingHorizontal: 14, paddingVertical: 8 }}
-                    hitSlop={8}
-                  >
-                    <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round">
-                      <Line x1={12} y1={5} x2={12} y2={19} />
-                      <Line x1={5} y1={12} x2={19} y2={12} />
-                    </Svg>
-                  </Pressable>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <View style={{ flexDirection: "row", backgroundColor: colors.bgSurface, borderRadius: 10, padding: 3 }}>
+                    <Pressable
+                      onPress={() => { if (ingredientsView !== "list") toggleIngredientsView(); }}
+                      style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: ingredientsView === "list" ? colors.bg : "transparent" }}
+                    >
+                      <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={ingredientsView === "list" ? colors.text : colors.textSubtle} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                        <Line x1={8} y1={6} x2={21} y2={6} />
+                        <Line x1={8} y1={12} x2={21} y2={12} />
+                        <Line x1={8} y1={18} x2={21} y2={18} />
+                        <Line x1={3} y1={6} x2={3.01} y2={6} />
+                        <Line x1={3} y1={12} x2={3.01} y2={12} />
+                        <Line x1={3} y1={18} x2={3.01} y2={18} />
+                      </Svg>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => { if (ingredientsView !== "grid") toggleIngredientsView(); }}
+                      style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: ingredientsView === "grid" ? colors.bg : "transparent" }}
+                    >
+                      <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={ingredientsView === "grid" ? colors.text : colors.textSubtle} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                        <Rect x={3} y={3} width={7} height={7} rx={1} />
+                        <Rect x={14} y={3} width={7} height={7} rx={1} />
+                        <Rect x={3} y={14} width={7} height={7} rx={1} />
+                        <Rect x={14} y={14} width={7} height={7} rx={1} />
+                      </Svg>
+                    </Pressable>
+                  </View>
+                  {/* Inline servings adjuster */}
+                  <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.bgSurface, borderRadius: 12, overflow: "hidden" }}>
+                    <Pressable
+                      onPress={() => setServings(s => Math.max(1, s - 1))}
+                      style={{ paddingHorizontal: 16, paddingVertical: 12 }}
+                    >
+                      <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2.5} strokeLinecap="round">
+                        <Line x1={5} y1={12} x2={19} y2={12} />
+                      </Svg>
+                    </Pressable>
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text, minWidth: 44, textAlign: "center" }}>{servings} pers.</Text>
+                    <Pressable
+                      onPress={() => setServings(s => s + 1)}
+                      style={{ paddingHorizontal: 16, paddingVertical: 12 }}
+                    >
+                      <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round">
+                        <Line x1={12} y1={5} x2={12} y2={19} />
+                        <Line x1={5} y1={12} x2={19} y2={12} />
+                      </Svg>
+                    </Pressable>
+                  </View>
                 </View>
               </View>
 
-              <View style={{ paddingHorizontal: 20 }}>
-                {recipe.ingredients.map((ing, i) => {
-                  const isChecked = checkedIngredients.has(ing.id);
-                  const displayName = ing.productName ?? ing.customName ?? "";
-                  const isLinked = !!ing.productId;
-                  const normalized = normalizeIngredientName(ing.customName ?? "");
-                  const suggestion = !isLinked ? ingredientPrefs.get(normalized) : undefined;
-                  const ingCost = recipeCost?.ingredientCosts.get(ing.id);
-                  const adjustedIngCost = ingCost?.estimatedCost != null
-                    ? ingCost.estimatedCost * multiplier
-                    : null;
-                  return (
-                    <View key={ing.id}>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 13 }}>
-                        <Pressable onPress={() => toggleIngredient(ing.id)}>
-                          <View style={{
-                            width: 24, height: 24, borderRadius: 12,
-                            borderWidth: 2,
-                            borderColor: isChecked ? "#E8571C" : "#D6D3D1",
-                            backgroundColor: isChecked ? "#E8571C" : "transparent",
-                            alignItems: "center", justifyContent: "center",
-                          }}>
-                            {isChecked && (
-                              <Svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3.5} strokeLinecap="round" strokeLinejoin="round">
-                                <Polyline points="20 6 9 17 4 12" />
-                              </Svg>
+              {ingredientsView === "list" ? (
+                <View style={{ paddingHorizontal: 20 }}>
+                  {groupIngredientsBySection(recipe.ingredients).map((group, gi) => (
+                    <View key={group.section ?? `__unsectioned_${gi}`}>
+                      {group.section && (
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingTop: gi > 0 ? 16 : 0, paddingBottom: 4 }}>
+                          <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+                          <Text style={{ fontSize: 10, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 1.2 }}>
+                            {group.section}
+                          </Text>
+                          <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+                        </View>
+                      )}
+                      {group.items.map((ing, i) => {
+                        const isChecked = checkedIngredients.has(ing.id);
+                        const displayName = ing.productName ?? ing.customName ?? "";
+                        const isLinked = !!ing.productId;
+                        const normalized = normalizeIngredientName(ing.customName ?? "");
+                        const suggestion = !isLinked ? ingredientPrefs.get(normalized) : undefined;
+                        const ingCost = recipeCost?.ingredientCosts.get(ing.id);
+                        const adjustedIngCost = ingCost?.estimatedCost != null
+                          ? ingCost.estimatedCost * multiplier
+                          : null;
+                        return (
+                          <View key={ing.id}>
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 13 }}>
+                              <Pressable onPress={() => toggleIngredient(ing.id)}>
+                                <View style={{
+                                  width: 24, height: 24, borderRadius: 12,
+                                  borderWidth: 2,
+                                  borderColor: isChecked ? "#E8571C" : "#D6D3D1",
+                                  backgroundColor: isChecked ? "#E8571C" : "transparent",
+                                  alignItems: "center", justifyContent: "center",
+                                }}>
+                                  {isChecked && (
+                                    <Svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3.5} strokeLinecap="round" strokeLinejoin="round">
+                                      <Polyline points="20 6 9 17 4 12" />
+                                    </Svg>
+                                  )}
+                                </View>
+                              </Pressable>
+                              <Pressable style={{ flex: 1 }} onPress={() => toggleIngredient(ing.id)}>
+                                <Text style={{ fontSize: 15, color: isChecked ? "#B0AAA5" : colors.text, opacity: isChecked ? 0.55 : 1, textDecorationLine: isChecked ? "line-through" : "none" }}>
+                                  {ing.quantity > 0 ? (
+                                    <Text style={{ fontWeight: "700", color: isChecked ? "#B0AAA5" : "#E8571C" }}>
+                                      {fmtQty(ing.quantity, multiplier)}{ing.unit ? ` ${ing.unit}` : ""}{" "}
+                                    </Text>
+                                  ) : null}
+                                  {displayName}
+                                  {ing.isOptional ? <Text style={{ color: colors.textSubtle, fontSize: 13 }}> (opt.)</Text> : null}
+                                </Text>
+                                {adjustedIngCost != null ? (
+                                  <Text style={{ fontSize: 11, fontWeight: "600", marginTop: 2 }} numberOfLines={1}>
+                                    <Text style={{ color: colors.accent }}>{fmtCost(adjustedIngCost)}</Text>
+                                    {ingCost?.storeName ? (
+                                      <Text style={{ color: colors.textSubtle, fontWeight: "400" }}> · {ingCost.storeName}</Text>
+                                    ) : ingCost?.confidence !== "exact" ? (
+                                      <Text style={{ color: colors.textSubtle, fontWeight: "400" }}> estimé</Text>
+                                    ) : null}
+                                  </Text>
+                                ) : suggestion ? (
+                                  <Text style={{ fontSize: 11, color: colors.accent, fontWeight: "600", marginTop: 2 }} numberOfLines={1}>
+                                    → {suggestion.productName}
+                                  </Text>
+                                ) : null}
+                              </Pressable>
+                              <Pressable
+                                onPress={() => openLinkSheet(ing)}
+                                style={{
+                                  width: 30, height: 30, borderRadius: 8,
+                                  backgroundColor: isLinked ? colors.accentBg : suggestion ? colors.accentBg + "66" : colors.bgSurface,
+                                  alignItems: "center", justifyContent: "center",
+                                }}
+                              >
+                                <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={isLinked ? colors.accent : suggestion ? colors.accent : "#A8A29E"} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                                  <Path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                                  <Path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                                </Svg>
+                              </Pressable>
+                            </View>
+                            {i < group.items.length - 1 && (
+                              <View style={{ height: 1, backgroundColor: colors.bgSurface }} />
                             )}
                           </View>
-                        </Pressable>
-                        <Pressable style={{ flex: 1 }} onPress={() => toggleIngredient(ing.id)}>
-                          <Text style={{ fontSize: 15, color: isChecked ? "#B0AAA5" : colors.text, opacity: isChecked ? 0.55 : 1, textDecorationLine: isChecked ? "line-through" : "none" }}>
-                            {ing.quantity > 0 ? (
-                              <Text style={{ fontWeight: "700", color: isChecked ? "#B0AAA5" : "#E8571C" }}>
-                                {fmtQty(ing.quantity, multiplier)}{ing.unit ? ` ${ing.unit}` : ""}{" "}
-                              </Text>
-                            ) : null}
-                            {displayName}
-                            {ing.isOptional ? <Text style={{ color: colors.textSubtle, fontSize: 13 }}> (opt.)</Text> : null}
-                          </Text>
-                          {adjustedIngCost != null ? (
-                            <Text style={{ fontSize: 11, fontWeight: "600", marginTop: 2 }} numberOfLines={1}>
-                              <Text style={{ color: colors.accent }}>{fmtCost(adjustedIngCost)}</Text>
-                              {ingCost?.storeName ? (
-                                <Text style={{ color: colors.textSubtle, fontWeight: "400" }}> · {ingCost.storeName}</Text>
-                              ) : ingCost?.confidence !== "exact" ? (
-                                <Text style={{ color: colors.textSubtle, fontWeight: "400" }}> estimé</Text>
-                              ) : null}
-                            </Text>
-                          ) : suggestion ? (
-                            <Text style={{ fontSize: 11, color: colors.accent, fontWeight: "600", marginTop: 2 }} numberOfLines={1}>
-                              → {suggestion.productName}
-                            </Text>
-                          ) : null}
-                        </Pressable>
-                        <Pressable
-                          onPress={() => openLinkSheet(ing)}
-                          style={{
-                            width: 30, height: 30, borderRadius: 8,
-                            backgroundColor: isLinked ? colors.accentBg : suggestion ? colors.accentBg + "66" : colors.bgSurface,
-                            alignItems: "center", justifyContent: "center",
-                          }}
-                        >
-                          <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={isLinked ? colors.accent : suggestion ? colors.accent : "#A8A29E"} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                            <Path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                            <Path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                          </Svg>
-                        </Pressable>
-                      </View>
-                      {i < recipe.ingredients.length - 1 && (
-                        <View style={{ height: 1, backgroundColor: colors.bgSurface }} />
-                      )}
+                        );
+                      })}
                     </View>
-                  );
-                })}
-              </View>
+                  ))}
+                </View>
+              ) : (
+                <IngredientGrid
+                  ingredients={recipe.ingredients}
+                  multiplier={multiplier}
+                  checkedIngredients={checkedIngredients}
+                  onToggle={toggleIngredient}
+                  colors={colors}
+                  recipeCost={recipeCost}
+                />
+              )}
             </View>
           )}
 
@@ -602,27 +1122,76 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
               <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 24 }}>
                 Préparation
               </Text>
-              {recipe.steps.map((step, i) => (
-                <View key={step.id} style={{ flexDirection: "row", gap: 16 }}>
-                  {/* Step number + connector line */}
-                  <View style={{ alignItems: "center", width: 36 }}>
-                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "#E8571C", alignItems: "center", justifyContent: "center" }}>
-                      <Text style={{ fontSize: 15, fontWeight: "900", color: "#fff" }}>{step.stepNumber}</Text>
+              {groupStepsBySection(recipe.steps).map((group, gi) => (
+                <View key={group.section ?? `__unsectioned_${gi}`}>
+                  {group.section && (
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 20, marginTop: gi > 0 ? 8 : 0 }}>
+                      <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+                      <Text style={{ fontSize: 10, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 1.2 }}>
+                        {group.section}
+                      </Text>
+                      <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
                     </View>
-                    {i < recipe.steps.length - 1 && (
-                      <View style={{ width: 2, flex: 1, minHeight: 20, backgroundColor: "#FCDCC8", marginTop: 6 }} />
-                    )}
-                  </View>
-                  {/* Step description */}
-                  <View style={{ flex: 1, paddingBottom: i < recipe.steps.length - 1 ? 28 : 0, paddingTop: 7 }}>
-                    <Text style={{ fontSize: 15, color: "#374151", lineHeight: 24 }}>
-                      {step.description}
-                    </Text>
-                  </View>
+                  )}
+                  {group.items.map((step, i) => (
+                    <View key={step.id} style={{ flexDirection: "row", gap: 16 }}>
+                      <View style={{ alignItems: "center", width: 36 }}>
+                        <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "#E8571C", alignItems: "center", justifyContent: "center" }}>
+                          <Text style={{ fontSize: 15, fontWeight: "900", color: "#fff" }}>{step.stepNumber}</Text>
+                        </View>
+                        {i < group.items.length - 1 && (
+                          <View style={{ width: 2, flex: 1, minHeight: 20, backgroundColor: "#FCDCC8", marginTop: 6 }} />
+                        )}
+                      </View>
+                      <View style={{ flex: 1, paddingBottom: i < group.items.length - 1 ? 28 : 0, paddingTop: 7 }}>
+                        <Text style={{ fontSize: 15, color: colors.textMuted, lineHeight: 24 }}>
+                          {step.description}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                  {gi < groupStepsBySection(recipe.steps).length - 1 && (
+                    <View style={{ height: 28 }} />
+                  )}
                 </View>
               ))}
             </View>
           )}
+
+          {/* Nutrition grid */}
+          {recipeNutrition && (
+            <NutritionGrid nutrition={recipeNutrition} colors={colors} />
+          )}
+
+          {/* Quality */}
+          {recipeQuality && (
+            <RecipeQualitySection quality={recipeQuality} colors={colors} />
+          )}
+
+          {/* Personal notes */}
+          <Pressable
+            onPress={openNotesSheet}
+            style={{ marginHorizontal: 20, marginTop: 28, marginBottom: 16 }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 1.5 }}>
+                Notes personnelles
+              </Text>
+              <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={colors.textSubtle} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <Path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <Path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </Svg>
+            </View>
+            <View style={{ backgroundColor: colors.bgSurface, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, minHeight: 72 }}>
+              {notes.trim() ? (
+                <Text style={{ fontSize: 15, color: colors.textMuted, lineHeight: 22 }}>{notes}</Text>
+              ) : (
+                <Text style={{ fontSize: 15, color: colors.textSubtle, lineHeight: 22, fontStyle: "italic" }}>
+                  Ajoutez vos notes, variantes, astuces…
+                </Text>
+              )}
+            </View>
+          </Pressable>
 
           {/* Bottom spacing for sticky button */}
           <View style={{ height: 100 }} />
@@ -925,6 +1494,47 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
               </Button>
               <Button variant="secondary" onPress={() => setConfirmDelete(false)} className="w-full rounded-2xl">
                 <Button.Label>Annuler</Button.Label>
+              </Button>
+            </View>
+      </BottomModal>
+
+      <BottomModal isOpen={notesOpen} onClose={() => setNotesOpen(false)} height="60%">
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingBottom: 16 }}>
+                <Text style={{ fontSize: 17, fontWeight: "800", color: colors.text }}>Notes personnelles</Text>
+                <Pressable onPress={() => setNotesOpen(false)} hitSlop={8} style={{ padding: 4 }}>
+                  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.textMuted} strokeWidth={2.5} strokeLinecap="round">
+                    <Line x1={18} y1={6} x2={6} y2={18} /><Line x1={6} y1={6} x2={18} y2={18} />
+                  </Svg>
+                </Pressable>
+              </View>
+              <TextInput
+                value={notesDraft}
+                onChangeText={setNotesDraft}
+                placeholder="Vos notes, variantes, astuces…"
+                placeholderTextColor={colors.textSubtle}
+                multiline
+                autoFocus
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.bgSurface,
+                  borderRadius: 16,
+                  paddingHorizontal: 16,
+                  paddingVertical: 14,
+                  fontSize: 15,
+                  color: colors.text,
+                  lineHeight: 22,
+                  textAlignVertical: "top",
+                  marginBottom: 16,
+                }}
+              />
+              <Button
+                variant="primary"
+                className="w-full rounded-2xl"
+                isDisabled={notesSaving}
+                onPress={handleSaveNotes}
+              >
+                <Button.Label>{notesSaving ? "Enregistrement…" : "Sauvegarder"}</Button.Label>
               </Button>
             </View>
       </BottomModal>

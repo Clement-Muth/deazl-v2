@@ -8,6 +8,7 @@ export interface RecipeIngredient {
   unit: string;
   isOptional: boolean;
   sortOrder: number;
+  section: string | null;
 }
 
 export interface CatalogProduct {
@@ -22,6 +23,7 @@ export interface RecipeStep {
   recipeId: string;
   stepNumber: number;
   description: string;
+  section: string | null;
 }
 
 export interface Recipe {
