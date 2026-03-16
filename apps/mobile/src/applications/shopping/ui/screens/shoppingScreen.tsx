@@ -227,6 +227,7 @@ export function ShoppingScreen() {
   const [selectedItem, setSelectedItem] = useState<ShoppingItem | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [groupBy, setGroupBy] = useState<"category" | "recipe">("category");
   const router = useRouter();
 
   useFocusEffect(useCallback(() => { silentReload(); }, []));
@@ -257,6 +258,20 @@ export function ShoppingScreen() {
     ...CATEGORY_ORDER.filter((c) => grouped[c]),
     ...Object.keys(grouped).filter((c) => !CATEGORY_ORDER.includes(c)),
   ];
+
+  const groupedByRecipe = unchecked.reduce<Record<string, ShoppingItem[]>>((acc, item) => {
+    const key = item.recipeName ?? "__manual";
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(item);
+    return acc;
+  }, {});
+
+  const sortedRecipes = [
+    ...Object.keys(groupedByRecipe).filter((k) => k !== "__manual"),
+    ...(groupedByRecipe["__manual"] ? ["__manual"] : []),
+  ];
+
+  const hasRecipeItems = unchecked.some((i) => i.recipeName);
 
   const storeSummaries = list?.storeSummaries ?? [];
   const storeIds = storeSummaries.map((s) => s.storeId);
@@ -397,6 +412,27 @@ export function ShoppingScreen() {
           </View>
         </View>
 
+        {hasRecipeItems && items.length > 0 && (
+          <View style={{ flexDirection: "row", gap: 6, paddingHorizontal: 16, marginBottom: 8 }}>
+            {(["category", "recipe"] as const).map((mode) => (
+              <Pressable
+                key={mode}
+                onPress={() => setGroupBy(mode)}
+                style={({ pressed }) => ({
+                  paddingHorizontal: 14,
+                  paddingVertical: 7,
+                  borderRadius: 99,
+                  backgroundColor: groupBy === mode ? colors.text : pressed ? colors.bgSurface : colors.bgCard,
+                })}
+              >
+                <Text style={{ fontSize: 13, fontWeight: "600", color: groupBy === mode ? colors.bg : colors.textMuted }}>
+                  {mode === "category" ? "Catégories" : "Recettes"}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+
         {storeSummariesSorted.length > 0 && unchecked.length > 0 && (
           <ScrollView
             horizontal
@@ -450,7 +486,7 @@ export function ShoppingScreen() {
           </View>
         ) : (
           <View style={{ paddingHorizontal: 16 }}>
-            {sortedCategories.map((cat, catIdx) => {
+            {groupBy === "category" ? sortedCategories.map((cat, catIdx) => {
               const catItems = grouped[cat];
               const color = CATEGORY_COLORS[cat] ?? "#9ca3af";
               return (
@@ -471,6 +507,32 @@ export function ShoppingScreen() {
                         onDelete={handleDelete}
                         onOpenDetail={handleOpenDetail}
                         isLast={i === catItems.length - 1}
+                      />
+                    ))}
+                  </View>
+                </View>
+              );
+            }) : sortedRecipes.map((key, idx) => {
+              const recipeItems = groupedByRecipe[key];
+              const label = key === "__manual" ? "Hors recette" : key;
+              return (
+                <View key={key} style={{ marginTop: idx === 0 ? 4 : 20 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 4, paddingBottom: 8 }}>
+                    <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: key === "__manual" ? colors.textSubtle : colors.accent }} />
+                    <Text style={{ flex: 1, fontSize: 11, fontWeight: "700", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1.5 }}>
+                      {label}
+                    </Text>
+                    <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textSubtle }}>{recipeItems.length}</Text>
+                  </View>
+                  <View style={{ borderRadius: 14, backgroundColor: colors.bgCard, overflow: "hidden" }}>
+                    {recipeItems.map((item, i) => (
+                      <ItemRow
+                        key={item.id}
+                        item={item}
+                        onToggle={handleToggle}
+                        onDelete={handleDelete}
+                        onOpenDetail={handleOpenDetail}
+                        isLast={i === recipeItems.length - 1}
                       />
                     ))}
                   </View>

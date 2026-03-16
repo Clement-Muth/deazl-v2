@@ -1309,6 +1309,7 @@ export function ModeCourses() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [editVirtualId, setEditVirtualId] = useState<string | null>(null);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [groupBy, setGroupBy] = useState<"category" | "recipe">("category");
   const swipeableRefs = useRef<Map<string, { close: () => void }>>(new Map());
 
   useFocusEffect(useCallback(() => {
@@ -1380,6 +1381,20 @@ export function ModeCourses() {
     ...CATEGORY_ORDER.filter((c) => grouped[c]),
     ...Object.keys(grouped).filter((c) => !CATEGORY_ORDER.includes(c)),
   ];
+
+  const groupedByRecipe = useMemo(() => unchecked.reduce<Record<string, ShoppingItem[]>>((acc, item) => {
+    const key = item.recipeName ?? "__manual";
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(item);
+    return acc;
+  }, {}), [unchecked]);
+
+  const sortedRecipes = useMemo(() => [
+    ...Object.keys(groupedByRecipe).filter((k) => k !== "__manual"),
+    ...(groupedByRecipe["__manual"] ? ["__manual"] : []),
+  ], [groupedByRecipe]);
+
+  const hasRecipeItems = useMemo(() => unchecked.some((i) => i.recipeName), [unchecked]);
 
   const checkedIds = useMemo(() => new Set((list?.items ?? []).filter((i) => i.isChecked).map((i) => i.id)), [list]);
 
@@ -1857,6 +1872,27 @@ export function ModeCourses() {
             )}
           </Pressable>
 
+          {hasRecipeItems && (
+            <View style={{ flexDirection: "row", gap: 6, paddingHorizontal: 16, paddingBottom: 10 }}>
+              {(["category", "recipe"] as const).map((mode) => (
+                <Pressable
+                  key={mode}
+                  onPress={() => setGroupBy(mode)}
+                  style={({ pressed }) => ({
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 99,
+                    backgroundColor: groupBy === mode ? colors.text : pressed ? "#F5F0EB" : "#F0EDE8",
+                  })}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: groupBy === mode ? colors.bg : "#78716C" }}>
+                    {mode === "category" ? "Catégories" : "Recettes"}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100, flexGrow: 1 }}>
             {unchecked.length === 0 && !hasCartItems && (
               <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 60, gap: 8 }}>
@@ -1866,18 +1902,21 @@ export function ModeCourses() {
                 </Text>
               </View>
             )}
-            {sortedCategories.map((cat, catIdx) => {
-              const catItems = grouped[cat];
-              const color = CATEGORY_COLORS[cat] ?? "#9ca3af";
+            {(groupBy === "category" ? sortedCategories : sortedRecipes).map((key, groupIdx) => {
+              const groupItems = groupBy === "category" ? grouped[key] : groupedByRecipe[key];
+              const color = groupBy === "category"
+                ? (CATEGORY_COLORS[key] ?? "#9ca3af")
+                : (key === "__manual" ? "#9ca3af" : colors.accent);
+              const label = groupBy === "category" ? key : (key === "__manual" ? "Hors recette" : key);
               return (
-                <View key={cat} style={{ marginTop: catIdx === 0 ? 4 : 20 }}>
+                <View key={key} style={{ marginTop: groupIdx === 0 ? 4 : 20 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 4, paddingBottom: 8 }}>
                     <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: color }} />
-                    <Text style={{ flex: 1, fontSize: 11, fontWeight: "700", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1.5 }}>{cat}</Text>
-                    <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textSubtle }}>{catItems.length}</Text>
+                    <Text style={{ flex: 1, fontSize: 11, fontWeight: "700", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1.5 }}>{label}</Text>
+                    <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textSubtle }}>{groupItems.length}</Text>
                   </View>
                   <View style={{ borderRadius: 14, backgroundColor: colors.bgCard, overflow: "hidden" }}>
-                    {catItems.map((item, i) => {
+                    {groupItems.map((item, i) => {
                       return (
                         <View key={item.id}>
                           <Pressable
@@ -1905,7 +1944,7 @@ export function ModeCourses() {
                               <Text style={{ fontSize: 12, fontWeight: "600", color: "#C4B8AF" }}>~{getPrefillPrice(item)} €</Text>
                             ) : null}
                           </Pressable>
-                          {i < catItems.length - 1 && <View style={{ height: 1, backgroundColor: colors.bgSurface, marginLeft: 60 }} />}
+                          {i < groupItems.length - 1 && <View style={{ height: 1, backgroundColor: colors.bgSurface, marginLeft: 60 }} />}
                         </View>
                       );
                     })}
