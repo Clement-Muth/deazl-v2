@@ -22,5 +22,5 @@ export function usePantryItems() {
 
   useEffect(() => { reload(); }, [reload]);
 
-  return { items, loading, error, reload };
+  return { items, setItems, loading, error, reload };
 }

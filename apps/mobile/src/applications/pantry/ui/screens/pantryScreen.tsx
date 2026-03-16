@@ -1,21 +1,28 @@
-import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as Haptics from "expo-haptics";
-import { BottomSheet, Button, Card, Separator } from "heroui-native";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Svg, { Circle, Line, Path, Polyline, Rect } from "react-native-svg";
+import Svg, { Line, Path, Polyline, Rect } from "react-native-svg";
 import { useAppTheme } from "../../../../shared/theme";
 import { addPantryItem } from "../../application/useCases/addPantryItem";
 import { deletePantryItem } from "../../application/useCases/deletePantryItem";
 import { updatePantryItem } from "../../application/useCases/updatePantryItem";
+import { updatePantryItemQuantity } from "../../application/useCases/updatePantryItemQuantity";
 import { usePantryItems } from "../../api/usePantryItems";
 import { addShoppingItem } from "../../../shopping/application/useCases/addShoppingItem";
 import { createEmptyShoppingList } from "../../../shopping/application/useCases/createEmptyShoppingList";
 import { getActiveShoppingList } from "../../../shopping/application/useCases/getActiveShoppingList";
 import type { PantryItem, StorageLocation } from "../../domain/entities/pantry";
 import { LOCATION_LABELS, LOCATION_ORDER } from "../../domain/entities/pantry";
+import { BottomModal, BottomModalScrollView } from "../../../shopping/ui/components/bottomModal";
+
+const PANTRY_UNITS = ["pièce", "kg", "g", "L", "cL", "mL", "boîte"];
+
+function normalizeUnit(raw: string): string {
+  return PANTRY_UNITS.find((u) => u.toLowerCase() === raw.toLowerCase()) ?? "pièce";
+}
 
 function daysUntilExpiry(dateStr: string): number {
   return Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
@@ -52,7 +59,91 @@ function LocationIcon({ loc, size = 14, color = "#78716C" }: { loc: StorageLocat
   );
 }
 
-function PantryItemRow({ item, onEdit, onDelete }: { item: PantryItem; onEdit: (item: PantryItem) => void; onDelete: (id: string) => void }) {
+function ExpiryDatePicker({ value, onChange, colors }: { value: string; onChange: (v: string) => void; colors: ReturnType<typeof useAppTheme>["colors"] }) {
+  const [showAndroid, setShowAndroid] = useState(false);
+  const date = value ? new Date(value + "T12:00:00") : new Date();
+
+  function handleChange(_: unknown, selected?: Date) {
+    if (Platform.OS === "android") setShowAndroid(false);
+    if (selected) onChange(selected.toISOString().slice(0, 10));
+  }
+
+  function formatDate(d: Date): string {
+    return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+  }
+
+  if (Platform.OS === "ios") {
+    return (
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 14, paddingVertical: 6 }}>
+        <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <Rect x={3} y={4} width={18} height={18} rx={2} />
+          <Line x1={16} y1={2} x2={16} y2={6} />
+          <Line x1={8} y1={2} x2={8} y2={6} />
+          <Line x1={3} y1={10} x2={21} y2={10} />
+        </Svg>
+        <DateTimePicker
+          value={date}
+          mode="date"
+          display="compact"
+          onChange={handleChange}
+          locale="fr-FR"
+          style={{ flex: 1 }}
+          themeVariant="light"
+        />
+        {value && (
+          <Pressable onPress={() => onChange("")} hitSlop={10}>
+            <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+              <Line x1={18} y1={6} x2={6} y2={18} />
+              <Line x1={6} y1={6} x2={18} y2={18} />
+            </Svg>
+          </Pressable>
+        )}
+      </View>
+    );
+  }
+
+  return (
+    <>
+      <Pressable
+        onPress={() => setShowAndroid(true)}
+        style={({ pressed }) => ({
+          flexDirection: "row", alignItems: "center", gap: 10,
+          borderRadius: 14, backgroundColor: colors.bgSurface,
+          paddingHorizontal: 16, paddingVertical: 14,
+          opacity: pressed ? 0.7 : 1,
+        })}
+      >
+        <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <Rect x={3} y={4} width={18} height={18} rx={2} />
+          <Line x1={16} y1={2} x2={16} y2={6} />
+          <Line x1={8} y1={2} x2={8} y2={6} />
+          <Line x1={3} y1={10} x2={21} y2={10} />
+        </Svg>
+        <Text style={{ flex: 1, fontSize: 15, color: value ? colors.text : "#A8A29E" }}>
+          {value ? formatDate(new Date(value + "T12:00:00")) : "Choisir une date"}
+        </Text>
+        {value && (
+          <Pressable onPress={() => onChange("")} hitSlop={10}>
+            <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+              <Line x1={18} y1={6} x2={6} y2={18} />
+              <Line x1={6} y1={6} x2={18} y2={18} />
+            </Svg>
+          </Pressable>
+        )}
+      </Pressable>
+      {showAndroid && (
+        <DateTimePicker value={date} mode="date" display="default" onChange={handleChange} locale="fr-FR" />
+      )}
+    </>
+  );
+}
+
+function PantryItemRow({ item, onEdit, onDelete, onQuantityChange }: {
+  item: PantryItem;
+  onEdit: (item: PantryItem) => void;
+  onDelete: (id: string) => void;
+  onQuantityChange: (id: string, newQty: number) => void;
+}) {
   const { colors } = useAppTheme();
   const days = item.expiryDate ? daysUntilExpiry(item.expiryDate) : null;
   const isExpiringSoon = days !== null && days >= 0 && days <= 3;
@@ -61,40 +152,89 @@ function PantryItemRow({ item, onEdit, onDelete }: { item: PantryItem; onEdit: (
   return (
     <Pressable
       onPress={() => onEdit(item)}
-      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, paddingHorizontal: 16, backgroundColor: pressed ? colors.bgSubtle : "transparent" })}
+      style={({ pressed }) => ({
+        flexDirection: "row", alignItems: "center", gap: 14,
+        paddingLeft: 16, paddingRight: 8, paddingVertical: 14,
+        backgroundColor: pressed ? colors.bgSubtle : colors.bgCard,
+        minHeight: 64,
+      })}
     >
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text }}>{item.customName}</Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
-          {item.quantity !== null && (
-            <Text style={{ fontSize: 12, color: colors.textMuted }}>
-              {item.quantity}{item.unit ? ` ${item.unit}` : ""}
-            </Text>
-          )}
-          {item.expiryDate && (
+        <Text style={{ fontSize: 15, fontWeight: "600", color: colors.text }}>{item.customName}</Text>
+        {item.expiryDate && (
+          <View style={{ marginTop: 2 }}>
             <View style={{
+              alignSelf: "flex-start",
               borderRadius: 99, paddingHorizontal: 6, paddingVertical: 1,
               backgroundColor: isExpired ? colors.dangerBg : isExpiringSoon ? "#FEF3C7" : colors.bgSurface,
             }}>
-              <Text style={{
-                fontSize: 10, fontWeight: "600",
-                color: isExpired ? colors.danger : isExpiringSoon ? "#D97706" : colors.textMuted,
-              }}>
+              <Text style={{ fontSize: 10, fontWeight: "600", color: isExpired ? colors.danger : isExpiringSoon ? "#D97706" : colors.textMuted }}>
                 {isExpired ? "Expiré" : days === 0 ? "Expire auj." : `J-${days}`}
               </Text>
             </View>
-          )}
-        </View>
+          </View>
+        )}
       </View>
-      <Pressable onPress={() => onDelete(item.id)} hitSlop={12} style={{ padding: 4 }}>
-        <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      {item.quantity !== null && (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
+          <Pressable
+            onPress={() => onQuantityChange(item.id, Math.max(0, (item.quantity ?? 0) - 1))}
+            hitSlop={8}
+            style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center" }}
+          >
+            <Text style={{ fontSize: 16, color: colors.textMuted, lineHeight: 22 }}>−</Text>
+          </Pressable>
+          <View style={{ borderRadius: 6, backgroundColor: colors.bgSurface, paddingHorizontal: 7, paddingVertical: 3 }}>
+            <Text style={{ fontSize: 12, fontWeight: "700", color: colors.textMuted }}>
+              {item.quantity}{item.unit ? ` ${item.unit}` : ""}
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => onQuantityChange(item.id, (item.quantity ?? 0) + 1)}
+            hitSlop={8}
+            style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center" }}
+          >
+            <Text style={{ fontSize: 16, color: colors.textMuted, lineHeight: 22 }}>+</Text>
+          </Pressable>
+        </View>
+      )}
+      <Pressable
+        onPress={() => onDelete(item.id)}
+        hitSlop={12}
+        style={({ pressed }) => ({
+          width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+          backgroundColor: pressed ? colors.dangerBg : colors.bgSurface,
+          alignItems: "center", justifyContent: "center",
+        })}
+      >
+        <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
           <Polyline points="3 6 5 6 21 6" />
           <Path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-          <Path d="M10 11v6" />
-          <Path d="M14 11v6" />
+          <Path d="M10 11v6M14 11v6" />
         </Svg>
       </Pressable>
     </Pressable>
+  );
+}
+
+function LocationSelector({ value, onChange, colors }: { value: StorageLocation; onChange: (loc: StorageLocation) => void; colors: ReturnType<typeof useAppTheme>["colors"] }) {
+  return (
+    <View style={{ gap: 4 }}>
+      <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Emplacement</Text>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        {LOCATION_ORDER.map((loc) => (
+          <Pressable
+            key={loc}
+            onPress={() => onChange(loc)}
+            style={{ borderRadius: 99, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: value === loc ? colors.accent : colors.bgSurface }}
+          >
+            <Text style={{ fontSize: 13, fontWeight: "600", color: value === loc ? "#fff" : colors.textMuted }}>
+              {LOCATION_LABELS[loc]}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
   );
 }
 
@@ -102,8 +242,9 @@ function AddPantryItemSheet({ isOpen, onClose, onAdded }: { isOpen: boolean; onC
   const { colors } = useAppTheme();
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
-  const [unit, setUnit] = useState("");
+  const [unit, setUnit] = useState("pièce");
   const [location, setLocation] = useState<StorageLocation>("pantry");
+  const [expiryDate, setExpiryDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
@@ -119,10 +260,11 @@ function AddPantryItemSheet({ isOpen, onClose, onAdded }: { isOpen: boolean; onC
       quantity: quantity ? parseFloat(quantity.replace(",", ".")) : null,
       unit: unit.trim() || null,
       location,
+      expiryDate: expiryDate || null,
     });
     setSubmitting(false);
     if (result.error) { setError(result.error); return; }
-    setName(""); setQuantity(""); setUnit(""); setLocation("pantry"); setError(null);
+    setName(""); setQuantity(""); setUnit("pièce"); setLocation("pantry"); setExpiryDate(""); setError(null);
     onAdded();
     onClose();
   }
@@ -150,7 +292,7 @@ function AddPantryItemSheet({ isOpen, onClose, onAdded }: { isOpen: boolean; onC
           const qty = json.product.quantity;
           if (qty) {
             const match = qty.match(/^([\d.,]+)\s*(.*)$/);
-            if (match) { setQuantity(match[1]); setUnit(match[2].trim()); }
+            if (match) { setQuantity(match[1]); setUnit(normalizeUnit(match[2].trim())); }
           }
         }
       }
@@ -160,247 +302,95 @@ function AddPantryItemSheet({ isOpen, onClose, onAdded }: { isOpen: boolean; onC
   }
 
   return (
-    <BottomSheet isOpen={isOpen} onOpenChange={(v) => !v && onClose()}>
-      <BottomSheet.Portal>
-        <BottomSheet.Overlay />
-        <BottomSheet.Content snapPoints={["60%"]}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 16 }}>
-            <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text }}>Ajouter au stock</Text>
-            <BottomSheet.Close />
-          </View>
-          {scanning ? (
-            <View style={{ height: 260, borderRadius: 16, overflow: "hidden", marginBottom: 16 }}>
-              <CameraView
-                style={{ flex: 1 }}
-                barcodeScannerSettings={{ barcodeTypes: ["ean13", "ean8", "code128"] }}
-                onBarcodeScanned={(e) => handleBarcode(e.data)}
-              />
-              {scanLoading && (
-                <View style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}>
-                  <ActivityIndicator color="#fff" size="large" />
-                </View>
-              )}
-              <Pressable onPress={() => setScanning(false)} style={{ position: "absolute", top: 10, right: 10, backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 99, width: 32, height: 32, alignItems: "center", justifyContent: "center" }}>
-                <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                  <Line x1={18} y1={6} x2={6} y2={18} />
-                  <Line x1={6} y1={6} x2={18} y2={18} />
-                </Svg>
-              </Pressable>
+    <BottomModal isOpen={isOpen} onClose={onClose} height="auto">
+      <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 8 }}>Ajouter au stock</Text>
+      {scanning && (
+        <View style={{ height: 220, borderRadius: 16, overflow: "hidden", marginBottom: 12 }}>
+          <CameraView
+            style={{ flex: 1 }}
+            barcodeScannerSettings={{ barcodeTypes: ["ean13", "ean8", "code128"] }}
+            onBarcodeScanned={(e) => handleBarcode(e.data)}
+          />
+          {scanLoading && (
+            <View style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" }}>
+              <ActivityIndicator color="#fff" size="large" />
             </View>
-          ) : null}
-          <BottomSheetScrollView contentContainerStyle={{ paddingBottom: 40, gap: 12 }}>
-            {error && <Text style={{ color: colors.danger, fontSize: 13, fontWeight: "600" }}>{error}</Text>}
-            <View style={{ gap: 4 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Produit *</Text>
-                <Pressable onPress={openScanner} style={{ flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 8, backgroundColor: colors.bgSurface, paddingHorizontal: 10, paddingVertical: 4 }}>
-                  <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <Path d="M3 9V5a2 2 0 0 1 2-2h4M3 15v4a2 2 0 0 0 2 2h4M15 3h4a2 2 0 0 1 2 2v4M15 21h4a2 2 0 0 0 2-2v-4" />
-                    <Rect x={7} y={7} width={10} height={10} rx={1} />
-                  </Svg>
-                  <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textMuted }}>Scanner</Text>
+          )}
+          <Pressable onPress={() => setScanning(false)} style={{ position: "absolute", top: 10, right: 10, backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 99, width: 32, height: 32, alignItems: "center", justifyContent: "center" }}>
+            <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+              <Line x1={18} y1={6} x2={6} y2={18} />
+              <Line x1={6} y1={6} x2={18} y2={18} />
+            </Svg>
+          </Pressable>
+        </View>
+      )}
+      <View style={{ gap: 12 }}>
+        {error && <Text style={{ color: colors.danger, fontSize: 13, fontWeight: "600" }}>{error}</Text>}
+        <View style={{ gap: 4 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Produit *</Text>
+            <Pressable onPress={openScanner} style={{ flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 8, backgroundColor: colors.bgSurface, paddingHorizontal: 10, paddingVertical: 4 }}>
+              <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <Path d="M3 9V5a2 2 0 0 1 2-2h4M3 15v4a2 2 0 0 0 2 2h4M15 3h4a2 2 0 0 1 2 2v4M15 21h4a2 2 0 0 0 2-2v-4" />
+                <Rect x={7} y={7} width={10} height={10} rx={1} />
+              </Svg>
+              <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textMuted }}>Scanner</Text>
+            </Pressable>
+          </View>
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            placeholder="Ex: Carottes"
+            placeholderTextColor="#A8A29E"
+            style={{ borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: colors.text }}
+          />
+        </View>
+        <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+          <View style={{ gap: 6 }}>
+            <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Quantité</Text>
+            <TextInput
+              value={quantity}
+              onChangeText={setQuantity}
+              placeholder="1"
+              keyboardType="numeric"
+              placeholderTextColor="#A8A29E"
+              style={{ width: 72, borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 12, paddingVertical: 14, fontSize: 16, fontWeight: "700", color: colors.text, textAlign: "center" }}
+            />
+          </View>
+          <View style={{ flex: 1, gap: 6 }}>
+            <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Unité</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+              {PANTRY_UNITS.map((u) => (
+                <Pressable
+                  key={u}
+                  onPress={() => setUnit(u)}
+                  style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 99, backgroundColor: unit === u ? colors.accent : colors.bgSurface }}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: unit === u ? "#fff" : colors.textMuted }}>{u}</Text>
                 </Pressable>
-              </View>
-              <TextInput
-                value={name}
-                onChangeText={setName}
-                placeholder="Ex: Carottes"
-                placeholderTextColor="#A8A29E"
-                style={{ borderRadius: 12, backgroundColor: colors.bgSurface, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: colors.text }}
-              />
-            </View>
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              <View style={{ flex: 1, gap: 4 }}>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Quantité</Text>
-                <TextInput
-                  value={quantity}
-                  onChangeText={setQuantity}
-                  placeholder="1"
-                  keyboardType="numeric"
-                  placeholderTextColor="#A8A29E"
-                  style={{ borderRadius: 12, backgroundColor: colors.bgSurface, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: colors.text }}
-                />
-              </View>
-              <View style={{ flex: 1, gap: 4 }}>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Unité</Text>
-                <TextInput
-                  value={unit}
-                  onChangeText={setUnit}
-                  placeholder="kg, L, pièce..."
-                  placeholderTextColor="#A8A29E"
-                  style={{ borderRadius: 12, backgroundColor: colors.bgSurface, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: colors.text }}
-                />
-              </View>
-            </View>
-            <View style={{ gap: 4 }}>
-              <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Emplacement</Text>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {LOCATION_ORDER.map((loc) => (
-                  <Pressable
-                    key={loc}
-                    onPress={() => setLocation(loc)}
-                    style={{
-                      borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8,
-                      backgroundColor: location === loc ? colors.accent : colors.bgSurface,
-                    }}
-                  >
-                    <Text style={{ fontSize: 13, fontWeight: "600", color: location === loc ? "#fff" : colors.textMuted }}>
-                      {LOCATION_LABELS[loc]}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-            <Button
-              variant="primary"
-              onPress={handleSubmit}
-              isDisabled={submitting}
-              className="w-full rounded-2xl mt-2"
-            >
-              <Button.Label>{submitting ? "Ajout…" : "Ajouter"}</Button.Label>
-            </Button>
-          </BottomSheetScrollView>
-        </BottomSheet.Content>
-      </BottomSheet.Portal>
-    </BottomSheet>
-  );
-}
-
-export function PantryScreen() {
-  const { colors } = useAppTheme();
-  const { items, loading, reload } = usePantryItems();
-  const [addOpen, setAddOpen] = useState(false);
-  const [editItem, setEditItem] = useState<PantryItem | null>(null);
-  const [openLocation, setOpenLocation] = useState<StorageLocation | null>("pantry");
-
-  const grouped: Record<StorageLocation, PantryItem[]> = {
-    fridge: [], freezer: [], pantry: [], other: [],
-  };
-  for (const item of items) {
-    grouped[item.location].push(item);
-  }
-
-  const expiringSoon = items.filter((i) => {
-    if (!i.expiryDate) return false;
-    const days = daysUntilExpiry(i.expiryDate);
-    return days >= 0 && days <= 3;
-  });
-
-  const nonEmptyLocations = LOCATION_ORDER.filter((loc) => grouped[loc].length > 0);
-
-  async function handleDelete(id: string) {
-    await deletePantryItem(id);
-    reload();
-  }
-
-  if (loading) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator color="#E8571C" size="large" />
-      </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top"]}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 120 }}>
-        <Text style={{ fontSize: 28, fontWeight: "900", color: colors.text, letterSpacing: -0.5, marginBottom: 16 }}>Mon stock</Text>
-
-        {expiringSoon.length > 0 && (
-          <View style={{
-            borderRadius: 16, backgroundColor: colors.accentBg, paddingHorizontal: 16, paddingVertical: 12,
-            borderWidth: 1, borderColor: colors.accentBgBorder, marginBottom: 12,
-          }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#EA580C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <Path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                <Line x1={12} y1={9} x2={12} y2={13} />
-                <Line x1={12} y1={17} x2={12.01} y2={17} />
-              </Svg>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: "#C2410C" }}>
-                {expiringSoon.length} article{expiringSoon.length > 1 ? "s" : ""} expire{expiringSoon.length === 1 ? "" : "nt"} bientôt
-              </Text>
-            </View>
-            <Text style={{ fontSize: 12, color: "#C2410C", opacity: 0.7, marginTop: 4, paddingLeft: 22 }}>
-              {expiringSoon.map((i) => i.customName).join(", ")}
-            </Text>
-          </View>
-        )}
-
-        {items.length === 0 ? (
-          <View style={{ alignItems: "center", paddingTop: 64, gap: 16 }}>
-            <View style={{ width: 64, height: 64, borderRadius: 24, backgroundColor: colors.bgCard, alignItems: "center", justifyContent: "center", shadowColor: "#1C1917", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 }}>
-              <Svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                <Rect x={3} y={2} width={18} height={20} rx={2} />
-                <Line x1={12} y1={2} x2={12} y2={22} />
-              </Svg>
-            </View>
-            <View style={{ alignItems: "center" }}>
-              <Text style={{ fontSize: 15, fontWeight: "600", color: colors.text }}>Stock vide</Text>
-              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 4, textAlign: "center" }}>Ajoutez vos produits pour suivre vos stocks</Text>
+              ))}
             </View>
           </View>
-        ) : (
-          <View style={{ gap: 10 }}>
-            {nonEmptyLocations.map((loc) => {
-              const locItems = grouped[loc];
-              const isOpen = openLocation === loc;
-              return (
-                <Card key={loc}>
-                  <Pressable
-                    onPress={() => setOpenLocation(isOpen ? null : loc)}
-                    style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingVertical: 12 }}
-                  >
-                    <LocationIcon loc={loc} />
-                    <Text style={{ flex: 1, fontSize: 11, fontWeight: "700", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1.5 }}>
-                      {LOCATION_LABELS[loc]}
-                    </Text>
-                    <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textSubtle }}>{locItems.length}</Text>
-                    <Svg
-                      width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"
-                      style={{ transform: [{ rotate: isOpen ? "0deg" : "-90deg" }] }}
-                    >
-                      <Polyline points="6 9 12 15 18 9" />
-                    </Svg>
-                  </Pressable>
-                  {isOpen && (
-                    <View style={{ borderTopWidth: 1, borderTopColor: colors.bgSurface }}>
-                      {locItems.map((item, i) => (
-                        <View key={item.id}>
-                          <PantryItemRow item={item} onEdit={setEditItem} onDelete={handleDelete} />
-                          {i < locItems.length - 1 && <Separator />}
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </Card>
-              );
-            })}
-          </View>
-        )}
-      </ScrollView>
-
-      <Pressable
-        onPress={() => setAddOpen(true)}
-        style={({ pressed }) => ({
-          position: "absolute", bottom: 100, left: 16, right: 16,
-          borderRadius: 16, backgroundColor: colors.bgCard,
-          paddingVertical: 16,
-          flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-          shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 4,
-          opacity: pressed ? 0.9 : 1,
-        })}
-      >
-        <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-          <Line x1={12} y1={5} x2={12} y2={19} />
-          <Line x1={5} y1={12} x2={19} y2={12} />
-        </Svg>
-        <Text style={{ fontSize: 14, fontWeight: "600", color: colors.textMuted }}>Ajouter un produit</Text>
-      </Pressable>
-
-      <AddPantryItemSheet isOpen={addOpen} onClose={() => setAddOpen(false)} onAdded={reload} />
-      <EditPantryItemSheet item={editItem} isOpen={editItem !== null} onClose={() => setEditItem(null)} onSaved={reload} />
-    </SafeAreaView>
+        </View>
+        <View style={{ gap: 4 }}>
+          <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Date d'expiration</Text>
+          <ExpiryDatePicker value={expiryDate} onChange={setExpiryDate} colors={colors} />
+        </View>
+        <LocationSelector value={location} onChange={setLocation} colors={colors} />
+        <Pressable
+          onPress={handleSubmit}
+          disabled={submitting}
+          style={({ pressed }) => ({
+            borderRadius: 16, paddingVertical: 16, alignItems: "center",
+            backgroundColor: submitting ? colors.bgSurface : pressed ? colors.accentPress : colors.accent,
+          })}
+        >
+          <Text style={{ fontSize: 16, fontWeight: "800", color: submitting ? colors.textSubtle : "#fff" }}>
+            {submitting ? "Ajout…" : "Ajouter"}
+          </Text>
+        </Pressable>
+      </View>
+    </BottomModal>
   );
 }
 
@@ -452,7 +442,7 @@ function EditPantryItemSheet({ item, isOpen, onClose, onSaved }: { item: PantryI
       quantity: quantity ? parseFloat(quantity.replace(",", ".")) : null,
       unit: unit.trim() || null,
       location,
-      expiryDate: expiryDate.trim() || null,
+      expiryDate: expiryDate || null,
     });
     setSaving(false);
     onSaved();
@@ -462,103 +452,294 @@ function EditPantryItemSheet({ item, isOpen, onClose, onSaved }: { item: PantryI
   if (!item) return null;
 
   return (
-    <BottomSheet isOpen={isOpen} onOpenChange={(v) => !v && onClose()}>
-      <BottomSheet.Portal>
-        <BottomSheet.Overlay />
-        <BottomSheet.Content snapPoints={["70%"]}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 16 }}>
-            <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text }}>Modifier</Text>
-            <BottomSheet.Close />
+    <BottomModal isOpen={isOpen} onClose={onClose} height="auto">
+      <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 8 }}>Modifier</Text>
+      <BottomModalScrollView contentContainerStyle={{ paddingBottom: 32, gap: 12 }}>
+        {error && <Text style={{ color: colors.danger, fontSize: 13, fontWeight: "600" }}>{error}</Text>}
+        <View style={{ gap: 4 }}>
+          <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Produit *</Text>
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            autoFocus
+            placeholderTextColor="#A8A29E"
+            style={{ borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: colors.text }}
+          />
+        </View>
+        <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+          <View style={{ gap: 6 }}>
+            <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Quantité</Text>
+            <TextInput
+              value={quantity}
+              onChangeText={setQuantity}
+              keyboardType="numeric"
+              placeholderTextColor="#A8A29E"
+              style={{ width: 72, borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 12, paddingVertical: 14, fontSize: 16, fontWeight: "700", color: colors.text, textAlign: "center" }}
+            />
           </View>
-          <BottomSheetScrollView contentContainerStyle={{ paddingBottom: 40, gap: 12 }}>
-            {error && <Text style={{ color: colors.danger, fontSize: 13, fontWeight: "600" }}>{error}</Text>}
-            <View style={{ gap: 4 }}>
-              <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Produit *</Text>
-              <TextInput
-                value={name}
-                onChangeText={setName}
-                autoFocus
-                placeholderTextColor="#A8A29E"
-                style={{ borderRadius: 12, backgroundColor: colors.bgSurface, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: colors.text }}
-              />
+          <View style={{ flex: 1, gap: 6 }}>
+            <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Unité</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+              {PANTRY_UNITS.map((u) => (
+                <Pressable
+                  key={u}
+                  onPress={() => setUnit(u)}
+                  style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 99, backgroundColor: unit === u ? colors.accent : colors.bgSurface }}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: unit === u ? "#fff" : colors.textMuted }}>{u}</Text>
+                </Pressable>
+              ))}
             </View>
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              <View style={{ flex: 1, gap: 4 }}>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Quantité</Text>
-                <TextInput
-                  value={quantity}
-                  onChangeText={setQuantity}
-                  keyboardType="numeric"
-                  placeholderTextColor="#A8A29E"
-                  style={{ borderRadius: 12, backgroundColor: colors.bgSurface, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: colors.text }}
-                />
+          </View>
+        </View>
+        <View style={{ gap: 4 }}>
+          <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Date d'expiration</Text>
+          <ExpiryDatePicker value={expiryDate} onChange={setExpiryDate} colors={colors} />
+        </View>
+        <LocationSelector value={location} onChange={setLocation} colors={colors} />
+        <Pressable
+          onPress={handleAddToList}
+          disabled={addingToList || addedToList}
+          style={({ pressed }) => ({
+            flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+            borderRadius: 14, paddingVertical: 14,
+            borderWidth: 1.5, borderColor: addedToList ? "#BBF7D0" : "#FDBA74",
+            backgroundColor: addedToList ? colors.greenBg : pressed ? colors.accentBg : "transparent",
+          })}
+        >
+          {addingToList ? (
+            <ActivityIndicator size="small" color="#E8571C" />
+          ) : (
+            <>
+              <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={addedToList ? "#16A34A" : "#E8571C"} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                {addedToList ? <Polyline points="20 6 9 17 4 12" /> : <><Path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><Path d="M12 11v6M9 14h6" /></>}
+              </Svg>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: addedToList ? colors.green : colors.accent }}>
+                {addedToList ? "Ajouté à la liste ✓" : "Ajouter à la liste de courses"}
+              </Text>
+            </>
+          )}
+        </Pressable>
+        <Pressable
+          onPress={handleSave}
+          disabled={saving}
+          style={({ pressed }) => ({
+            borderRadius: 16, paddingVertical: 16, alignItems: "center",
+            backgroundColor: saving ? colors.bgSurface : pressed ? colors.accentPress : colors.accent,
+          })}
+        >
+          <Text style={{ fontSize: 16, fontWeight: "800", color: saving ? colors.textSubtle : "#fff" }}>
+            {saving ? "Enregistrement…" : "Enregistrer"}
+          </Text>
+        </Pressable>
+      </BottomModalScrollView>
+    </BottomModal>
+  );
+}
+
+export function PantryScreen() {
+  const { colors } = useAppTheme();
+  const { items, setItems, loading, reload } = usePantryItems();
+  const [addOpen, setAddOpen] = useState(false);
+  const [editItem, setEditItem] = useState<PantryItem | null>(null);
+  const [openLocations, setOpenLocations] = useState<Set<StorageLocation>>(() => new Set(LOCATION_ORDER));
+
+  function toggleLocation(loc: StorageLocation) {
+    setOpenLocations((prev) => {
+      const next = new Set(prev);
+      if (next.has(loc)) next.delete(loc); else next.add(loc);
+      return next;
+    });
+  }
+  const [deletingExpired, setDeletingExpired] = useState(false);
+
+  const grouped: Record<StorageLocation, PantryItem[]> = {
+    fridge: [], freezer: [], pantry: [], other: [],
+  };
+  for (const item of items) {
+    grouped[item.location].push(item);
+  }
+
+  const expiringSoon = items.filter((i) => {
+    if (!i.expiryDate) return false;
+    const days = daysUntilExpiry(i.expiryDate);
+    return days >= 0 && days <= 3;
+  });
+
+  const expiredItems = items.filter((i) => {
+    if (!i.expiryDate) return false;
+    return daysUntilExpiry(i.expiryDate) < 0;
+  });
+
+  const nonEmptyLocations = LOCATION_ORDER.filter((loc) => grouped[loc].length > 0);
+
+  async function handleDelete(id: string) {
+    await deletePantryItem(id);
+    reload();
+  }
+
+  function handleQuantityChange(id: string, newQty: number) {
+    const qty = newQty <= 0 ? null : newQty;
+    setItems((prev) => prev.map((i) => i.id === id ? { ...i, quantity: qty } : i));
+    updatePantryItemQuantity(id, qty).catch(() => reload());
+  }
+
+  async function handleDeleteExpired() {
+    setDeletingExpired(true);
+    await Promise.all(expiredItems.map((i) => deletePantryItem(i.id)));
+    setDeletingExpired(false);
+    reload();
+  }
+
+  if (loading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator color="#E8571C" size="large" />
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top"]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 120 }}>
+        <Text style={{ fontSize: 28, fontWeight: "900", color: colors.text, letterSpacing: -0.5, marginBottom: 16 }}>Mon stock</Text>
+
+        {expiredItems.length > 0 && (
+          <View style={{
+            borderRadius: 16, backgroundColor: colors.dangerBg, paddingHorizontal: 16, paddingVertical: 12,
+            borderWidth: 1, borderColor: colors.danger + "33", marginBottom: 8,
+          }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={colors.danger} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <Path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <Line x1={12} y1={9} x2={12} y2={13} />
+                  <Line x1={12} y1={17} x2={12.01} y2={17} />
+                </Svg>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: colors.danger }}>
+                  {expiredItems.length} article{expiredItems.length > 1 ? "s" : ""} expiré{expiredItems.length > 1 ? "s" : ""}
+                </Text>
               </View>
-              <View style={{ flex: 1, gap: 4 }}>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Unité</Text>
-                <TextInput
-                  value={unit}
-                  onChangeText={setUnit}
-                  placeholder="kg, L, pièce..."
-                  placeholderTextColor="#A8A29E"
-                  style={{ borderRadius: 12, backgroundColor: colors.bgSurface, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: colors.text }}
-                />
-              </View>
+              <Pressable
+                onPress={handleDeleteExpired}
+                disabled={deletingExpired}
+                style={({ pressed }) => ({ borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: pressed ? colors.danger + "22" : "transparent" })}
+              >
+                {deletingExpired ? (
+                  <ActivityIndicator size="small" color={colors.danger} />
+                ) : (
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: colors.danger }}>Supprimer</Text>
+                )}
+              </Pressable>
             </View>
-            <View style={{ gap: 4 }}>
-              <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Date d'expiration (YYYY-MM-DD)</Text>
-              <TextInput
-                value={expiryDate}
-                onChangeText={setExpiryDate}
-                placeholder="2025-12-31"
-                placeholderTextColor="#A8A29E"
-                style={{ borderRadius: 12, backgroundColor: colors.bgSurface, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: colors.text }}
-              />
+            <Text style={{ fontSize: 12, color: colors.danger, opacity: 0.7, marginTop: 4, paddingLeft: 22 }}>
+              {expiredItems.map((i) => i.customName).join(", ")}
+            </Text>
+          </View>
+        )}
+
+        {expiringSoon.length > 0 && (
+          <View style={{
+            borderRadius: 16, backgroundColor: colors.accentBg, paddingHorizontal: 16, paddingVertical: 12,
+            borderWidth: 1, borderColor: colors.accentBgBorder, marginBottom: 12,
+          }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#EA580C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <Path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <Line x1={12} y1={9} x2={12} y2={13} />
+                <Line x1={12} y1={17} x2={12.01} y2={17} />
+              </Svg>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: "#C2410C" }}>
+                {expiringSoon.length} article{expiringSoon.length > 1 ? "s" : ""} expire{expiringSoon.length === 1 ? "" : "nt"} bientôt
+              </Text>
             </View>
-            <View style={{ gap: 4 }}>
-              <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Emplacement</Text>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {LOCATION_ORDER.map((loc) => (
+            <Text style={{ fontSize: 12, color: "#C2410C", opacity: 0.7, marginTop: 4, paddingLeft: 22 }}>
+              {expiringSoon.map((i) => i.customName).join(", ")}
+            </Text>
+          </View>
+        )}
+
+        {items.length === 0 ? (
+          <View style={{ alignItems: "center", paddingTop: 64, gap: 16 }}>
+            <View style={{ width: 64, height: 64, borderRadius: 24, backgroundColor: colors.bgCard, alignItems: "center", justifyContent: "center", shadowColor: "#1C1917", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 }}>
+              <Svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                <Rect x={3} y={2} width={18} height={20} rx={2} />
+                <Line x1={12} y1={2} x2={12} y2={22} />
+              </Svg>
+            </View>
+            <View style={{ alignItems: "center" }}>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: colors.text }}>Stock vide</Text>
+              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 4, textAlign: "center" }}>Ajoutez vos produits pour suivre vos stocks</Text>
+            </View>
+          </View>
+        ) : (
+          <View style={{ gap: 10 }}>
+            {nonEmptyLocations.map((loc) => {
+              const locItems = grouped[loc];
+              const isOpen = openLocations.has(loc);
+              return (
+                <View key={loc} style={{ borderRadius: 14, backgroundColor: colors.bgCard, overflow: "hidden" }}>
                   <Pressable
-                    key={loc}
-                    onPress={() => setLocation(loc)}
-                    style={{ borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: location === loc ? "#E8571C" : "#F5F3EF" }}
+                    onPress={() => toggleLocation(loc)}
+                    style={({ pressed }) => ({
+                      flexDirection: "row", alignItems: "center", gap: 10,
+                      paddingHorizontal: 16, paddingVertical: 14,
+                      backgroundColor: pressed ? colors.bgSubtle : colors.bgCard,
+                    })}
                   >
-                    <Text style={{ fontSize: 13, fontWeight: "600", color: location === loc ? "#fff" : "#78716C" }}>
+                    <LocationIcon loc={loc} />
+                    <Text style={{ flex: 1, fontSize: 11, fontWeight: "700", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1.5 }}>
                       {LOCATION_LABELS[loc]}
                     </Text>
+                    <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textSubtle }}>{locItems.length}</Text>
+                    <Svg
+                      width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"
+                      style={{ transform: [{ rotate: isOpen ? "0deg" : "-90deg" }] }}
+                    >
+                      <Polyline points="6 9 12 15 18 9" />
+                    </Svg>
                   </Pressable>
-                ))}
-              </View>
-            </View>
-            <Pressable
-              onPress={handleAddToList}
-              disabled={addingToList || addedToList}
-              style={({ pressed }) => ({
-                flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-                borderRadius: 14, paddingVertical: 14,
-                borderWidth: 1.5, borderColor: addedToList ? "#BBF7D0" : "#FDBA74",
-                backgroundColor: addedToList ? colors.greenBg : pressed ? colors.accentBg : "transparent",
-              })}
-            >
-              {addingToList ? (
-                <ActivityIndicator size="small" color="#E8571C" />
-              ) : (
-                <>
-                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={addedToList ? "#16A34A" : "#E8571C"} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                    {addedToList ? <Polyline points="20 6 9 17 4 12" /> : <><Path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><Path d="M12 11v6M9 14h6" /></>}
-                  </Svg>
-                  <Text style={{ fontSize: 14, fontWeight: "700", color: addedToList ? colors.green : colors.accent }}>
-                    {addedToList ? "Ajouté à la liste ✓" : "Ajouter à la liste de courses"}
-                  </Text>
-                </>
-              )}
-            </Pressable>
-            <Button variant="primary" onPress={handleSave} isDisabled={saving} className="w-full rounded-2xl mt-2">
-              <Button.Label>{saving ? "Enregistrement…" : "Enregistrer"}</Button.Label>
-            </Button>
-          </BottomSheetScrollView>
-        </BottomSheet.Content>
-      </BottomSheet.Portal>
-    </BottomSheet>
+                  {isOpen && (
+                    <View style={{ borderTopWidth: 1, borderTopColor: colors.border }}>
+                      {locItems.map((item, i) => (
+                        <View key={item.id}>
+                          <PantryItemRow
+                            item={item}
+                            onEdit={setEditItem}
+                            onDelete={handleDelete}
+                            onQuantityChange={handleQuantityChange}
+                          />
+                          {i < locItems.length - 1 && <View style={{ height: 1, backgroundColor: colors.border, marginLeft: 16 }} />}
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </ScrollView>
+
+      <Pressable
+        onPress={() => setAddOpen(true)}
+        style={({ pressed }) => ({
+          position: "absolute", bottom: 100, right: 20,
+          width: 56, height: 56, borderRadius: 28,
+          backgroundColor: pressed ? colors.accentPress : colors.accent,
+          alignItems: "center", justifyContent: "center",
+          shadowColor: "#E8571C", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 10,
+          transform: [{ scale: pressed ? 0.92 : 1 }],
+        })}
+      >
+        <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+          <Line x1={12} y1={5} x2={12} y2={19} />
+          <Line x1={5} y1={12} x2={19} y2={12} />
+        </Svg>
+      </Pressable>
+
+      <AddPantryItemSheet isOpen={addOpen} onClose={() => setAddOpen(false)} onAdded={reload} />
+      <EditPantryItemSheet item={editItem} isOpen={editItem !== null} onClose={() => setEditItem(null)} onSaved={reload} />
+    </SafeAreaView>
   );
 }
