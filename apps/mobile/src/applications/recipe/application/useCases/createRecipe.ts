@@ -1,4 +1,5 @@
 import { supabase } from "../../../../lib/supabase";
+import { autoLinkIngredients } from "./autoLinkIngredients";
 
 export interface RecipeIngredientInput {
   name: string;
@@ -62,6 +63,8 @@ export async function createRecipe(input: RecipeInput): Promise<string | { error
   if (steps.length > 0) {
     await supabase.from("recipe_steps").insert(steps);
   }
+
+  await autoLinkIngredients(recipe.id);
 
   return recipe.id;
 }

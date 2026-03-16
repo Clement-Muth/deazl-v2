@@ -8,6 +8,11 @@ import Svg, { Circle, Line, Path, Polygon, Polyline, Rect } from "react-native-s
 import { useAppTheme } from "../../../../shared/theme";
 import { BottomModal, BottomModalScrollView } from "../../../shopping/ui/components/bottomModal";
 import { addRecipeToShoppingList } from "../../application/useCases/addRecipeToShoppingList";
+import { getUserIngredientPreferences } from "../../../user/application/useCases/getUserIngredientPreferences";
+import type { IngredientPreference } from "../../../user/application/useCases/getUserIngredientPreferences";
+import { getRecipeEstimatedCost } from "../../application/useCases/getRecipeEstimatedCost";
+import type { RecipeCostResult } from "../../application/useCases/getRecipeEstimatedCost";
+import { normalizeIngredientName } from "../../../shopping/domain/normalizeIngredientName";
 import { deleteRecipe } from "../../application/useCases/deleteRecipe";
 import { duplicateRecipe } from "../../application/useCases/duplicateRecipe";
 import { getRecipeById } from "../../application/useCases/getRecipeById";
@@ -41,6 +46,11 @@ function fmtTime(min: number): string {
   const h = Math.floor(min / 60);
   const m = min % 60;
   return m > 0 ? `${h}h${m}` : `${h}h`;
+}
+
+function fmtCost(c: number): string {
+  if (c < 0.005) return "<0,01€";
+  return `${c.toFixed(2).replace(".", ",")}€`;
 }
 
 function fmtQty(qty: number, multiplier: number): string {
@@ -78,6 +88,8 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
   const [addingToList, setAddingToList] = useState(false);
   const [addedToList, setAddedToList] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
+  const [ingredientPrefs, setIngredientPrefs] = useState<Map<string, IngredientPreference>>(new Map());
+  const [recipeCost, setRecipeCost] = useState<RecipeCostResult | null>(null);
 
   const [headerVisible, setHeaderVisible] = useState(false);
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -102,12 +114,17 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
   });
 
   useEffect(() => {
-    getRecipeById(id).then((r) => {
+    Promise.all([
+      getRecipeById(id),
+      getUserIngredientPreferences(),
+    ]).then(([r, prefs]) => {
       setRecipe(r);
+      setIngredientPrefs(prefs);
       if (r) {
         setIsFavorite(r.isFavorite);
         setIsPublic(r.isPublic);
         setServings(r.servings);
+        getRecipeEstimatedCost(r.ingredients, r.servings).then(setRecipeCost);
       }
     }).finally(() => setLoading(false));
   }, [id]);
@@ -160,7 +177,14 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
   function openLinkSheet(ing: RecipeIngredient) {
     setLinkingIngredient(ing);
     setProductSearch("");
-    setProductResults([]);
+    const normalized = normalizeIngredientName(ing.customName ?? "");
+    const suggestion = ingredientPrefs.get(normalized);
+    setProductResults(suggestion && !ing.productId ? [{
+      id: suggestion.productId,
+      name: suggestion.productName,
+      brand: suggestion.productBrand,
+      imageUrl: suggestion.productImageUrl,
+    }] : []);
   }
 
   function closeLinkSheet() {
@@ -234,6 +258,11 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
   const prepTime = recipe.prepTimeMinutes ?? 0;
   const cookTime = recipe.cookTimeMinutes ?? 0;
   const hasStats = prepTime > 0 || cookTime > 0;
+
+  const adjustedTotalCost = recipeCost?.totalCost != null
+    ? recipeCost.totalCost * multiplier
+    : null;
+  const costPerServing = recipeCost?.costPerServing ?? null;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -404,6 +433,51 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
 
           {!hasStats && <View style={{ height: 24 }} />}
 
+          {/* Cost estimate band */}
+          {recipeCost && recipeCost.totalCount > 0 && (
+            <View style={{ marginHorizontal: 20, marginBottom: 8 }}>
+              <View style={{
+                flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+                backgroundColor: costPerServing != null ? colors.accentBg : colors.bgSurface,
+                borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12,
+              }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={costPerServing != null ? colors.accent : colors.textSubtle} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                    <Line x1={12} y1={1} x2={12} y2={23} />
+                    <Path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                  </Svg>
+                  {costPerServing != null ? (
+                    <View>
+                      <Text style={{ fontSize: 15, fontWeight: "800", color: colors.accent }}>
+                        {fmtCost(adjustedTotalCost!)}
+                        {servings !== recipe.servings && (
+                          <Text style={{ fontSize: 12, fontWeight: "600", color: colors.accent }}> · {fmtCost(costPerServing)}/pers.</Text>
+                        )}
+                      </Text>
+                      {recipeCost.coveredCount < recipeCost.totalCount && (
+                        <Text style={{ fontSize: 11, color: colors.textSubtle, marginTop: 1 }}>
+                          estimé sur {recipeCost.coveredCount}/{recipeCost.totalCount} ingrédients
+                        </Text>
+                      )}
+                    </View>
+                  ) : (
+                    <Text style={{ fontSize: 13, color: colors.textSubtle }}>Coût indisponible</Text>
+                  )}
+                </View>
+                {costPerServing != null && servings === recipe.servings && (
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: colors.accent }}>
+                    {fmtCost(costPerServing)}<Text style={{ fontWeight: "400", color: colors.textSubtle }}>/pers.</Text>
+                  </Text>
+                )}
+                {costPerServing == null && recipeCost.totalCount > 0 && (
+                  <Text style={{ fontSize: 11, color: colors.textSubtle }}>
+                    {recipeCost.coveredCount}/{recipeCost.totalCount} ingrédients
+                  </Text>
+                )}
+              </View>
+            </View>
+          )}
+
           {/* Description */}
           {recipe.description ? (
             <View style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 20 }}>
@@ -449,6 +523,12 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
                   const isChecked = checkedIngredients.has(ing.id);
                   const displayName = ing.productName ?? ing.customName ?? "";
                   const isLinked = !!ing.productId;
+                  const normalized = normalizeIngredientName(ing.customName ?? "");
+                  const suggestion = !isLinked ? ingredientPrefs.get(normalized) : undefined;
+                  const ingCost = recipeCost?.ingredientCosts.get(ing.id);
+                  const adjustedIngCost = ingCost?.estimatedCost != null
+                    ? ingCost.estimatedCost * multiplier
+                    : null;
                   return (
                     <View key={ing.id}>
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 13 }}>
@@ -468,7 +548,7 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
                           </View>
                         </Pressable>
                         <Pressable style={{ flex: 1 }} onPress={() => toggleIngredient(ing.id)}>
-                          <Text style={{ fontSize: 15, color: isChecked ? "#B0AAA5" : "#1C1917", opacity: isChecked ? 0.55 : 1, textDecorationLine: isChecked ? "line-through" : "none" }}>
+                          <Text style={{ fontSize: 15, color: isChecked ? "#B0AAA5" : colors.text, opacity: isChecked ? 0.55 : 1, textDecorationLine: isChecked ? "line-through" : "none" }}>
                             {ing.quantity > 0 ? (
                               <Text style={{ fontWeight: "700", color: isChecked ? "#B0AAA5" : "#E8571C" }}>
                                 {fmtQty(ing.quantity, multiplier)}{ing.unit ? ` ${ing.unit}` : ""}{" "}
@@ -477,16 +557,30 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
                             {displayName}
                             {ing.isOptional ? <Text style={{ color: colors.textSubtle, fontSize: 13 }}> (opt.)</Text> : null}
                           </Text>
+                          {adjustedIngCost != null ? (
+                            <Text style={{ fontSize: 11, fontWeight: "600", marginTop: 2 }} numberOfLines={1}>
+                              <Text style={{ color: colors.accent }}>{fmtCost(adjustedIngCost)}</Text>
+                              {ingCost?.storeName ? (
+                                <Text style={{ color: colors.textSubtle, fontWeight: "400" }}> · {ingCost.storeName}</Text>
+                              ) : ingCost?.confidence !== "exact" ? (
+                                <Text style={{ color: colors.textSubtle, fontWeight: "400" }}> estimé</Text>
+                              ) : null}
+                            </Text>
+                          ) : suggestion ? (
+                            <Text style={{ fontSize: 11, color: colors.accent, fontWeight: "600", marginTop: 2 }} numberOfLines={1}>
+                              → {suggestion.productName}
+                            </Text>
+                          ) : null}
                         </Pressable>
                         <Pressable
                           onPress={() => openLinkSheet(ing)}
                           style={{
                             width: 30, height: 30, borderRadius: 8,
-                            backgroundColor: isLinked ? colors.accentBg : colors.bgSurface,
+                            backgroundColor: isLinked ? colors.accentBg : suggestion ? colors.accentBg + "66" : colors.bgSurface,
                             alignItems: "center", justifyContent: "center",
                           }}
                         >
-                          <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={isLinked ? "#E8571C" : "#A8A29E"} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                          <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={isLinked ? colors.accent : suggestion ? colors.accent : "#A8A29E"} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                             <Path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
                             <Path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                           </Svg>
