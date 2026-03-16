@@ -434,39 +434,57 @@ export function ShoppingScreen() {
         )}
 
         {storeSummariesSorted.length > 0 && unchecked.length > 0 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 16, gap: 8, paddingBottom: 4 }}
-            style={{ marginBottom: 4 }}
-          >
-            {storeSummariesSorted.map((store) => {
-              const isBest = store.storeId === bestStoreId;
-              const displayCost = hasMeaningfulIntersection ? store.intersectionCost : store.totalCost;
-              return (
-                <View
-                  key={store.storeId}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 6,
-                    borderRadius: 99,
-                    paddingHorizontal: 12,
-                    paddingVertical: 7,
-                    backgroundColor: isBest ? colors.greenBg : colors.bgSurface,
-                  }}
-                >
-                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: isBest ? "#22c55e" : "#D1CCC5" }} />
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: isBest ? colors.green : "#44403C" }} numberOfLines={1}>
-                    {store.storeName}
-                  </Text>
-                  <Text style={{ fontSize: 13, fontWeight: "700", color: isBest ? colors.green : colors.textMuted }}>
-                    ~{displayCost.toFixed(2)} €
-                  </Text>
-                </View>
-              );
-            })}
-          </ScrollView>
+          <View style={{ marginBottom: 4 }}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 16, gap: 8, paddingBottom: 4 }}
+            >
+              {storeSummariesSorted.map((store) => {
+                const isBest = store.storeId === bestStoreId;
+                const displayCost = hasMeaningfulIntersection ? store.intersectionCost : store.totalCost;
+                const canCompare = storeSummariesSorted.length >= 2;
+                return (
+                  <Pressable
+                    key={store.storeId}
+                    onPress={() => {
+                      if (!canCompare) return;
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      router.push("/shopping/compare");
+                    }}
+                    style={({ pressed }) => ({
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                      borderRadius: 99,
+                      paddingHorizontal: 12,
+                      paddingVertical: 7,
+                      backgroundColor: isBest ? colors.greenBg : colors.bgSurface,
+                      opacity: pressed ? 0.7 : 1,
+                    })}
+                  >
+                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: isBest ? "#22c55e" : "#D1CCC5" }} />
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: isBest ? colors.green : "#44403C" }} numberOfLines={1}>
+                      {store.storeName}
+                    </Text>
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: isBest ? colors.green : colors.textMuted }}>
+                      ~{displayCost.toFixed(2)} €
+                    </Text>
+                    {canCompare && (
+                      <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke={isBest ? colors.green : colors.textSubtle} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                        <Polyline points="9 18 15 12 9 6" />
+                      </Svg>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+            {storeSummariesSorted.length >= 2 && (
+              <Text style={{ fontSize: 11, color: colors.textSubtle, paddingHorizontal: 16, marginTop: 2 }}>
+                Appuie pour comparer les magasins
+              </Text>
+            )}
+          </View>
         )}
 
 
