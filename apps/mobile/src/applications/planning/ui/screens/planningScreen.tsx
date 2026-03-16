@@ -1,6 +1,6 @@
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { useRouter } from "expo-router";
-import { BottomSheet, Button, Card, SearchField, Separator } from "heroui-native";
+import { BottomSheet, Button, SearchField } from "heroui-native";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -112,9 +112,104 @@ function MealIcon({ mealType, color }: { mealType: MealType; color: string }) {
   return <MoonIcon color={color} />;
 }
 
+const COL_W = 90;
+const ROW_H = 80;
+const LABEL_W = 48;
+
 interface PickerState { dayOfWeek: number; mealType: MealType; }
 interface SlotActionState { dayOfWeek: number; mealType: MealType; recipeId: string; recipeName: string; }
 interface SimpleRecipe { id: string; name: string; }
+
+function WeekGrid({
+  localPlan, weekDays, today, onCellPress,
+}: {
+  localPlan: MealPlanData | null;
+  weekDays: Date[];
+  today: Date;
+  onCellPress: (dayOfWeek: number, mealType: MealType, slot: MealSlotData | null) => void;
+}) {
+  const { colors } = useAppTheme();
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 4 }}>
+      <View>
+        <View style={{ flexDirection: "row", marginLeft: LABEL_W, marginBottom: 6 }}>
+          {weekDays.map((day, i) => {
+            const isToday = isSameDay(day, today);
+            return (
+              <View key={i} style={{ width: COL_W, alignItems: "center", gap: 2 }}>
+                <Text style={{ fontSize: 9, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1.2, color: isToday ? colors.accent : colors.textSubtle }}>
+                  {DAY_LETTERS[i]}
+                </Text>
+                <Text style={{ fontSize: 17, fontWeight: "900", color: isToday ? colors.accent : colors.text }}>
+                  {day.getDate()}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+
+        {MEAL_TYPES.map((mealType, rowIdx) => {
+          const { icon, bg } = MEAL_COLORS[mealType];
+          const shortLabel = mealType === "breakfast" ? "Matin" : mealType === "lunch" ? "Midi" : "Soir";
+          return (
+            <View key={mealType} style={{ flexDirection: "row", marginBottom: rowIdx < 2 ? 6 : 0 }}>
+              <View style={{ width: LABEL_W, justifyContent: "center", alignItems: "flex-start", paddingRight: 6, gap: 3 }}>
+                <MealIcon mealType={mealType} color={icon} />
+                <Text style={{ fontSize: 9, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 0.8 }}>
+                  {shortLabel}
+                </Text>
+              </View>
+              {weekDays.map((day, dayIdx) => {
+                const dayOfWeek = dayIdx + 1;
+                const slot = localPlan ? getSlot(localPlan, dayOfWeek, mealType) : null;
+                const hasRecipe = !!slot?.recipeName;
+                const isDone = slot?.isDone ?? false;
+                const isToday = isSameDay(day, today);
+                return (
+                  <Pressable
+                    key={dayIdx}
+                    onPress={() => onCellPress(dayOfWeek, mealType, slot)}
+                    style={({ pressed }) => ({
+                      width: COL_W - 6, height: ROW_H, marginRight: 6,
+                      borderRadius: 14,
+                      backgroundColor: hasRecipe
+                        ? (isDone ? "#DCFCE7" : bg)
+                        : colors.bgCard,
+                      borderWidth: isToday && !hasRecipe ? 1.5 : 0,
+                      borderColor: colors.accent + "50",
+                      alignItems: "center", justifyContent: "center",
+                      padding: 6,
+                      opacity: pressed ? 0.75 : 1,
+                    })}
+                  >
+                    {hasRecipe ? (
+                      <>
+                        {isDone && (
+                          <View style={{ position: "absolute", top: 6, right: 6 }}>
+                            <Svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+                              <Path d="M20 6 9 17l-5-5" />
+                            </Svg>
+                          </View>
+                        )}
+                        <Text numberOfLines={3} style={{ fontSize: 11, fontWeight: "700", color: isDone ? "#16A34A" : icon, textAlign: "center", lineHeight: 15 }}>
+                          {slot!.recipeName}
+                        </Text>
+                      </>
+                    ) : (
+                      <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke={isToday ? colors.accent + "80" : colors.border} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <Path d="M12 5v14M5 12h14" />
+                      </Svg>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          );
+        })}
+      </View>
+    </ScrollView>
+  );
+}
 
 export function PlanningScreen() {
   const { colors } = useAppTheme();
@@ -122,11 +217,6 @@ export function PlanningScreen() {
   const router = useRouter();
   const [currentWeekMonday, setCurrentWeekMonday] = useState(() => getMondayOf(today));
   const { plan, loading, reload } = usePlanning(currentWeekMonday);
-  const [selectedDayIndex, setSelectedDayIndex] = useState(() => {
-    const days = getWeekDays(getMondayOf(today));
-    const idx = days.findIndex((d) => isSameDay(d, today));
-    return idx >= 0 ? idx : 0;
-  });
   const [pickerState, setPickerState] = useState<PickerState | null>(null);
   const [slotAction, setSlotAction] = useState<SlotActionState | null>(null);
   const [allRecipes, setAllRecipes] = useState<SimpleRecipe[]>([]);
@@ -179,22 +269,13 @@ export function PlanningScreen() {
   }, [pickerState]);
 
   const weekDays = useMemo(() => getWeekDays(currentWeekMonday), [currentWeekMonday]);
-  const todayDayIndex = useMemo(() => weekDays.findIndex((d) => isSameDay(d, today)), [weekDays, today]);
-  const selectedDayOfWeek = selectedDayIndex + 1;
-  const selectedDate = weekDays[selectedDayIndex];
-  const isSelectedToday = isSameDay(selectedDate, today);
-
-  const mealFilled = useMemo(() => {
-    if (!localPlan) return Array(7).fill([false, false, false]);
-    return weekDays.map((_, i) =>
-      MEAL_TYPES.map((mt) => !!getSlot(localPlan, i + 1, mt).recipeName)
-    );
-  }, [localPlan, weekDays]);
+  const pickerDate = pickerState ? weekDays[pickerState.dayOfWeek - 1] : null;
 
   const weekCoverage = useMemo(() => {
-    const flat = (mealFilled as boolean[][]).flat();
-    return { filled: flat.filter(Boolean).length, total: flat.length };
-  }, [mealFilled]);
+    if (!localPlan) return { filled: 0, total: 21 };
+    const slots = weekDays.flatMap((_, i) => MEAL_TYPES.map((mt) => !!getSlot(localPlan, i + 1, mt).recipeName));
+    return { filled: slots.filter(Boolean).length, total: slots.length };
+  }, [localPlan, weekDays]);
 
   const filteredRecipes = useMemo(() => {
     if (!recipeSearch.trim()) return allRecipes;
@@ -205,6 +286,14 @@ export function PlanningScreen() {
   const activeSlot = pickerState && localPlan
     ? getSlot(localPlan, pickerState.dayOfWeek, pickerState.mealType)
     : null;
+
+  function handleCellPress(dayOfWeek: number, mealType: MealType, slot: MealSlotData | null) {
+    if (slot?.recipeId && slot.recipeName) {
+      setSlotAction({ dayOfWeek, mealType, recipeId: slot.recipeId, recipeName: slot.recipeName });
+    } else {
+      setPickerState({ dayOfWeek, mealType });
+    }
+  }
 
   async function fillSlot(dayOfWeek: number, mealType: MealType, recipeId: string) {
     if (!localPlan) return;
@@ -306,8 +395,8 @@ export function PlanningScreen() {
           </View>
           <View style={{ flexDirection: "row", gap: 8, marginTop: 6 }}>
             {[
-              { onPress: () => { const d = new Date(currentWeekMonday); d.setDate(d.getDate() - 7); setCurrentWeekMonday(d); setSelectedDayIndex(0); }, path: "M15 18l-6-6 6-6" },
-              { onPress: () => { const d = new Date(currentWeekMonday); d.setDate(d.getDate() + 7); setCurrentWeekMonday(d); setSelectedDayIndex(0); }, path: "M9 18l6-6-6-6" },
+              { onPress: () => { const d = new Date(currentWeekMonday); d.setDate(d.getDate() - 7); setCurrentWeekMonday(d); }, path: "M15 18l-6-6 6-6" },
+              { onPress: () => { const d = new Date(currentWeekMonday); d.setDate(d.getDate() + 7); setCurrentWeekMonday(d); }, path: "M9 18l6-6-6-6" },
             ].map(({ onPress, path }, idx) => (
               <Pressable key={idx} onPress={onPress} style={({ pressed }) => ({
                 width: 34, height: 34, borderRadius: 10,
@@ -323,157 +412,14 @@ export function PlanningScreen() {
           </View>
         </View>
 
-        {/* ── Day strip ── */}
-        <ScrollView
-          horizontal showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 8, paddingBottom: 4, gap: 4 }}
-        >
-          {weekDays.map((day, i) => {
-            const isSelected = i === selectedDayIndex;
-            const isToday = isSameDay(day, today);
-            const meals = mealFilled[i] as boolean[];
-
-            return (
-              <Pressable
-                key={i}
-                onPress={() => setSelectedDayIndex(i)}
-                style={({ pressed }) => ({
-                  width: 44, borderRadius: 16, paddingVertical: 10,
-                  alignItems: "center", gap: 4,
-                  backgroundColor: isSelected ? colors.bgCard : "transparent",
-                  shadowColor: isSelected ? "#1C1917" : "transparent",
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: isSelected ? 0.08 : 0,
-                  shadowRadius: isSelected ? 8 : 0,
-                  elevation: isSelected ? 3 : 0,
-                  opacity: pressed ? 0.8 : 1,
-                })}
-              >
-                <Text style={{
-                  fontSize: 9, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1,
-                  color: isSelected ? colors.accent : colors.textSubtle,
-                }}>
-                  {DAY_LETTERS[i]}
-                </Text>
-                <Text style={{
-                  fontSize: isSelected ? 22 : 17, fontWeight: "900", lineHeight: isSelected ? 28 : 22,
-                  color: isSelected ? colors.accent : isToday ? colors.accent : colors.text,
-                }}>
-                  {day.getDate()}
-                </Text>
-                <View style={{ flexDirection: "row", gap: 3 }}>
-                  {meals.map((filled, j) => (
-                    <View key={j} style={{
-                      width: 5, height: 5, borderRadius: 3,
-                      backgroundColor: filled
-                        ? (isSelected ? colors.accent : "#E8571C60")
-                        : (isSelected ? colors.border : "#D6D3D0"),
-                    }} />
-                  ))}
-                </View>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-
-        {/* ── Selected day label ── */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12 }}>
-          <View>
-            <Text style={{ fontSize: 20, fontWeight: "900", color: colors.text, letterSpacing: -0.3 }}>
-              {selectedDate.toLocaleDateString("fr-FR", { weekday: "long" }).replace(/^\w/, (c) => c.toUpperCase())}
-            </Text>
-            <Text style={{ fontSize: 13, color: isSelectedToday ? colors.accent : colors.textMuted, marginTop: 1, fontWeight: "500" }}>
-              {selectedDate.toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}
-            </Text>
-          </View>
-          {!isSelectedToday && todayDayIndex >= 0 && (
-            <Pressable
-              onPress={() => setSelectedDayIndex(todayDayIndex)}
-              style={({ pressed }) => ({
-                flexDirection: "row", alignItems: "center", gap: 5,
-                borderRadius: 99, backgroundColor: colors.accent,
-                paddingHorizontal: 12, paddingVertical: 7,
-                opacity: pressed ? 0.85 : 1,
-              })}
-            >
-              <Svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                <Rect x={3} y={4} width={18} height={18} rx={2} ry={2} />
-                <Line x1={16} y1={2} x2={16} y2={6} />
-                <Line x1={8} y1={2} x2={8} y2={6} />
-                <Line x1={3} y1={10} x2={21} y2={10} />
-              </Svg>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: "#fff" }}>Aujourd'hui</Text>
-            </Pressable>
-          )}
-        </View>
-
-        {/* ── Meal slots card ── */}
-        <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
-          <Card>
-            {MEAL_TYPES.map((mealType, i) => {
-              const slot = localPlan ? getSlot(localPlan, selectedDayOfWeek, mealType) : null;
-              const hasRecipe = !!slot?.recipeName;
-              const { icon, bg } = MEAL_COLORS[mealType];
-
-              const isDone = slot?.isDone ?? false;
-
-              return (
-                <View key={mealType}>
-                  {i > 0 && <Separator />}
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <Pressable
-                      onPress={() => {
-                        if (slot?.recipeId && slot.recipeName) {
-                          setSlotAction({ dayOfWeek: selectedDayOfWeek, mealType, recipeId: slot.recipeId, recipeName: slot.recipeName });
-                        } else {
-                          setPickerState({ dayOfWeek: selectedDayOfWeek, mealType });
-                        }
-                      }}
-                      style={({ pressed }) => ({
-                        flex: 1, flexDirection: "row", alignItems: "center", gap: 12,
-                        paddingLeft: 16, paddingRight: 8, paddingVertical: 14,
-                        backgroundColor: pressed ? colors.bgSubtle : "transparent",
-                      })}
-                    >
-                      <View style={{
-                        width: 36, height: 36, borderRadius: 12,
-                        backgroundColor: hasRecipe ? (isDone ? "#DCFCE7" : bg) : colors.bgSurface,
-                        alignItems: "center", justifyContent: "center", flexShrink: 0,
-                      }}>
-                        <MealIcon mealType={mealType} color={hasRecipe ? (isDone ? "#16A34A" : icon) : "#C2BDB8"} />
-                      </View>
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={{ fontSize: 10, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 1, marginBottom: 2 }}>
-                          {MEAL_LABELS[mealType]}
-                        </Text>
-                        {hasRecipe ? (
-                          <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "700", color: isDone ? colors.textSubtle : colors.text, textDecorationLine: isDone ? "line-through" : "none" }}>
-                            {slot!.recipeName}
-                          </Text>
-                        ) : (
-                          <Text style={{ fontSize: 13, color: "#C2BDB8" }}>Ajouter une recette</Text>
-                        )}
-                      </View>
-                    </Pressable>
-                    {hasRecipe && slot?.slotId ? (
-                      <Pressable
-                        onPress={() => handleToggleDone(slot!)}
-                        hitSlop={8}
-                        style={{ paddingHorizontal: 16, paddingVertical: 14 }}
-                      >
-                        <Svg width={22} height={22} viewBox="0 0 24 24" fill={isDone ? "#16A34A" : "none"} stroke={isDone ? "#16A34A" : colors.border} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                          <Circle cx={12} cy={12} r={10} />
-                          {isDone && <Path d="M7 12l3.5 3.5L17 8" strokeWidth={2.5} />}
-                        </Svg>
-                      </Pressable>
-                    ) : (
-                      <View style={{ width: 54 }} />
-                    )}
-                  </View>
-                </View>
-              );
-            })}
-          </Card>
+        {/* ── Week grid ── */}
+        <View style={{ marginTop: 8, marginBottom: 20 }}>
+          <WeekGrid
+            localPlan={localPlan}
+            weekDays={weekDays}
+            today={today}
+            onCellPress={handleCellPress}
+          />
         </View>
 
         {/* ── Generate shopping list ── */}
@@ -598,9 +544,9 @@ export function PlanningScreen() {
             <View style={{ flex: 1 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 8, marginBottom: 4 }}>
               <View>
-                {pickerState && (
+                {pickerDate && (
                   <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 1 }}>
-                    {selectedDate.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" })}
+                    {pickerDate.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" })}
                   </Text>
                 )}
                 <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginTop: 2 }}>
