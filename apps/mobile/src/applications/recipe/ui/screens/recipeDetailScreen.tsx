@@ -1,12 +1,12 @@
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
-import { BottomSheet, Button, PressableFeedback, SearchField } from "heroui-native";
+import { Button, PressableFeedback, SearchField } from "heroui-native";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Animated, Image, Pressable, Text, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Line, Path, Polygon, Polyline, Rect } from "react-native-svg";
 import { useAppTheme } from "../../../../shared/theme";
-import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import { BottomModal, BottomModalScrollView } from "../../../shopping/ui/components/bottomModal";
 import { addRecipeToShoppingList } from "../../application/useCases/addRecipeToShoppingList";
 import { deleteRecipe } from "../../application/useCases/deleteRecipe";
 import { duplicateRecipe } from "../../application/useCases/duplicateRecipe";
@@ -79,7 +79,15 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
   const [addedToList, setAddedToList] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
 
+  const [headerVisible, setHeaderVisible] = useState(false);
   const scrollY = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const id = scrollY.addListener(({ value }) => {
+      setHeaderVisible(value >= HERO_HEIGHT - 40);
+    });
+    return () => scrollY.removeListener(id);
+  }, [scrollY]);
 
   const headerOpacity = scrollY.interpolate({
     inputRange: [HERO_HEIGHT - 100, HERO_HEIGHT - 40],
@@ -231,6 +239,7 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       {/* Sticky compact header — fades in after scrolling past hero */}
       <Animated.View
+        pointerEvents={headerVisible ? "auto" : "none"}
         style={{
           position: "absolute", top: 0, left: 0, right: 0, zIndex: 50,
           opacity: headerOpacity,
@@ -572,11 +581,8 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
         )}
       </View>
 
-      {/* Product linking BottomSheet */}
-      <BottomSheet isOpen={linkingIngredient !== null} onOpenChange={open => !open && closeLinkSheet()}>
-        <BottomSheet.Portal>
-          <BottomSheet.Overlay />
-          <BottomSheet.Content snapPoints={["70%"]}>
+      {/* Product linking BottomModal */}
+      <BottomModal isOpen={linkingIngredient !== null} onClose={closeLinkSheet} height="70%">
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingBottom: 12 }}>
                 <View style={{ flex: 1 }}>
@@ -585,7 +591,11 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
                     {linkingIngredient?.productName ?? linkingIngredient?.customName ?? ""}
                   </Text>
                 </View>
-                <BottomSheet.Close />
+                <Pressable onPress={closeLinkSheet} hitSlop={8} style={{ padding: 4 }}>
+                  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.textMuted} strokeWidth={2.5} strokeLinecap="round">
+                    <Line x1={18} y1={6} x2={6} y2={18} /><Line x1={6} y1={6} x2={18} y2={18} />
+                  </Svg>
+                </Pressable>
               </View>
 
               {linkingIngredient?.productId && (
@@ -618,7 +628,7 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
                 </SearchField.Group>
               </SearchField>
 
-              <BottomSheetScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40, paddingTop: 8 }}>
+              <BottomModalScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40, paddingTop: 8 }}>
                 {productSearching ? (
                   <View style={{ alignItems: "center", paddingVertical: 32 }}>
                     <ActivityIndicator color="#E8571C" />
@@ -662,26 +672,25 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
                     </Pressable>
                   ))
                 )}
-              </BottomSheetScrollView>
+              </BottomModalScrollView>
             </View>
-          </BottomSheet.Content>
-        </BottomSheet.Portal>
-      </BottomSheet>
+      </BottomModal>
 
-      {/* Cook Mode BottomSheet */}
-      <BottomSheet isOpen={cookModeOpen && recipe.steps.length > 0} onOpenChange={v => !v && setCookModeOpen(false)}>
-        <BottomSheet.Portal>
-          <BottomSheet.Overlay />
-          <BottomSheet.Content snapPoints={["88%"]}>
+      {/* Cook Mode BottomModal */}
+      <BottomModal isOpen={cookModeOpen && recipe.steps.length > 0} onClose={() => setCookModeOpen(false)} height="88%">
             <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 1.5 }}>
                     Étape {cookStep + 1} / {recipe.steps.length}
                   </Text>
                   <Text style={{ fontSize: 16, fontWeight: "800", color: colors.text, marginTop: 2 }} numberOfLines={1}>{recipe.name}</Text>
                 </View>
-                <BottomSheet.Close />
+                <Pressable onPress={() => setCookModeOpen(false)} hitSlop={8} style={{ padding: 4 }}>
+                  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.textMuted} strokeWidth={2.5} strokeLinecap="round">
+                    <Line x1={18} y1={6} x2={6} y2={18} /><Line x1={6} y1={6} x2={18} y2={18} />
+                  </Svg>
+                </Pressable>
               </View>
 
               {/* Progress bar */}
@@ -726,15 +735,10 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
                 )}
               </View>
             </View>
-          </BottomSheet.Content>
-        </BottomSheet.Portal>
-      </BottomSheet>
+      </BottomModal>
 
-      <BottomSheet isOpen={actionsOpen} onOpenChange={(v) => !v && setActionsOpen(false)}>
-        <BottomSheet.Portal>
-          <BottomSheet.Overlay />
-          <BottomSheet.Content snapPoints={["58%"]}>
-            <View style={{ paddingVertical: 8, gap: 4 }}>
+      <BottomModal isOpen={actionsOpen} onClose={() => setActionsOpen(false)} height="auto">
+            <View style={{ paddingBottom: 8, gap: 4 }}>
               <Pressable
                 onPress={() => { setActionsOpen(false); setScheduleOpen(true); }}
                 style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 20, paddingVertical: 16, opacity: pressed ? 0.7 : 1 })}
@@ -808,9 +812,7 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
                 </Pressable>
               )}
             </View>
-          </BottomSheet.Content>
-        </BottomSheet.Portal>
-      </BottomSheet>
+      </BottomModal>
 
       <ScheduleSheet
         recipeId={id}
@@ -818,10 +820,7 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
         onClose={() => setScheduleOpen(false)}
       />
 
-      <BottomSheet isOpen={confirmDelete} onOpenChange={(v) => !v && setConfirmDelete(false)}>
-        <BottomSheet.Portal>
-          <BottomSheet.Overlay />
-          <BottomSheet.Content snapPoints={["32%"]}>
+      <BottomModal isOpen={confirmDelete} onClose={() => setConfirmDelete(false)} height="auto">
             <View style={{ alignItems: "center", paddingVertical: 16, gap: 6 }}>
               <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text }}>Supprimer la recette ?</Text>
               <Text style={{ fontSize: 13, color: colors.textMuted, textAlign: "center" }}>Cette action est irréversible.</Text>
@@ -834,9 +833,7 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
                 <Button.Label>Annuler</Button.Label>
               </Button>
             </View>
-          </BottomSheet.Content>
-        </BottomSheet.Portal>
-      </BottomSheet>
+      </BottomModal>
     </View>
   );
 }
@@ -884,13 +881,14 @@ function ScheduleSheet({ recipeId, isOpen, onClose }: { recipeId: string; isOpen
   }
 
   return (
-    <BottomSheet isOpen={isOpen} onOpenChange={(v) => !v && onClose()}>
-      <BottomSheet.Portal>
-        <BottomSheet.Overlay />
-        <BottomSheet.Content snapPoints={["52%"]}>
+    <BottomModal isOpen={isOpen} onClose={onClose} height="52%">
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingBottom: 16 }}>
             <Text style={{ fontSize: 17, fontWeight: "800", color: colors.text }}>Planifier cette recette</Text>
-            <BottomSheet.Close />
+            <Pressable onPress={onClose} hitSlop={8} style={{ padding: 4 }}>
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.textMuted} strokeWidth={2.5} strokeLinecap="round">
+                <Line x1={18} y1={6} x2={6} y2={18} /><Line x1={6} y1={6} x2={18} y2={18} />
+              </Svg>
+            </Pressable>
           </View>
 
           <View style={{ gap: 16 }}>
@@ -959,8 +957,6 @@ function ScheduleSheet({ recipeId, isOpen, onClose }: { recipeId: string; isOpen
               )}
             </Pressable>
           </View>
-        </BottomSheet.Content>
-      </BottomSheet.Portal>
-    </BottomSheet>
+    </BottomModal>
   );
 }
