@@ -16,7 +16,9 @@ import { supabase } from "../../../../lib/supabase";
 import { usePlanning } from "../../api/usePlanning";
 import { clearMealSlot } from "../../application/useCases/clearMealSlot";
 import { generateShoppingListFromPlan } from "../../application/useCases/generateShoppingListFromPlan";
+import { getStreak } from "../../application/useCases/getStreak";
 import { setMealSlot } from "../../application/useCases/setMealSlot";
+import { toggleMealDone } from "../../application/useCases/toggleMealDone";
 import type { MealPlanData, MealSlotData, MealType } from "../../domain/entities/planning";
 
 const MEAL_TYPES: MealType[] = ["breakfast", "lunch", "dinner"];
@@ -66,7 +68,7 @@ function normalize(s: string): string {
 
 function getSlot(plan: MealPlanData, dayOfWeek: number, mealType: MealType): MealSlotData {
   return plan.slots.find((s) => s.dayOfWeek === dayOfWeek && s.mealType === mealType) ?? {
-    slotId: null, dayOfWeek, mealType, recipeId: null, recipeName: null, servings: 4,
+    slotId: null, dayOfWeek, mealType, recipeId: null, recipeName: null, servings: 4, isDone: false,
   };
 }
 
@@ -133,8 +135,11 @@ export function PlanningScreen() {
   const [generating, setGenerating] = useState(false);
   const [generateResult, setGenerateResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [localPlan, setLocalPlan] = useState<MealPlanData | null>(null);
+  const [streak, setStreak] = useState(0);
 
   useEffect(() => { if (plan) setLocalPlan(plan); }, [plan]);
+
+  useEffect(() => { getStreak().then(setStreak); }, []);
 
   useEffect(() => {
     if (!localPlan) return;
@@ -227,6 +232,16 @@ export function PlanningScreen() {
     try { await clearMealSlot(slotId); } catch { reload(); }
   }
 
+  async function handleToggleDone(slot: MealSlotData) {
+    if (!slot.slotId) return;
+    const next = !slot.isDone;
+    setLocalPlan((prev) => prev ? { ...prev, slots: prev.slots.map((s) =>
+      s.slotId === slot.slotId ? { ...s, isDone: next } : s
+    )} : prev);
+    await toggleMealDone(slot.slotId, next);
+    getStreak().then(setStreak);
+  }
+
   async function handleSelectRecipe(recipeId: string) {
     if (!pickerState) return;
     const { dayOfWeek, mealType } = pickerState;
@@ -263,7 +278,17 @@ export function PlanningScreen() {
         {/* ── Header ── */}
         <View style={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 4, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
           <View>
-            <Text style={{ fontSize: 28, fontWeight: "900", color: colors.text, letterSpacing: -0.5 }}>Planning</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Text style={{ fontSize: 28, fontWeight: "900", color: colors.text, letterSpacing: -0.5 }}>Planning</Text>
+              {streak > 0 && (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#FEF3C7", borderRadius: 99, paddingHorizontal: 10, paddingVertical: 4 }}>
+                  <Svg width={13} height={13} viewBox="0 0 24 24" fill="#D97706" stroke="#D97706" strokeWidth={1}>
+                    <Path d="M12 2c0 0-5 5.5-5 10a5 5 0 0 0 10 0C17 7.5 12 2 12 2zm0 13a2 2 0 0 1-2-2c0-2 2-4.5 2-4.5s2 2.5 2 4.5a2 2 0 0 1-2 2z" />
+                  </Svg>
+                  <Text style={{ fontSize: 12, fontWeight: "800", color: "#D97706" }}>{streak}j</Text>
+                </View>
+              )}
+            </View>
             <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>{formatWeekRange(currentWeekMonday)}</Text>
             {weekCoverage.filled > 0 && (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 }}>
@@ -390,47 +415,61 @@ export function PlanningScreen() {
               const hasRecipe = !!slot?.recipeName;
               const { icon, bg } = MEAL_COLORS[mealType];
 
+              const isDone = slot?.isDone ?? false;
+
               return (
                 <View key={mealType}>
                   {i > 0 && <Separator />}
-                  <Pressable
-                    onPress={() => {
-                      if (slot?.recipeId && slot.recipeName) {
-                        setSlotAction({ dayOfWeek: selectedDayOfWeek, mealType, recipeId: slot.recipeId, recipeName: slot.recipeName });
-                      } else {
-                        setPickerState({ dayOfWeek: selectedDayOfWeek, mealType });
-                      }
-                    }}
-                    style={({ pressed }) => ({
-                      flexDirection: "row", alignItems: "center", gap: 12,
-                      paddingHorizontal: 16, paddingVertical: 14,
-                      backgroundColor: pressed ? colors.bgSubtle : "transparent",
-                    })}
-                  >
-                    <View style={{
-                      width: 36, height: 36, borderRadius: 12,
-                      backgroundColor: hasRecipe ? bg : colors.bgSurface,
-                      alignItems: "center", justifyContent: "center", flexShrink: 0,
-                    }}>
-                      <MealIcon mealType={mealType} color={hasRecipe ? icon : "#C2BDB8"} />
-                    </View>
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={{ fontSize: 10, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 1, marginBottom: 2 }}>
-                        {MEAL_LABELS[mealType]}
-                      </Text>
-                      {hasRecipe ? (
-                        <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>
-                          {slot!.recipeName}
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <Pressable
+                      onPress={() => {
+                        if (slot?.recipeId && slot.recipeName) {
+                          setSlotAction({ dayOfWeek: selectedDayOfWeek, mealType, recipeId: slot.recipeId, recipeName: slot.recipeName });
+                        } else {
+                          setPickerState({ dayOfWeek: selectedDayOfWeek, mealType });
+                        }
+                      }}
+                      style={({ pressed }) => ({
+                        flex: 1, flexDirection: "row", alignItems: "center", gap: 12,
+                        paddingLeft: 16, paddingRight: 8, paddingVertical: 14,
+                        backgroundColor: pressed ? colors.bgSubtle : "transparent",
+                      })}
+                    >
+                      <View style={{
+                        width: 36, height: 36, borderRadius: 12,
+                        backgroundColor: hasRecipe ? (isDone ? "#DCFCE7" : bg) : colors.bgSurface,
+                        alignItems: "center", justifyContent: "center", flexShrink: 0,
+                      }}>
+                        <MealIcon mealType={mealType} color={hasRecipe ? (isDone ? "#16A34A" : icon) : "#C2BDB8"} />
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={{ fontSize: 10, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 1, marginBottom: 2 }}>
+                          {MEAL_LABELS[mealType]}
                         </Text>
-                      ) : (
-                        <Text style={{ fontSize: 13, color: "#C2BDB8" }}>Ajouter une recette</Text>
-                      )}
-                    </View>
-                    <View style={{
-                      width: 8, height: 8, borderRadius: 4,
-                      backgroundColor: hasRecipe ? icon : colors.border,
-                    }} />
-                  </Pressable>
+                        {hasRecipe ? (
+                          <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "700", color: isDone ? colors.textSubtle : colors.text, textDecorationLine: isDone ? "line-through" : "none" }}>
+                            {slot!.recipeName}
+                          </Text>
+                        ) : (
+                          <Text style={{ fontSize: 13, color: "#C2BDB8" }}>Ajouter une recette</Text>
+                        )}
+                      </View>
+                    </Pressable>
+                    {hasRecipe && slot?.slotId ? (
+                      <Pressable
+                        onPress={() => handleToggleDone(slot!)}
+                        hitSlop={8}
+                        style={{ paddingHorizontal: 16, paddingVertical: 14 }}
+                      >
+                        <Svg width={22} height={22} viewBox="0 0 24 24" fill={isDone ? "#16A34A" : "none"} stroke={isDone ? "#16A34A" : colors.border} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                          <Circle cx={12} cy={12} r={10} />
+                          {isDone && <Path d="M7 12l3.5 3.5L17 8" strokeWidth={2.5} />}
+                        </Svg>
+                      </Pressable>
+                    ) : (
+                      <View style={{ width: 54 }} />
+                    )}
+                  </View>
                 </View>
               );
             })}

@@ -5,6 +5,12 @@ export interface RecipeIngredientInput {
   name: string;
   quantity: number;
   unit: string;
+  section?: string | null;
+}
+
+export interface RecipeStepInput {
+  description: string;
+  section?: string | null;
 }
 
 export interface RecipeInput {
@@ -17,7 +23,7 @@ export interface RecipeInput {
   imageUrl: string | null;
   isPublic?: boolean;
   ingredients: RecipeIngredientInput[];
-  steps: string[];
+  steps: RecipeStepInput[];
 }
 
 export async function createRecipe(input: RecipeInput): Promise<string | { error: string }> {
@@ -50,6 +56,7 @@ export async function createRecipe(input: RecipeInput): Promise<string | { error
       quantity: ing.quantity,
       unit: ing.unit || "pièce",
       sort_order: i,
+      section: ing.section ?? null,
     }));
 
   if (ingredients.length > 0) {
@@ -57,8 +64,8 @@ export async function createRecipe(input: RecipeInput): Promise<string | { error
   }
 
   const steps = input.steps
-    .filter((s) => s.trim().length > 0)
-    .map((desc, i) => ({ recipe_id: recipe.id, step_number: i + 1, description: desc.trim() }));
+    .filter((s) => s.description.trim().length > 0)
+    .map((s, i) => ({ recipe_id: recipe.id, step_number: i + 1, description: s.description.trim(), section: s.section ?? null }));
 
   if (steps.length > 0) {
     await supabase.from("recipe_steps").insert(steps);

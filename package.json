@@ -1,6 +1,6 @@
 {
   "name": "deazl-v2",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "private": true,
   "workspaces": [
     "apps/*"
@@ -14,5 +14,8 @@
     "supabase:stop": "bunx supabase stop",
     "supabase:status": "bunx supabase status",
     "supabase:types": "bunx supabase gen types typescript --local > apps/web/src/lib/supabase/database.types.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.99.2"
   }
 }

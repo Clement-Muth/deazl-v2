@@ -1,16 +1,79 @@
 import * as ImagePicker from "expo-image-picker";
-import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Line, Path, Polyline } from "react-native-svg";
 import { useAppTheme } from "../../../../shared/theme";
 import { BottomModal } from "../../../shopping/ui/components/bottomModal";
 import { createRecipe } from "../../application/useCases/createRecipe";
-import type { RecipeIngredientInput } from "../../application/useCases/createRecipe";
+import type { RecipeIngredientInput, RecipeStepInput } from "../../application/useCases/createRecipe";
 import { importRecipeFromUrl } from "../../application/useCases/importRecipeFromUrl";
 import { updateRecipe } from "../../application/useCases/updateRecipe";
 import { uploadRecipeImage } from "../../application/useCases/uploadRecipeImage";
-import type { Recipe } from "../../domain/entities/recipe";
+import type { Recipe, RecipeIngredient, RecipeStep } from "../../domain/entities/recipe";
+
+let _nextId = 0;
+function newId() { return _nextId++; }
+
+type FormItem =
+  | { id: number; type: "ingredient"; name: string; quantity: string; unit: string }
+  | { id: number; type: "section"; name: string };
+
+type StepFormItem =
+  | { id: number; type: "step"; description: string }
+  | { id: number; type: "section"; name: string };
+
+function buildFormItems(ingredients: RecipeIngredient[]): FormItem[] {
+  const items: FormItem[] = [];
+  let lastSection: string | null | undefined = undefined;
+  for (const ing of ingredients) {
+    if (ing.section !== lastSection) {
+      if (ing.section !== null) items.push({ id: newId(), type: "section", name: ing.section });
+      lastSection = ing.section;
+    }
+    items.push({ id: newId(), type: "ingredient", name: ing.customName ?? "", quantity: String(ing.quantity), unit: ing.unit });
+  }
+  return items.length > 0 ? items : [{ id: newId(), type: "ingredient", name: "", quantity: "1", unit: "pièce" }];
+}
+
+function buildIngredientInputs(items: FormItem[]): RecipeIngredientInput[] {
+  let currentSection: string | null = null;
+  const result: RecipeIngredientInput[] = [];
+  for (const item of items) {
+    if (item.type === "section") {
+      currentSection = item.name.trim() || null;
+    } else if (item.name.trim().length > 0) {
+      result.push({ name: item.name, quantity: parseFloat(item.quantity) || 0, unit: item.unit, section: currentSection });
+    }
+  }
+  return result;
+}
+
+function buildStepFormItems(steps: RecipeStep[]): StepFormItem[] {
+  const items: StepFormItem[] = [];
+  let lastSection: string | null | undefined = undefined;
+  for (const step of steps) {
+    if (step.section !== lastSection) {
+      if (step.section !== null) items.push({ id: newId(), type: "section", name: step.section });
+      lastSection = step.section;
+    }
+    items.push({ id: newId(), type: "step", description: step.description });
+  }
+  return items.length > 0 ? items : [{ id: newId(), type: "step", description: "" }];
+}
+
+function buildStepInputs(items: StepFormItem[]): RecipeStepInput[] {
+  let currentSection: string | null = null;
+  const result: RecipeStepInput[] = [];
+  for (const item of items) {
+    if (item.type === "section") {
+      currentSection = item.name.trim() || null;
+    } else if (item.description.trim().length > 0) {
+      result.push({ description: item.description, section: currentSection });
+    }
+  }
+  return result;
+}
 
 const DIETARY_OPTIONS = [
   { key: "vegetarian", label: "Végétarien" },
@@ -23,10 +86,10 @@ const DIETARY_OPTIONS = [
   { key: "no_seafood", label: "Sans fruits de mer" },
 ];
 
-const COMMON_UNITS = ["pièce", "g", "kg", "ml", "cl", "L", "càs", "càc", "tasse", "pincée", "tranche"];
+const COMMON_UNITS = ["g", "kg", "ml", "cl", "L", "càs", "càc", "tasse", "pincée", "tranche", "pièce"];
 
-const STEPS_LABELS = ["Informations", "Ingrédients", "Préparation"];
-const TOTAL_STEPS = 3;
+const STEPS_LABELS = ["Informations", "Ingrédients", "Préparation", "Détails"];
+const TOTAL_STEPS = 4;
 
 interface Props {
   existingRecipe?: Recipe;
@@ -49,21 +112,21 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
     shadowRadius: 3,
     elevation: 1,
   };
+
   const [step, setStep] = useState(1);
-  const scrollRef = useRef<ScrollView>(null);
 
   const [name, setName] = useState(existingRecipe?.name ?? "");
   const [description, setDescription] = useState(existingRecipe?.description ?? "");
-  const [servings, setServings] = useState(String(existingRecipe?.servings ?? 4));
+  const [servings, setServings] = useState(existingRecipe?.servings ?? 4);
   const [prepTime, setPrepTime] = useState(existingRecipe?.prepTimeMinutes ? String(existingRecipe.prepTimeMinutes) : "");
   const [cookTime, setCookTime] = useState(existingRecipe?.cookTimeMinutes ? String(existingRecipe.cookTimeMinutes) : "");
   const [dietaryTags, setDietaryTags] = useState<string[]>(existingRecipe?.dietaryTags ?? []);
   const [isPublic, setIsPublic] = useState(existingRecipe?.isPublic ?? false);
-  const [ingredients, setIngredients] = useState<RecipeIngredientInput[]>(
-    existingRecipe?.ingredients.map((i) => ({ name: i.customName ?? "", quantity: i.quantity, unit: i.unit })) ?? [{ name: "", quantity: 1, unit: "pièce" }]
+  const [ingredients, setIngredients] = useState<FormItem[]>(
+    () => existingRecipe ? buildFormItems(existingRecipe.ingredients) : [{ id: newId(), type: "ingredient", name: "", quantity: "1", unit: "pièce" }]
   );
-  const [steps, setSteps] = useState<string[]>(
-    existingRecipe?.steps.map((s) => s.description) ?? [""]
+  const [steps, setSteps] = useState<StepFormItem[]>(
+    () => existingRecipe ? buildStepFormItems(existingRecipe.steps) : [{ id: newId(), type: "step", description: "" }]
   );
 
   const [imageUri, setImageUri] = useState<string | null>(existingRecipe?.imageUrl ?? null);
@@ -72,30 +135,32 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
   const [importUrl, setImportUrl] = useState("");
   const [importing, setImporting] = useState(false);
   const [importSheet, setImportSheet] = useState(false);
-  const [unitSheet, setUnitSheet] = useState<number | null>(null);
+  const [unitSheetId, setUnitSheetId] = useState<number | null>(null);
+  const [customUnit, setCustomUnit] = useState("");
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ y: 0, animated: false });
     setError(null);
   }, [step]);
 
   async function handleImport() {
     if (!importUrl.trim()) return;
     setImporting(true);
+    setImportError(null);
     const result = await importRecipeFromUrl(importUrl.trim());
     setImporting(false);
-    if ("error" in result) { setError(result.error); return; }
+    if ("error" in result) { setImportError(result.error); return; }
     const r = result.data;
     setName(r.name);
     setDescription(r.description ?? "");
-    setServings(String(r.servings));
+    setServings(r.servings);
     setPrepTime(r.prepTimeMinutes ? String(r.prepTimeMinutes) : "");
     setCookTime(r.cookTimeMinutes ? String(r.cookTimeMinutes) : "");
-    if (r.ingredients.length > 0) setIngredients(r.ingredients);
-    if (r.steps.length > 0) setSteps(r.steps);
+    if (r.ingredients.length > 0) setIngredients(r.ingredients.map((i) => ({ id: newId(), type: "ingredient" as const, name: i.name, quantity: String(i.quantity), unit: i.unit })));
+    if (r.steps.length > 0) setSteps(r.steps.map((s) => ({ id: newId(), type: "step" as const, description: s })));
     setImportSheet(false);
     setImportUrl("");
   }
@@ -124,14 +189,14 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
     const input = {
       name,
       description: description || null,
-      servings: parseInt(servings) || 4,
+      servings,
       prepTimeMinutes: prepTime ? parseInt(prepTime) : null,
       cookTimeMinutes: cookTime ? parseInt(cookTime) : null,
       dietaryTags,
       imageUrl,
       isPublic,
-      ingredients: ingredients.filter((i) => i.name.trim()),
-      steps: steps.filter((s) => s.trim()),
+      ingredients: buildIngredientInputs(ingredients),
+      steps: buildStepInputs(steps),
     };
     if (existingRecipe) {
       const err = await updateRecipe(existingRecipe.id, input);
@@ -152,48 +217,116 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
   }
 
   function goBack() {
-    if (step === 1) { onBack(); return; }
-    setStep((s) => s - 1);
+    if (step > 1) { setStep((s) => s - 1); return; }
+    const hasData = !existingRecipe && (
+      name.trim() !== "" ||
+      description.trim() !== "" ||
+      ingredients.some((i) => i.type === "ingredient" && i.name.trim() !== "")
+    );
+    if (hasData) {
+      Alert.alert(
+        "Abandonner ?",
+        "Les informations saisies seront perdues.",
+        [
+          { text: "Continuer", style: "cancel" },
+          { text: "Abandonner", style: "destructive", onPress: onBack },
+        ]
+      );
+      return;
+    }
+    onBack();
+  }
+
+  function pickUnit(id: number, unit: string) {
+    setIngredients((prev) => prev.map((item) => item.id === id && item.type === "ingredient" ? { ...item, unit } : item));
+    setUnitSheetId(null);
+    setCustomUnit("");
   }
 
   function addIngredient() {
-    setIngredients((prev) => [...prev, { name: "", quantity: 1, unit: "pièce" }]);
+    setIngredients((prev) => [...prev, { id: newId(), type: "ingredient", name: "", quantity: "1", unit: "pièce" }]);
   }
 
-  function removeIngredient(i: number) {
-    setIngredients((prev) => prev.filter((_, idx) => idx !== i));
+  function insertIngredientAt(index: number) {
+    setIngredients((prev) => {
+      const next = [...prev];
+      next.splice(index, 0, { id: newId(), type: "ingredient", name: "", quantity: "1", unit: "pièce" });
+      return next;
+    });
   }
 
-  function updateIngredient(i: number, field: keyof RecipeIngredientInput, value: string | number) {
-    setIngredients((prev) => prev.map((ing, idx) => idx === i ? { ...ing, [field]: value } : ing));
+  function addSection() {
+    setIngredients((prev) => [...prev, { id: newId(), type: "section", name: "" }]);
+  }
+
+  function removeItemById(id: number) {
+    setIngredients((prev) => prev.filter((item) => item.id !== id));
+  }
+
+  function updateIngredientById(id: number, field: "name" | "quantity" | "unit", value: string) {
+    setIngredients((prev) => prev.map((item) => item.id === id && item.type === "ingredient" ? { ...item, [field]: value } : item));
+  }
+
+  function updateSectionNameById(id: number, value: string) {
+    setIngredients((prev) => prev.map((item) => item.id === id && item.type === "section" ? { ...item, name: value } : item));
   }
 
   function addStep() {
-    setSteps((prev) => [...prev, ""]);
+    setSteps((prev) => [...prev, { id: newId(), type: "step", description: "" }]);
   }
 
-  function removeStep(i: number) {
-    setSteps((prev) => prev.filter((_, idx) => idx !== i));
+  function insertStepAt(index: number) {
+    setSteps((prev) => {
+      const next = [...prev];
+      next.splice(index, 0, { id: newId(), type: "step", description: "" });
+      return next;
+    });
   }
+
+  function addStepSection() {
+    setSteps((prev) => [...prev, { id: newId(), type: "section", name: "" }]);
+  }
+
+  function removeStepItemById(id: number) {
+    setSteps((prev) => prev.filter((item) => item.id !== id));
+  }
+
+  function updateStepDescriptionById(id: number, value: string) {
+    setSteps((prev) => prev.map((item) => item.id === id && item.type === "step" ? { ...item, description: value } : item));
+  }
+
+  function updateStepSectionNameById(id: number, value: string) {
+    setSteps((prev) => prev.map((item) => item.id === id && item.type === "section" ? { ...item, name: value } : item));
+  }
+
+  const activeIngredient = unitSheetId !== null ? ingredients.find((i) => i.id === unitSheetId) : null;
+  const currentUnit = activeIngredient?.type === "ingredient" ? activeIngredient.unit : null;
 
   const isLastStep = step === TOTAL_STEPS;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top"]}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}>
 
         {/* Header */}
         <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }}>
           <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
             <Pressable onPress={goBack} style={{ padding: 4, marginRight: 8 }}>
-              <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#1C1917" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+              <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                 <Polyline points="15 18 9 12 15 6" />
               </Svg>
             </Pressable>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textMuted + "99", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 1 }}>
-                {existingRecipe ? "Modifier" : "Nouvelle recette"} · {step}/{TOTAL_STEPS}
-              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 1 }}>
+                <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textMuted + "99", textTransform: "uppercase", letterSpacing: 1.5 }}>
+                  {existingRecipe ? "Modifier" : "Nouvelle recette"} · {step}/{TOTAL_STEPS}
+                </Text>
+                {step === TOTAL_STEPS && (
+                  <View style={{ borderRadius: 99, backgroundColor: colors.bgSurface, paddingHorizontal: 6, paddingVertical: 1 }}>
+                    <Text style={{ fontSize: 9, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 0.8 }}>optionnel</Text>
+                  </View>
+                )}
+              </View>
               <Text style={{ fontSize: 20, fontWeight: "900", color: colors.text, letterSpacing: -0.3 }}>
                 {STEPS_LABELS[step - 1]}
               </Text>
@@ -221,7 +354,7 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
               ) : (
                 <Pressable
                   onPress={goNext}
-                  style={{ borderRadius: 12, backgroundColor: colors.text, paddingHorizontal: 16, paddingVertical: 8 }}
+                  style={{ borderRadius: 12, backgroundColor: colors.accent, paddingHorizontal: 16, paddingVertical: 8 }}
                 >
                   <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}>Suivant</Text>
                 </Pressable>
@@ -232,33 +365,33 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
           {/* Progress bar */}
           <View style={{ flexDirection: "row", gap: 5 }}>
             {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-              <View
+              <Pressable
                 key={i}
-                style={{
-                  flex: 1, height: 3, borderRadius: 99,
-                  backgroundColor: i < step ? colors.accent : colors.border,
-                }}
+                onPress={() => { if (i + 1 < step) setStep(i + 1); }}
+                style={{ flex: 1, height: 3, borderRadius: 99, backgroundColor: i < step ? colors.accent : colors.border }}
               />
             ))}
           </View>
         </View>
 
-        <ScrollView ref={scrollRef} contentContainerStyle={{ padding: 16, gap: 20, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+          contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+          showsVerticalScrollIndicator={false}
+        >
           {error && (
-            <View style={{ borderRadius: 12, backgroundColor: colors.dangerBg, padding: 12 }}>
+            <View style={{ borderRadius: 12, backgroundColor: colors.dangerBg, padding: 12, marginBottom: 16 }}>
               <Text style={{ fontSize: 13, color: colors.danger, fontWeight: "600" }}>{error}</Text>
             </View>
           )}
 
+          {/* Step 1 — Informations essentielles */}
           {step === 1 && (
-            <>
+            <View style={{ gap: 20 }}>
               <Pressable
                 onPress={pickImage}
-                style={{
-                  height: 180, borderRadius: 16, overflow: "hidden",
-                  backgroundColor: colors.bgSurface,
-                  alignItems: "center", justifyContent: "center",
-                }}
+                style={{ height: 180, borderRadius: 16, overflow: "hidden", backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center" }}
               >
                 {imageUri ? (
                   <>
@@ -299,6 +432,227 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
                   style={inputStyle}
                 />
               </Field>
+
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <Field label="Personnes" style={{ flex: 1 }}>
+                  <View style={{
+                    flexDirection: "row", alignItems: "center",
+                    backgroundColor: colors.bgCard, borderRadius: 12,
+                    shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 1,
+                  }}>
+                    <Pressable onPress={() => setServings((s) => Math.max(1, s - 1))} style={{ paddingHorizontal: 14, paddingVertical: 12 }}>
+                      <Text style={{ fontSize: 16, fontWeight: "700", color: servings <= 1 ? colors.textSubtle : colors.text }}>−</Text>
+                    </Pressable>
+                    <Text style={{ flex: 1, textAlign: "center", fontSize: 14, fontWeight: "700", color: colors.text }}>{servings}</Text>
+                    <Pressable onPress={() => setServings((s) => Math.min(99, s + 1))} style={{ paddingHorizontal: 14, paddingVertical: 12 }}>
+                      <Text style={{ fontSize: 16, fontWeight: "700", color: colors.text }}>+</Text>
+                    </Pressable>
+                  </View>
+                </Field>
+                <Field label="Prép. (min)" style={{ flex: 1 }}>
+                  <TextInput value={prepTime} onChangeText={setPrepTime} keyboardType="number-pad" placeholder="0" placeholderTextColor={colors.textSubtle} style={inputStyle} />
+                </Field>
+                <Field label="Cuisson (min)" style={{ flex: 1 }}>
+                  <TextInput value={cookTime} onChangeText={setCookTime} keyboardType="number-pad" placeholder="0" placeholderTextColor={colors.textSubtle} style={inputStyle} />
+                </Field>
+              </View>
+            </View>
+          )}
+
+          {/* Step 2 — Ingrédients */}
+          {step === 2 && (
+            <View style={{ gap: 8 }}>
+              {ingredients.flatMap((item, i) => {
+                const nextItem = ingredients[i + 1];
+                const showInlineAdd =
+                  (item.type === "section" && (!nextItem || nextItem.type === "section")) ||
+                  (item.type === "ingredient" && nextItem?.type === "section");
+
+                const renderedItem = item.type === "section" ? (
+                  <View key={item.id} style={{
+                    flexDirection: "row", alignItems: "center", gap: 10,
+                    backgroundColor: colors.bgSurface,
+                    borderRadius: 12,
+                    paddingHorizontal: 12, paddingVertical: 11,
+                  }}>
+                    <TextInput
+                      value={item.name}
+                      onChangeText={(v) => updateSectionNameById(item.id, v)}
+                      placeholder="Nom de la section"
+                      placeholderTextColor={colors.textSubtle}
+                      style={{ flex: 1, fontSize: 13, fontWeight: "700", color: colors.text }}
+                    />
+                    <Pressable onPress={() => removeItemById(item.id)} style={{ padding: 4 }}>
+                      <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={colors.textSubtle} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <Line x1={18} y1={6} x2={6} y2={18} />
+                        <Line x1={6} y1={6} x2={18} y2={18} />
+                      </Svg>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <View key={item.id} style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                    <TextInput
+                      value={item.quantity}
+                      onChangeText={(v) => updateIngredientById(item.id, "quantity", v)}
+                      keyboardType="decimal-pad"
+                      style={[inputStyle, { width: 60, textAlign: "center" }]}
+                    />
+                    <Pressable
+                      onPress={() => setUnitSheetId(item.id)}
+                      style={[inputStyle, { width: 82, flexDirection: "row", alignItems: "center", gap: 2 }]}
+                    >
+                      <Text style={{ fontSize: 13, color: item.unit ? colors.text : colors.textSubtle, fontWeight: "600", flex: 1 }} numberOfLines={1}>
+                        {item.unit || "unité"}
+                      </Text>
+                      <Svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke={colors.textSubtle} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                        <Polyline points="6 9 12 15 18 9" />
+                      </Svg>
+                    </Pressable>
+                    <TextInput
+                      value={item.name}
+                      onChangeText={(v) => updateIngredientById(item.id, "name", v)}
+                      placeholder="Ingrédient"
+                      placeholderTextColor={colors.textSubtle}
+                      style={[inputStyle, { flex: 1 }]}
+                    />
+                    <Pressable onPress={() => removeItemById(item.id)} style={{ padding: 4 }}>
+                      <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.textSubtle} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <Line x1={18} y1={6} x2={6} y2={18} />
+                        <Line x1={6} y1={6} x2={18} y2={18} />
+                      </Svg>
+                    </Pressable>
+                  </View>
+                );
+
+                if (!showInlineAdd) return [renderedItem];
+                return [
+                  renderedItem,
+                  <Pressable key={`add-${item.id}`} onPress={() => insertIngredientAt(i + 1)} style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 2, paddingLeft: 4 }}>
+                    <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke={colors.textSubtle} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                      <Line x1={12} y1={5} x2={12} y2={19} />
+                      <Line x1={5} y1={12} x2={19} y2={12} />
+                    </Svg>
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textSubtle }}>Ajouter un ingrédient</Text>
+                  </Pressable>,
+                ];
+              })}
+              <View style={{ flexDirection: "row", gap: 16, paddingVertical: 8 }}>
+                <Pressable onPress={addIngredient} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                    <Line x1={12} y1={5} x2={12} y2={19} />
+                    <Line x1={5} y1={12} x2={19} y2={12} />
+                  </Svg>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: colors.accent }}>Ingrédient</Text>
+                </Pressable>
+                <Pressable onPress={addSection} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.textMuted} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                    <Line x1={3} y1={7} x2={21} y2={7} />
+                    <Line x1={3} y1={12} x2={21} y2={12} />
+                    <Line x1={3} y1={17} x2={21} y2={17} />
+                  </Svg>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: colors.textMuted }}>Section</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+
+          {/* Step 3 — Préparation */}
+          {step === 3 && (
+            <View style={{ gap: 8 }}>
+              {(() => {
+                let stepNumber = 0;
+                return steps.flatMap((item, i) => {
+                  const nextItem = steps[i + 1];
+                  const showInlineAdd =
+                    (item.type === "section" && (!nextItem || nextItem.type === "section")) ||
+                    (item.type === "step" && nextItem?.type === "section");
+
+                  let renderedItem: React.ReactElement;
+                  if (item.type === "section") {
+                    renderedItem = (
+                      <View key={item.id} style={{
+                        flexDirection: "row", alignItems: "center", gap: 10,
+                        backgroundColor: colors.bgSurface,
+                        borderRadius: 12,
+                        paddingHorizontal: 12, paddingVertical: 11,
+                      }}>
+                        <TextInput
+                          value={item.name}
+                          onChangeText={(v) => updateStepSectionNameById(item.id, v)}
+                          placeholder="Nom de la section"
+                          placeholderTextColor={colors.textSubtle}
+                          style={{ flex: 1, fontSize: 13, fontWeight: "700", color: colors.text }}
+                        />
+                        <Pressable onPress={() => removeStepItemById(item.id)} style={{ padding: 4 }}>
+                          <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={colors.textSubtle} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                            <Line x1={18} y1={6} x2={6} y2={18} />
+                            <Line x1={6} y1={6} x2={18} y2={18} />
+                          </Svg>
+                        </Pressable>
+                      </View>
+                    );
+                  } else {
+                    stepNumber += 1;
+                    const n = stepNumber;
+                    renderedItem = (
+                      <View key={item.id} style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
+                        <View style={{ width: 26, height: 26, borderRadius: 99, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", marginTop: 11, flexShrink: 0 }}>
+                          <Text style={{ fontSize: 11, fontWeight: "900", color: "#fff" }}>{n}</Text>
+                        </View>
+                        <TextInput
+                          value={item.description}
+                          onChangeText={(v) => updateStepDescriptionById(item.id, v)}
+                          placeholder={`Étape ${n}…`}
+                          placeholderTextColor={colors.textSubtle}
+                          multiline
+                          style={[inputStyle, { flex: 1, minHeight: 72, textAlignVertical: "top" }]}
+                        />
+                        <Pressable onPress={() => removeStepItemById(item.id)} style={{ padding: 4, marginTop: 11 }}>
+                          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.textSubtle} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                            <Line x1={18} y1={6} x2={6} y2={18} />
+                            <Line x1={6} y1={6} x2={18} y2={18} />
+                          </Svg>
+                        </Pressable>
+                      </View>
+                    );
+                  }
+
+                  if (!showInlineAdd) return [renderedItem];
+                  return [
+                    renderedItem,
+                    <Pressable key={`add-${item.id}`} onPress={() => insertStepAt(i + 1)} style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 2, paddingLeft: 4 }}>
+                      <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke={colors.textSubtle} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                        <Line x1={12} y1={5} x2={12} y2={19} />
+                        <Line x1={5} y1={12} x2={19} y2={12} />
+                      </Svg>
+                      <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textSubtle }}>Ajouter une étape</Text>
+                    </Pressable>,
+                  ];
+                });
+              })()}
+              <View style={{ flexDirection: "row", gap: 16, paddingVertical: 8 }}>
+                <Pressable onPress={addStep} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                    <Line x1={12} y1={5} x2={12} y2={19} />
+                    <Line x1={5} y1={12} x2={19} y2={12} />
+                  </Svg>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: colors.accent }}>Étape</Text>
+                </Pressable>
+                <Pressable onPress={addStepSection} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.textMuted} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                    <Line x1={3} y1={7} x2={21} y2={7} />
+                    <Line x1={3} y1={12} x2={21} y2={12} />
+                    <Line x1={3} y1={17} x2={21} y2={17} />
+                  </Svg>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: colors.textMuted }}>Section</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+
+          {/* Step 4 — Détails (optionnel) */}
+          {step === 4 && (
+            <View style={{ gap: 20 }}>
               <Field label="Description">
                 <TextInput
                   value={description}
@@ -310,17 +664,6 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
                   style={[inputStyle, { minHeight: 80, textAlignVertical: "top" }]}
                 />
               </Field>
-              <View style={{ flexDirection: "row", gap: 10 }}>
-                <Field label="Personnes" style={{ flex: 1 }}>
-                  <TextInput value={servings} onChangeText={setServings} keyboardType="number-pad" style={inputStyle} />
-                </Field>
-                <Field label="Prép. (min)" style={{ flex: 1 }}>
-                  <TextInput value={prepTime} onChangeText={setPrepTime} keyboardType="number-pad" placeholder="0" placeholderTextColor={colors.textSubtle} style={inputStyle} />
-                </Field>
-                <Field label="Cuisson (min)" style={{ flex: 1 }}>
-                  <TextInput value={cookTime} onChangeText={setCookTime} keyboardType="number-pad" placeholder="0" placeholderTextColor={colors.textSubtle} style={inputStyle} />
-                </Field>
-              </View>
               <Field label="Régime alimentaire">
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                   {DIETARY_OPTIONS.map((opt) => {
@@ -350,95 +693,17 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
                   <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text }}>Recette publique</Text>
                   <Text style={{ fontSize: 12, color: colors.textSubtle }}>Visible par tous les utilisateurs</Text>
                 </View>
-                <View style={{
-                  width: 46, height: 26, borderRadius: 13,
-                  backgroundColor: isPublic ? colors.accent : colors.border,
-                  justifyContent: "center", paddingHorizontal: 2,
-                }}>
-                  <View style={{
-                    width: 22, height: 22, borderRadius: 11, backgroundColor: "#fff",
-                    alignSelf: isPublic ? "flex-end" : "flex-start",
-                  }} />
+                <View style={{ width: 46, height: 26, borderRadius: 13, backgroundColor: isPublic ? colors.accent : colors.border, justifyContent: "center", paddingHorizontal: 2 }}>
+                  <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: "#fff", alignSelf: isPublic ? "flex-end" : "flex-start" }} />
                 </View>
               </Pressable>
-            </>
-          )}
-
-          {step === 2 && (
-            <>
-              {ingredients.map((ing, i) => (
-                <View key={i} style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
-                  <TextInput
-                    value={String(ing.quantity)}
-                    onChangeText={(v) => updateIngredient(i, "quantity", parseFloat(v) || 1)}
-                    keyboardType="decimal-pad"
-                    style={[inputStyle, { width: 52, textAlign: "center" }]}
-                  />
-                  <Pressable onPress={() => setUnitSheet(i)} style={[inputStyle, { width: 72, alignItems: "center", justifyContent: "center" }]}>
-                    <Text style={{ fontSize: 13, color: colors.text, fontWeight: "600" }}>{ing.unit}</Text>
-                  </Pressable>
-                  <TextInput
-                    value={ing.name}
-                    onChangeText={(v) => updateIngredient(i, "name", v)}
-                    placeholder="Ingrédient"
-                    placeholderTextColor={colors.textSubtle}
-                    style={[inputStyle, { flex: 1 }]}
-                  />
-                  <Pressable onPress={() => removeIngredient(i)} style={{ padding: 4 }}>
-                    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                      <Line x1={18} y1={6} x2={6} y2={18} />
-                      <Line x1={6} y1={6} x2={18} y2={18} />
-                    </Svg>
-                  </Pressable>
-                </View>
-              ))}
-              <Pressable onPress={addIngredient} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8 }}>
-                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                  <Line x1={12} y1={5} x2={12} y2={19} />
-                  <Line x1={5} y1={12} x2={19} y2={12} />
-                </Svg>
-                <Text style={{ fontSize: 13, fontWeight: "700", color: colors.accent }}>Ajouter un ingrédient</Text>
-              </Pressable>
-            </>
-          )}
-
-          {step === 3 && (
-            <>
-              {steps.map((s, i) => (
-                <View key={i} style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
-                  <View style={{ width: 26, height: 26, borderRadius: 99, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", marginTop: 11, flexShrink: 0 }}>
-                    <Text style={{ fontSize: 11, fontWeight: "900", color: "#fff" }}>{i + 1}</Text>
-                  </View>
-                  <TextInput
-                    value={s}
-                    onChangeText={(v) => setSteps((prev) => prev.map((st, idx) => idx === i ? v : st))}
-                    placeholder={`Étape ${i + 1}…`}
-                    placeholderTextColor={colors.textSubtle}
-                    multiline
-                    style={[inputStyle, { flex: 1, minHeight: 72, textAlignVertical: "top" }]}
-                  />
-                  <Pressable onPress={() => removeStep(i)} style={{ padding: 4, marginTop: 11 }}>
-                    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                      <Line x1={18} y1={6} x2={6} y2={18} />
-                      <Line x1={6} y1={6} x2={18} y2={18} />
-                    </Svg>
-                  </Pressable>
-                </View>
-              ))}
-              <Pressable onPress={addStep} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8 }}>
-                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                  <Line x1={12} y1={5} x2={12} y2={19} />
-                  <Line x1={5} y1={12} x2={19} y2={12} />
-                </Svg>
-                <Text style={{ fontSize: 13, fontWeight: "700", color: colors.accent }}>Ajouter une étape</Text>
-              </Pressable>
-            </>
+            </View>
           )}
         </ScrollView>
       </KeyboardAvoidingView>
 
       {/* Import URL sheet */}
-      <BottomModal isOpen={importSheet} onClose={() => setImportSheet(false)} height="auto">
+      <BottomModal isOpen={importSheet} onClose={() => { setImportSheet(false); setImportError(null); }} height="auto">
         <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 16 }}>Importer depuis une URL</Text>
         <View style={{ gap: 12, paddingBottom: 8 }}>
           <TextInput
@@ -451,7 +716,7 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
             style={{ borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 16, paddingVertical: 13, fontSize: 14, color: colors.text }}
           />
           {importing && <ActivityIndicator color={colors.accent} />}
-          {error && <Text style={{ fontSize: 12, color: colors.danger }}>{error}</Text>}
+          {importError && <Text style={{ fontSize: 12, color: colors.danger }}>{importError}</Text>}
           <Pressable
             onPress={handleImport}
             disabled={importing || !importUrl.trim()}
@@ -463,19 +728,33 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
       </BottomModal>
 
       {/* Unit picker sheet */}
-      <BottomModal isOpen={unitSheet !== null} onClose={() => setUnitSheet(null)} height="auto">
-        <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 16 }}>Choisir une unité</Text>
+      <BottomModal isOpen={unitSheetId !== null} onClose={() => { setUnitSheetId(null); setCustomUnit(""); }} height="auto">
+        <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 12 }}>Choisir une unité</Text>
+        <TextInput
+          value={customUnit}
+          onChangeText={setCustomUnit}
+          placeholder="Unité personnalisée…"
+          placeholderTextColor={colors.textSubtle}
+          returnKeyType="done"
+          onSubmitEditing={() => {
+            if (unitSheetId !== null && customUnit.trim()) pickUnit(unitSheetId, customUnit.trim());
+          }}
+          style={{ borderRadius: 12, backgroundColor: colors.bgSurface, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: colors.text, marginBottom: 12 }}
+        />
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, paddingBottom: 8 }}>
+          <Pressable
+            onPress={() => { if (unitSheetId !== null) pickUnit(unitSheetId, ""); }}
+            style={{ borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: currentUnit === "" ? colors.accent : colors.bgSurface }}
+          >
+            <Text style={{ fontSize: 14, fontWeight: "600", color: currentUnit === "" ? "#fff" : colors.text }}>sans unité</Text>
+          </Pressable>
           {COMMON_UNITS.map((u) => (
             <Pressable
               key={u}
-              onPress={() => { if (unitSheet !== null) updateIngredient(unitSheet, "unit", u); setUnitSheet(null); }}
-              style={{
-                borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10,
-                backgroundColor: unitSheet !== null && ingredients[unitSheet]?.unit === u ? colors.accent : colors.bgSurface,
-              }}
+              onPress={() => { if (unitSheetId !== null) pickUnit(unitSheetId, u); }}
+              style={{ borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: currentUnit === u ? colors.accent : colors.bgSurface }}
             >
-              <Text style={{ fontSize: 14, fontWeight: "600", color: unitSheet !== null && ingredients[unitSheet]?.unit === u ? "#fff" : colors.text }}>{u}</Text>
+              <Text style={{ fontSize: 14, fontWeight: "600", color: currentUnit === u ? "#fff" : colors.text }}>{u}</Text>
             </Pressable>
           ))}
         </View>

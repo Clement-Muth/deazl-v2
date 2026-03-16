@@ -105,7 +105,7 @@ export async function getRecipeEstimatedCost(
   const namePrices = new Map<string, PriceEntry[]>();
 
   const linked = ingredients.filter(i => i.productId);
-  const unlinked = ingredients.filter(i => !i.productId && i.customName);
+  const withName = ingredients.filter(i => i.customName);
 
   const [tieredProductData, tieredNameData] = await Promise.all([
     linked.length > 0
@@ -114,11 +114,13 @@ export async function getRecipeEstimatedCost(
           p_store_ids: storeIds,
         })
       : Promise.resolve({ data: null }),
-    unlinked.length > 0
+    withName.length > 0
       ? supabase.rpc("get_tiered_ingredient_prices_for_stores", {
-          p_ingredient_names: unlinked
-            .map(i => normalizeIngredientName(i.customName ?? ""))
-            .filter(Boolean),
+          p_ingredient_names: [...new Set(
+            withName
+              .map(i => normalizeIngredientName(i.customName ?? ""))
+              .filter(Boolean)
+          )],
           p_store_ids: storeIds,
         })
       : Promise.resolve({ data: null }),
@@ -173,9 +175,11 @@ export async function getRecipeEstimatedCost(
   let coveredCount = 0;
 
   for (const ing of ingredients) {
-    const entries = ing.productId
-      ? (productPrices.get(ing.productId) ?? [])
-      : (namePrices.get(normalizeIngredientName(ing.customName ?? "")) ?? []);
+    const productEntries = ing.productId ? (productPrices.get(ing.productId) ?? []) : [];
+    const nameEntries = ing.customName
+      ? (namePrices.get(normalizeIngredientName(ing.customName)) ?? [])
+      : [];
+    const entries = productEntries.length > 0 ? productEntries : nameEntries;
 
     let bestCost: number | null = null;
     let bestEntry: PriceEntry | null = null;

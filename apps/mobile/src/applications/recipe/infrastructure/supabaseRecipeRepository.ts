@@ -36,7 +36,7 @@ export async function fetchRecipes(): Promise<Recipe[]> {
     updatedAt: new Date(row.updated_at),
     ingredients: (row.recipe_ingredients ?? [])
       .sort((a: { sort_order: number }, b: { sort_order: number }) => a.sort_order - b.sort_order)
-      .map((ing: { id: string; recipe_id: string; custom_name: string | null; product_id: string | null; products: { id: string; name: string } | null; quantity: number; unit: string; is_optional: boolean; sort_order: number }) => ({
+      .map((ing: { id: string; recipe_id: string; custom_name: string | null; product_id: string | null; products: { id: string; name: string } | null; quantity: number; unit: string; is_optional: boolean; sort_order: number; section: string | null }) => ({
         id: ing.id,
         recipeId: ing.recipe_id,
         customName: ing.custom_name,
@@ -46,14 +46,16 @@ export async function fetchRecipes(): Promise<Recipe[]> {
         unit: ing.unit,
         isOptional: ing.is_optional,
         sortOrder: ing.sort_order,
+        section: ing.section ?? null,
       })),
     steps: (row.recipe_steps ?? [])
       .sort((a: { step_number: number }, b: { step_number: number }) => a.step_number - b.step_number)
-      .map((step: { id: string; recipe_id: string; step_number: number; description: string }) => ({
+      .map((step: { id: string; recipe_id: string; step_number: number; description: string; section: string | null }) => ({
         id: step.id,
         recipeId: step.recipe_id,
         stepNumber: step.step_number,
         description: step.description,
+        section: step.section ?? null,
       })),
   }));
 }
@@ -89,7 +91,7 @@ export async function fetchRecipeById(id: string): Promise<Recipe | null> {
     updatedAt: new Date(data.updated_at),
     ingredients: (data.recipe_ingredients ?? [])
       .sort((a: { sort_order: number }, b: { sort_order: number }) => a.sort_order - b.sort_order)
-      .map((ing: { id: string; recipe_id: string; custom_name: string | null; product_id: string | null; products: { id: string; name: string } | null; quantity: number; unit: string; is_optional: boolean; sort_order: number }) => ({
+      .map((ing: { id: string; recipe_id: string; custom_name: string | null; product_id: string | null; products: { id: string; name: string } | null; quantity: number; unit: string; is_optional: boolean; sort_order: number; section: string | null }) => ({
         id: ing.id,
         recipeId: ing.recipe_id,
         customName: ing.custom_name,
@@ -99,14 +101,16 @@ export async function fetchRecipeById(id: string): Promise<Recipe | null> {
         unit: ing.unit,
         isOptional: ing.is_optional,
         sortOrder: ing.sort_order,
+        section: ing.section ?? null,
       })),
     steps: (data.recipe_steps ?? [])
       .sort((a: { step_number: number }, b: { step_number: number }) => a.step_number - b.step_number)
-      .map((step: { id: string; recipe_id: string; step_number: number; description: string }) => ({
+      .map((step: { id: string; recipe_id: string; step_number: number; description: string; section: string | null }) => ({
         id: step.id,
         recipeId: step.recipe_id,
         stepNumber: step.step_number,
         description: step.description,
+        section: step.section ?? null,
       })),
   };
 }

@@ -98,12 +98,13 @@ export async function getMealPlan(weekStart: Date): Promise<MealPlanData> {
     meal_type: string;
     recipe_id: string | null;
     servings: number;
+    is_done: boolean;
     recipes: { name: string } | { name: string }[] | null;
   };
 
   const { data: rawSlots } = await supabase
     .from("meal_slots")
-    .select("id, day_of_week, meal_type, recipe_id, servings, recipes(name)")
+    .select("id, day_of_week, meal_type, recipe_id, servings, is_done, recipes(name)")
     .eq("meal_plan_id", planId);
 
   const slots = (rawSlots ?? []) as RawSlot[];
@@ -125,6 +126,7 @@ export async function getMealPlan(weekStart: Date): Promise<MealPlanData> {
               ? (existing.recipes[0] as { name: string } | undefined)?.name
               : (existing.recipes as { name: string } | null)?.name) ?? null,
           servings: existing.servings,
+          isDone: existing.is_done,
         });
       } else {
         filledSlots.push({
@@ -134,6 +136,7 @@ export async function getMealPlan(weekStart: Date): Promise<MealPlanData> {
           recipeId: null,
           recipeName: null,
           servings: 4,
+          isDone: false,
         });
       }
     }
