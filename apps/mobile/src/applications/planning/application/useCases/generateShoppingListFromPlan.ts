@@ -75,11 +75,15 @@ export async function generateShoppingListFromPlan(): Promise<void> {
   const typedSlots = slots as { recipe_id: string | null }[];
   const recipeIds = [...new Set(typedSlots.map((s) => s.recipe_id as string))];
 
-  const [{ data: ingredients }, { data: pantryItems }] = await Promise.all([
+  const [{ data: ingredients }, { data: recipes }, { data: pantryItems }] = await Promise.all([
     supabase
       .from("recipe_ingredients")
-      .select("custom_name, quantity, unit")
+      .select("recipe_id, custom_name, quantity, unit")
       .in("recipe_id", recipeIds),
+    supabase
+      .from("recipes")
+      .select("id, name")
+      .in("id", recipeIds),
     supabase
       .from("pantry_items")
       .select("custom_name, quantity, unit")
@@ -88,30 +92,59 @@ export async function generateShoppingListFromPlan(): Promise<void> {
 
   if (!ingredients?.length) return;
 
-  const aggregation = new Map<string, { customName: string; quantity: number; unit: string }>();
-  for (const ing of ingredients) {
+  const recipeNameById = new Map((recipes ?? []).map((r: { id: string; name: string }) => [r.id, r.name]));
+
+  type RecipeIngredient = { recipe_id: string; custom_name: string; quantity: number; unit: string };
+  const typedIngredients = ingredients as RecipeIngredient[];
+
+  const globalAgg = new Map<string, number>();
+  for (const ing of typedIngredients) {
     const key = `${normalizeIngredientName(ing.custom_name)}||${ing.unit.trim().toLowerCase()}`;
-    const existing = aggregation.get(key);
-    if (existing) {
-      existing.quantity += ing.quantity;
+    globalAgg.set(key, (globalAgg.get(key) ?? 0) + ing.quantity);
+  }
+
+  const pantryByKey = new Map<string, number | null>();
+  for (const p of pantryItems ?? []) {
+    const key = `${normalizeIngredientName(p.custom_name)}||${(p.unit ?? "").trim().toLowerCase()}`;
+    const qty = p.quantity ? Number(p.quantity) : null;
+    const prev = pantryByKey.get(key);
+    if (prev === undefined) {
+      pantryByKey.set(key, qty);
+    } else if (prev !== null && qty !== null) {
+      pantryByKey.set(key, prev + qty);
     } else {
-      aggregation.set(key, {
-        customName: ing.custom_name.trim(),
-        quantity: ing.quantity,
-        unit: ing.unit.trim(),
-      });
+      pantryByKey.set(key, null);
     }
   }
 
-  const pantryByName = new Map<string, { quantity: number | null; unit: string }>();
-  for (const p of pantryItems ?? []) {
-    const key = `${normalizeIngredientName(p.custom_name)}||${(p.unit ?? "").trim().toLowerCase()}`;
-    const existing = pantryByName.get(key);
-    const qty = p.quantity ? Number(p.quantity) : null;
-    if (existing) {
-      existing.quantity = ((existing.quantity ?? 0) + (qty ?? 0)) || null;
+  const coverageRatio = new Map<string, { ratio: number; fullyChecked: boolean; skip: boolean }>();
+  for (const [key, totalNeeded] of globalAgg) {
+    const pantry = pantryByKey.get(key);
+    if (pantry === undefined) {
+      coverageRatio.set(key, { ratio: 1, fullyChecked: false, skip: false });
+    } else if (pantry === null) {
+      coverageRatio.set(key, { ratio: 1, fullyChecked: true, skip: false });
+    } else if (pantry >= totalNeeded) {
+      coverageRatio.set(key, { ratio: 0, fullyChecked: false, skip: true });
     } else {
-      pantryByName.set(key, { quantity: qty, unit: (p.unit ?? "").trim() });
+      coverageRatio.set(key, { ratio: (totalNeeded - pantry) / totalNeeded, fullyChecked: false, skip: false });
+    }
+  }
+
+  const perRecipeAgg = new Map<string, { customName: string; quantity: number; unit: string; recipeId: string; recipeName: string }>();
+  for (const ing of typedIngredients) {
+    const key = `${normalizeIngredientName(ing.custom_name)}||${ing.unit.trim().toLowerCase()}||${ing.recipe_id}`;
+    const existing = perRecipeAgg.get(key);
+    if (existing) {
+      existing.quantity += ing.quantity;
+    } else {
+      perRecipeAgg.set(key, {
+        customName: ing.custom_name.trim(),
+        quantity: ing.quantity,
+        unit: ing.unit.trim(),
+        recipeId: ing.recipe_id,
+        recipeName: recipeNameById.get(ing.recipe_id) ?? "",
+      });
     }
   }
 
@@ -123,48 +156,27 @@ export async function generateShoppingListFromPlan(): Promise<void> {
     is_checked: boolean;
     sort_order: number;
     category: string;
+    recipe_id: string;
+    recipe_name: string;
   }[] = [];
 
   let sortOrder = 0;
-  for (const item of aggregation.values()) {
-    const pantryKey = `${normalizeIngredientName(item.customName)}||${item.unit.toLowerCase()}`;
-    const pantry = pantryByName.get(pantryKey);
-
-    if (pantry) {
-      if (pantry.quantity === null) {
-        shoppingItems.push({
-          shopping_list_id: newList.id,
-          custom_name: item.customName,
-          quantity: item.quantity,
-          unit: item.unit,
-          is_checked: true,
-          sort_order: sortOrder++,
-          category: categorizeItem(item.customName),
-        });
-        continue;
-      }
-      const remaining = item.quantity - pantry.quantity;
-      if (remaining <= 0) continue;
-      shoppingItems.push({
-        shopping_list_id: newList.id,
-        custom_name: item.customName,
-        quantity: remaining,
-        unit: item.unit,
-        is_checked: false,
-        sort_order: sortOrder++,
-        category: categorizeItem(item.customName),
-      });
-    } else {
-      shoppingItems.push({
-        shopping_list_id: newList.id,
-        custom_name: item.customName,
-        quantity: item.quantity,
-        unit: item.unit,
-        is_checked: false,
-        sort_order: sortOrder++,
-        category: categorizeItem(item.customName),
-      });
-    }
+  for (const item of perRecipeAgg.values()) {
+    const globalKey = `${normalizeIngredientName(item.customName)}||${item.unit.toLowerCase()}`;
+    const coverage = coverageRatio.get(globalKey);
+    if (!coverage || coverage.skip) continue;
+    const quantity = coverage.fullyChecked ? item.quantity : Math.ceil(item.quantity * coverage.ratio * 100) / 100;
+    shoppingItems.push({
+      shopping_list_id: newList.id,
+      custom_name: item.customName,
+      quantity,
+      unit: item.unit,
+      is_checked: coverage.fullyChecked,
+      sort_order: sortOrder++,
+      category: categorizeItem(item.customName),
+      recipe_id: item.recipeId,
+      recipe_name: item.recipeName,
+    });
   }
 
   if (shoppingItems.length) {
