@@ -1,13 +1,14 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { Button, SearchField } from "heroui-native";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Dimensions, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Line, Path, Polyline } from "react-native-svg";
 import { useAppTheme } from "../../../../shared/theme";
 import { BottomModal } from "../../../shopping/ui/components/bottomModal";
 import { useRecipes } from "../../api/useRecipes";
+import { bootstrapIngredientLinks } from "../../application/useCases/bootstrapIngredientLinks";
 import type { Recipe } from "../../domain/entities/recipe";
 import { GridCard } from "../components/gridCard";
 import { ListCard } from "../components/listCard";
@@ -38,6 +39,13 @@ export function RecipesScreen() {
   const [search, setSearch] = useState("");
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [timeFilter, setTimeFilter] = useState("any");
+  const bootstrapped = useRef(false);
+
+  useEffect(() => {
+    if (bootstrapped.current) return;
+    bootstrapped.current = true;
+    bootstrapIngredientLinks();
+  }, []);
   const [sort, setSort] = useState<SortOption>("recent");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
