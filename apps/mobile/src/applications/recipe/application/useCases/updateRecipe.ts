@@ -1,5 +1,6 @@
 import { supabase } from "../../../../lib/supabase";
 import type { RecipeInput } from "./createRecipe";
+import { autoLinkIngredients } from "./autoLinkIngredients";
 
 export async function updateRecipe(id: string, input: RecipeInput): Promise<{ error: string } | null> {
   const { error: recipeError } = await supabase
@@ -43,6 +44,8 @@ export async function updateRecipe(id: string, input: RecipeInput): Promise<{ er
   if (steps.length > 0) {
     await supabase.from("recipe_steps").insert(steps);
   }
+
+  await autoLinkIngredients(id);
 
   return null;
 }

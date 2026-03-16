@@ -279,11 +279,12 @@ export function ShoppingScreen() {
 
   function handleToggle(id: string, isChecked: boolean) {
     const snapshot = list;
+    const item = list?.items.find((i) => i.id === id);
     setList((prev) => prev ? {
       ...prev,
       items: prev.items.map((i) => i.id === id ? { ...i, isChecked } : i),
     } : prev);
-    toggleShoppingItem(id, isChecked).catch(() => setList(snapshot));
+    toggleShoppingItem(id, isChecked, item?.productId, item?.customName).catch(() => setList(snapshot));
   }
 
   function handleDelete(id: string) {
