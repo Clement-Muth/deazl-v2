@@ -1,7 +1,8 @@
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as Haptics from "expo-haptics";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Line, Path, Polyline, Rect } from "react-native-svg";
 import { useAppTheme } from "../../../../shared/theme";
@@ -58,74 +59,82 @@ function LocationIcon({ loc, size = 14, color = "#78716C" }: { loc: StorageLocat
   );
 }
 
-function DateInput({ value, onChange, colors }: { value: string; onChange: (v: string) => void; colors: ReturnType<typeof useAppTheme>["colors"] }) {
-  const [day, setDay] = useState(value ? value.slice(8, 10) : "");
-  const [month, setMonth] = useState(value ? value.slice(5, 7) : "");
-  const [year, setYear] = useState(value ? value.slice(0, 4) : "");
-  const monthRef = useRef<TextInput>(null);
-  const yearRef = useRef<TextInput>(null);
-  const prevValue = useRef(value);
+function ExpiryDatePicker({ value, onChange, colors }: { value: string; onChange: (v: string) => void; colors: ReturnType<typeof useAppTheme>["colors"] }) {
+  const [showAndroid, setShowAndroid] = useState(false);
+  const date = value ? new Date(value + "T12:00:00") : new Date();
 
-  useEffect(() => {
-    if (prevValue.current !== value) {
-      prevValue.current = value;
-      setDay(value ? value.slice(8, 10) : "");
-      setMonth(value ? value.slice(5, 7) : "");
-      setYear(value ? value.slice(0, 4) : "");
-    }
-  }, [value]);
-
-  function commit(d: string, m: string, y: string) {
-    if (d.length === 2 && m.length === 2 && y.length === 4) {
-      onChange(`${y}-${m}-${d}`);
-    } else {
-      onChange("");
-    }
+  function handleChange(_: unknown, selected?: Date) {
+    if (Platform.OS === "android") setShowAndroid(false);
+    if (selected) onChange(selected.toISOString().slice(0, 10));
   }
 
-  const inputStyle = { borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: colors.text, textAlign: "center" as const };
+  function formatDate(d: Date): string {
+    return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+  }
+
+  if (Platform.OS === "ios") {
+    return (
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 14, paddingVertical: 6 }}>
+        <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <Rect x={3} y={4} width={18} height={18} rx={2} />
+          <Line x1={16} y1={2} x2={16} y2={6} />
+          <Line x1={8} y1={2} x2={8} y2={6} />
+          <Line x1={3} y1={10} x2={21} y2={10} />
+        </Svg>
+        <DateTimePicker
+          value={date}
+          mode="date"
+          display="compact"
+          onChange={handleChange}
+          locale="fr-FR"
+          style={{ flex: 1 }}
+          themeVariant="light"
+        />
+        {value && (
+          <Pressable onPress={() => onChange("")} hitSlop={10}>
+            <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+              <Line x1={18} y1={6} x2={6} y2={18} />
+              <Line x1={6} y1={6} x2={18} y2={18} />
+            </Svg>
+          </Pressable>
+        )}
+      </View>
+    );
+  }
 
   return (
-    <View style={{ flexDirection: "row", gap: 8 }}>
-      <View style={{ flex: 1, gap: 4 }}>
-        <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Jour</Text>
-        <TextInput
-          value={day}
-          onChangeText={(t) => { setDay(t); commit(t, month, year); if (t.length === 2) monthRef.current?.focus(); }}
-          placeholder="JJ"
-          maxLength={2}
-          keyboardType="numeric"
-          placeholderTextColor="#A8A29E"
-          style={inputStyle}
-        />
-      </View>
-      <View style={{ flex: 1, gap: 4 }}>
-        <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Mois</Text>
-        <TextInput
-          ref={monthRef}
-          value={month}
-          onChangeText={(t) => { setMonth(t); commit(day, t, year); if (t.length === 2) yearRef.current?.focus(); }}
-          placeholder="MM"
-          maxLength={2}
-          keyboardType="numeric"
-          placeholderTextColor="#A8A29E"
-          style={inputStyle}
-        />
-      </View>
-      <View style={{ flex: 2, gap: 4 }}>
-        <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Année</Text>
-        <TextInput
-          ref={yearRef}
-          value={year}
-          onChangeText={(t) => { setYear(t); commit(day, month, t); }}
-          placeholder="AAAA"
-          maxLength={4}
-          keyboardType="numeric"
-          placeholderTextColor="#A8A29E"
-          style={inputStyle}
-        />
-      </View>
-    </View>
+    <>
+      <Pressable
+        onPress={() => setShowAndroid(true)}
+        style={({ pressed }) => ({
+          flexDirection: "row", alignItems: "center", gap: 10,
+          borderRadius: 14, backgroundColor: colors.bgSurface,
+          paddingHorizontal: 16, paddingVertical: 14,
+          opacity: pressed ? 0.7 : 1,
+        })}
+      >
+        <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <Rect x={3} y={4} width={18} height={18} rx={2} />
+          <Line x1={16} y1={2} x2={16} y2={6} />
+          <Line x1={8} y1={2} x2={8} y2={6} />
+          <Line x1={3} y1={10} x2={21} y2={10} />
+        </Svg>
+        <Text style={{ flex: 1, fontSize: 15, color: value ? colors.text : "#A8A29E" }}>
+          {value ? formatDate(new Date(value + "T12:00:00")) : "Choisir une date"}
+        </Text>
+        {value && (
+          <Pressable onPress={() => onChange("")} hitSlop={10}>
+            <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+              <Line x1={18} y1={6} x2={6} y2={18} />
+              <Line x1={6} y1={6} x2={18} y2={18} />
+            </Svg>
+          </Pressable>
+        )}
+      </Pressable>
+      {showAndroid && (
+        <DateTimePicker value={date} mode="date" display="default" onChange={handleChange} locale="fr-FR" />
+      )}
+    </>
   );
 }
 
@@ -365,7 +374,7 @@ function AddPantryItemSheet({ isOpen, onClose, onAdded }: { isOpen: boolean; onC
         </View>
         <View style={{ gap: 4 }}>
           <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Date d'expiration</Text>
-          <DateInput value={expiryDate} onChange={setExpiryDate} colors={colors} />
+          <ExpiryDatePicker value={expiryDate} onChange={setExpiryDate} colors={colors} />
         </View>
         <LocationSelector value={location} onChange={setLocation} colors={colors} />
         <Pressable
@@ -485,7 +494,7 @@ function EditPantryItemSheet({ item, isOpen, onClose, onSaved }: { item: PantryI
         </View>
         <View style={{ gap: 4 }}>
           <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Date d'expiration</Text>
-          <DateInput value={expiryDate} onChange={setExpiryDate} colors={colors} />
+          <ExpiryDatePicker value={expiryDate} onChange={setExpiryDate} colors={colors} />
         </View>
         <LocationSelector value={location} onChange={setLocation} colors={colors} />
         <Pressable
@@ -533,7 +542,15 @@ export function PantryScreen() {
   const { items, loading, reload } = usePantryItems();
   const [addOpen, setAddOpen] = useState(false);
   const [editItem, setEditItem] = useState<PantryItem | null>(null);
-  const [openLocation, setOpenLocation] = useState<StorageLocation | null>("pantry");
+  const [openLocations, setOpenLocations] = useState<Set<StorageLocation>>(() => new Set(LOCATION_ORDER));
+
+  function toggleLocation(loc: StorageLocation) {
+    setOpenLocations((prev) => {
+      const next = new Set(prev);
+      if (next.has(loc)) next.delete(loc); else next.add(loc);
+      return next;
+    });
+  }
   const [deletingExpired, setDeletingExpired] = useState(false);
 
   const grouped: Record<StorageLocation, PantryItem[]> = {
@@ -659,11 +676,11 @@ export function PantryScreen() {
           <View style={{ gap: 10 }}>
             {nonEmptyLocations.map((loc) => {
               const locItems = grouped[loc];
-              const isOpen = openLocation === loc;
+              const isOpen = openLocations.has(loc);
               return (
                 <View key={loc} style={{ borderRadius: 14, backgroundColor: colors.bgCard, overflow: "hidden" }}>
                   <Pressable
-                    onPress={() => setOpenLocation(isOpen ? null : loc)}
+                    onPress={() => toggleLocation(loc)}
                     style={({ pressed }) => ({
                       flexDirection: "row", alignItems: "center", gap: 10,
                       paddingHorizontal: 16, paddingVertical: 14,

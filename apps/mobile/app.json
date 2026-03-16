@@ -50,7 +50,8 @@
         {
           "locationWhenInUsePermission": "Deazl utilise ta position pour trouver les magasins autour de toi."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true
