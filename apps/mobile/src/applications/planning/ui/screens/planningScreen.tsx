@@ -2,9 +2,11 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { Button } from "heroui-native";
 import { BottomModal } from "../../../shopping/ui/components/bottomModal";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Animated,
   ActivityIndicator,
+  Easing,
   Pressable,
   ScrollView,
   Text,
@@ -124,6 +126,19 @@ function WeekGrid({
   gridLoading: boolean;
 }) {
   const { colors } = useAppTheme();
+  const shimmer = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!gridLoading) { shimmer.setValue(0); return; }
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmer, { toValue: 1, duration: 600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(shimmer, { toValue: 0, duration: 600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [gridLoading]);
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 4 }}>
       <View>
@@ -160,24 +175,39 @@ function WeekGrid({
                 const hasRecipe = !!slot?.recipeName;
                 const isDone = slot?.isDone ?? false;
                 const isToday = isSameDay(day, today);
+                if (gridLoading) {
+                  return (
+                    <Animated.View
+                      key={dayIdx}
+                      style={{
+                        width: COL_W - 6, height: ROW_H, marginRight: 6,
+                        borderRadius: 14,
+                        backgroundColor: colors.bgSurface,
+                        opacity: shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0.9] }),
+                        alignItems: "center", justifyContent: "center", gap: 6, padding: 10,
+                      }}
+                    >
+                      <View style={{ width: "80%", height: 7, borderRadius: 4, backgroundColor: colors.border }} />
+                      <View style={{ width: "55%", height: 7, borderRadius: 4, backgroundColor: colors.border }} />
+                    </Animated.View>
+                  );
+                }
                 return (
                   <Pressable
                     key={dayIdx}
-                    onPress={() => !gridLoading && onCellPress(dayOfWeek, mealType, slot)}
+                    onPress={() => onCellPress(dayOfWeek, mealType, slot)}
                     style={({ pressed }) => ({
                       width: COL_W - 6, height: ROW_H, marginRight: 6,
                       borderRadius: 14,
-                      backgroundColor: gridLoading
-                        ? colors.bgSurface
-                        : hasRecipe ? (isDone ? "#DCFCE7" : bg) : colors.bgCard,
-                      borderWidth: !gridLoading && isToday && !hasRecipe ? 1.5 : 0,
+                      backgroundColor: hasRecipe ? (isDone ? "#DCFCE7" : bg) : colors.bgCard,
+                      borderWidth: isToday && !hasRecipe ? 1.5 : 0,
                       borderColor: colors.accent + "50",
                       alignItems: "center", justifyContent: "center",
                       padding: 6,
                       opacity: pressed ? 0.75 : 1,
                     })}
                   >
-                    {!gridLoading && hasRecipe ? (
+                    {hasRecipe ? (
                       <>
                         {isDone && (
                           <View style={{ position: "absolute", top: 6, right: 6 }}>
@@ -190,11 +220,11 @@ function WeekGrid({
                           {slot!.recipeName}
                         </Text>
                       </>
-                    ) : !gridLoading ? (
+                    ) : (
                       <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke={isToday ? colors.accent + "80" : colors.border} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                         <Path d="M12 5v14M5 12h14" />
                       </Svg>
-                    ) : null}
+                    )}
                   </Pressable>
                 );
               })}
