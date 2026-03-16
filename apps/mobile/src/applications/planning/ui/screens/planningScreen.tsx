@@ -319,7 +319,7 @@ export function PlanningScreen() {
           <View style={{ flexDirection: "row", gap: 8, marginTop: 6, alignItems: "center" }}>
             {!isSameDay(currentWeekMonday, getMondayOf(today)) && (
               <Pressable
-                onPress={() => setCurrentWeekMonday(getMondayOf(today))}
+                onPress={() => { setLocalPlan(null); setCurrentWeekMonday(getMondayOf(today)); }}
                 style={({ pressed }) => ({
                   height: 34, paddingHorizontal: 12, borderRadius: 10,
                   backgroundColor: colors.accentBg, borderWidth: 1, borderColor: colors.accentBgBorder,
@@ -331,8 +331,8 @@ export function PlanningScreen() {
               </Pressable>
             )}
             {[
-              { onPress: () => { const d = new Date(currentWeekMonday); d.setDate(d.getDate() - 7); setCurrentWeekMonday(d); }, path: "M15 18l-6-6 6-6" },
-              { onPress: () => { const d = new Date(currentWeekMonday); d.setDate(d.getDate() + 7); setCurrentWeekMonday(d); }, path: "M9 18l6-6-6-6" },
+              { onPress: () => { const d = new Date(currentWeekMonday); d.setDate(d.getDate() - 7); setLocalPlan(null); setCurrentWeekMonday(d); }, path: "M15 18l-6-6 6-6" },
+              { onPress: () => { const d = new Date(currentWeekMonday); d.setDate(d.getDate() + 7); setLocalPlan(null); setCurrentWeekMonday(d); }, path: "M9 18l6-6-6-6" },
             ].map(({ onPress, path }, idx) => (
               <Pressable key={idx} onPress={onPress} style={({ pressed }) => ({
                 width: 34, height: 34, borderRadius: 10,
