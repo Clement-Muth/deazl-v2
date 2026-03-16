@@ -29,6 +29,8 @@ export interface ShoppingItem {
   sortOrder: number;
   productId?: string | null;
   category?: string | null;
+  recipeId?: string | null;
+  recipeName?: string | null;
   price?: ShoppingItemPrice;
   allStorePrices: ShoppingItemStorePrice[];
 }

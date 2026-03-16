@@ -5,10 +5,27 @@ export async function fetchRecipes(): Promise<Recipe[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
+  const { data: membership } = await supabase
+    .from("household_members")
+    .select("household_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  let visibleUserIds: string[] = [user.id];
+
+  if (membership?.household_id) {
+    const { data: members } = await supabase
+      .from("household_members")
+      .select("user_id")
+      .eq("household_id", membership.household_id);
+    visibleUserIds = (members ?? []).map((m: { user_id: string }) => m.user_id);
+  }
+
   const [{ data, error }, { data: favorites }] = await Promise.all([
     supabase
       .from("recipes")
       .select("*, recipe_ingredients(*, products(id, name)), recipe_steps(*)")
+      .in("user_id", visibleUserIds)
       .order("created_at", { ascending: false }),
     supabase
       .from("recipe_favorites")

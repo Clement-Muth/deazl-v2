@@ -76,6 +76,8 @@ export async function addRecipeToShoppingList(
         sort_order: nextSortOrder++,
         category: categorizeItem(name),
         product_id: ing.productId ?? null,
+        recipe_id: recipeId,
+        recipe_name: recipe.name,
       };
     });
 

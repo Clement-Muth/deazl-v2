@@ -32,6 +32,8 @@ interface RawItem {
   sort_order: number;
   product_id: string | null;
   category: string | null;
+  recipe_id: string | null;
+  recipe_name: string | null;
 }
 
 interface TieredPriceRow {
@@ -74,7 +76,7 @@ export async function getActiveShoppingList(): Promise<ShoppingList | null> {
 
   const listQuery = supabase
     .from("shopping_lists")
-    .select("id, status, shopping_items(id, custom_name, quantity, unit, is_checked, sort_order, product_id, category)")
+    .select("id, status, shopping_items(id, custom_name, quantity, unit, is_checked, sort_order, product_id, category, recipe_id, recipe_name)")
     .eq("status", "active")
     .order("created_at", { ascending: false })
     .limit(1);
@@ -189,6 +191,8 @@ export async function getActiveShoppingList(): Promise<ShoppingList | null> {
         sortOrder: rawItem.sort_order,
         productId: rawItem.product_id,
         category: rawItem.category,
+        recipeId: rawItem.recipe_id,
+        recipeName: rawItem.recipe_name,
         price,
         allStorePrices,
       };
