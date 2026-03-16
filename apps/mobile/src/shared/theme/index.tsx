@@ -29,7 +29,7 @@ export const lightColors = {
   green: "#16A34A",
   greenBg: "#F0FDF4",
   shadow: "#1C1917",
-  isDark: false as const,
+  isDark: false,
 };
 
 export const darkColors: typeof lightColors = {
@@ -55,7 +55,7 @@ export const darkColors: typeof lightColors = {
   green: "#22C55E",
   greenBg: "#0F2920",
   shadow: "#000",
-  isDark: true as const,
+  isDark: true,
 };
 
 export type AppColors = typeof lightColors;
@@ -79,7 +79,7 @@ function applyColorScheme(p: ThemePreference, osScheme: "light" | "dark") {
     if (Platform.OS === "android") {
       Appearance.setColorScheme(osScheme);
     } else {
-      Appearance.setColorScheme(null);
+      Appearance.setColorScheme(null as any);
     }
   } else {
     Appearance.setColorScheme(p);
@@ -89,7 +89,7 @@ function applyColorScheme(p: ThemePreference, osScheme: "light" | "dark") {
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemScheme = useColorScheme();
   const [preference, setPreferenceState] = useState<ThemePreference>("auto");
-  const osSchemeRef = useRef<"light" | "dark">(Appearance.getColorScheme() ?? "light");
+  const osSchemeRef = useRef<"light" | "dark">((Appearance.getColorScheme() as "light" | "dark" | null) ?? "light");
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then((saved) => {

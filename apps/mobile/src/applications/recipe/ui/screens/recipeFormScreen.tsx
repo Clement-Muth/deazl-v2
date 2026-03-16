@@ -112,7 +112,7 @@ export function RecipeFormScreen({ existingRecipe, onSuccess, onBack }: Props) {
     const asset = result.assets[0];
     setImageUri(asset.uri);
     setUploadingImage(true);
-    const uploaded = await uploadRecipeImage(asset.base64, asset.mimeType ?? "image/jpeg");
+    const uploaded = await uploadRecipeImage(asset.base64!, asset.mimeType ?? "image/jpeg");
     setUploadingImage(false);
     if (typeof uploaded === "object") { setError(uploaded.error); return; }
     setImageUrl(uploaded);
