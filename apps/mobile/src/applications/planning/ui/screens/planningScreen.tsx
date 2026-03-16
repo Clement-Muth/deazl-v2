@@ -115,12 +115,13 @@ const LABEL_W = 48;
 interface SlotActionState { dayOfWeek: number; mealType: MealType; recipeId: string; recipeName: string; }
 
 function WeekGrid({
-  localPlan, weekDays, today, onCellPress,
+  localPlan, weekDays, today, onCellPress, gridLoading,
 }: {
   localPlan: MealPlanData | null;
   weekDays: Date[];
   today: Date;
   onCellPress: (dayOfWeek: number, mealType: MealType, slot: MealSlotData | null) => void;
+  gridLoading: boolean;
 }) {
   const { colors } = useAppTheme();
   return (
@@ -155,28 +156,28 @@ function WeekGrid({
               </View>
               {weekDays.map((day, dayIdx) => {
                 const dayOfWeek = dayIdx + 1;
-                const slot = localPlan ? getSlot(localPlan, dayOfWeek, mealType) : null;
+                const slot = (!gridLoading && localPlan) ? getSlot(localPlan, dayOfWeek, mealType) : null;
                 const hasRecipe = !!slot?.recipeName;
                 const isDone = slot?.isDone ?? false;
                 const isToday = isSameDay(day, today);
                 return (
                   <Pressable
                     key={dayIdx}
-                    onPress={() => onCellPress(dayOfWeek, mealType, slot)}
+                    onPress={() => !gridLoading && onCellPress(dayOfWeek, mealType, slot)}
                     style={({ pressed }) => ({
                       width: COL_W - 6, height: ROW_H, marginRight: 6,
                       borderRadius: 14,
-                      backgroundColor: hasRecipe
-                        ? (isDone ? "#DCFCE7" : bg)
-                        : colors.bgCard,
-                      borderWidth: isToday && !hasRecipe ? 1.5 : 0,
+                      backgroundColor: gridLoading
+                        ? colors.bgSurface
+                        : hasRecipe ? (isDone ? "#DCFCE7" : bg) : colors.bgCard,
+                      borderWidth: !gridLoading && isToday && !hasRecipe ? 1.5 : 0,
                       borderColor: colors.accent + "50",
                       alignItems: "center", justifyContent: "center",
                       padding: 6,
                       opacity: pressed ? 0.75 : 1,
                     })}
                   >
-                    {hasRecipe ? (
+                    {!gridLoading && hasRecipe ? (
                       <>
                         {isDone && (
                           <View style={{ position: "absolute", top: 6, right: 6 }}>
@@ -189,11 +190,11 @@ function WeekGrid({
                           {slot!.recipeName}
                         </Text>
                       </>
-                    ) : (
+                    ) : !gridLoading ? (
                       <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke={isToday ? colors.accent + "80" : colors.border} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                         <Path d="M12 5v14M5 12h14" />
                       </Svg>
-                    )}
+                    ) : null}
                   </Pressable>
                 );
               })}
@@ -215,9 +216,10 @@ export function PlanningScreen() {
   const [generating, setGenerating] = useState(false);
   const [generateResult, setGenerateResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [localPlan, setLocalPlan] = useState<MealPlanData | null>(null);
+  const [gridLoading, setGridLoading] = useState(false);
   const [streak, setStreak] = useState(0);
 
-  useEffect(() => { if (plan) setLocalPlan(plan); }, [plan]);
+  useEffect(() => { if (plan !== undefined) { setLocalPlan(plan); setGridLoading(false); } }, [plan]);
   useEffect(() => { getStreak().then(setStreak); }, []);
   useFocusEffect(useCallback(() => { reload(); }, [reload]));
 
@@ -319,7 +321,7 @@ export function PlanningScreen() {
           <View style={{ flexDirection: "row", gap: 8, marginTop: 6, alignItems: "center" }}>
             {!isSameDay(currentWeekMonday, getMondayOf(today)) && (
               <Pressable
-                onPress={() => { setLocalPlan(null); setCurrentWeekMonday(getMondayOf(today)); }}
+                onPress={() => { setGridLoading(true); setCurrentWeekMonday(getMondayOf(today)); }}
                 style={({ pressed }) => ({
                   height: 34, paddingHorizontal: 12, borderRadius: 10,
                   backgroundColor: colors.accentBg, borderWidth: 1, borderColor: colors.accentBgBorder,
@@ -331,8 +333,8 @@ export function PlanningScreen() {
               </Pressable>
             )}
             {[
-              { onPress: () => { const d = new Date(currentWeekMonday); d.setDate(d.getDate() - 7); setLocalPlan(null); setCurrentWeekMonday(d); }, path: "M15 18l-6-6 6-6" },
-              { onPress: () => { const d = new Date(currentWeekMonday); d.setDate(d.getDate() + 7); setLocalPlan(null); setCurrentWeekMonday(d); }, path: "M9 18l6-6-6-6" },
+              { onPress: () => { const d = new Date(currentWeekMonday); d.setDate(d.getDate() - 7); setGridLoading(true); setCurrentWeekMonday(d); }, path: "M15 18l-6-6 6-6" },
+              { onPress: () => { const d = new Date(currentWeekMonday); d.setDate(d.getDate() + 7); setGridLoading(true); setCurrentWeekMonday(d); }, path: "M9 18l6-6-6-6" },
             ].map(({ onPress, path }, idx) => (
               <Pressable key={idx} onPress={onPress} style={({ pressed }) => ({
                 width: 34, height: 34, borderRadius: 10,
@@ -355,6 +357,7 @@ export function PlanningScreen() {
             weekDays={weekDays}
             today={today}
             onCellPress={handleCellPress}
+            gridLoading={gridLoading}
           />
         </View>
 
