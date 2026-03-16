@@ -35,6 +35,7 @@ import { uploadAvatar } from "../../application/useCases/uploadAvatar";
 import { supabase } from "../../../../lib/supabase";
 import { getUserStores } from "../../../shopping/application/useCases/getUserStores";
 import type { UserStore } from "../../../shopping/application/useCases/getUserStores";
+import { useAppTheme, type ThemePreference } from "../../../../shared/theme";
 
 const DIETARY_OPTIONS = [
   { key: "vegetarian", label: "Végétarien" },
@@ -48,6 +49,7 @@ const DIETARY_OPTIONS = [
 ];
 
 function InitialsAvatar({ name, email, avatarUrl, size = 80 }: { name: string; email: string; avatarUrl?: string | null; size?: number }) {
+  const { colors } = useAppTheme();
   if (avatarUrl) {
     return (
       <Image
@@ -62,8 +64,8 @@ function InitialsAvatar({ name, email, avatarUrl, size = 80 }: { name: string; e
   return (
     <View style={{
       width: size, height: size, borderRadius: size / 2,
-      backgroundColor: "#E8571C", alignItems: "center", justifyContent: "center",
-      shadowColor: "#E8571C", shadowOffset: { width: 0, height: 4 },
+      backgroundColor: colors.accent, alignItems: "center", justifyContent: "center",
+      shadowColor: colors.accent, shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.3, shadowRadius: 12, elevation: 6,
     }}>
       <Text style={{ fontSize: size * 0.35, fontWeight: "900", color: "#fff" }}>{initials}</Text>
@@ -72,19 +74,20 @@ function InitialsAvatar({ name, email, avatarUrl, size = 80 }: { name: string; e
 }
 
 function SettingRow({ label, value, description, onPress }: { label: string; value: string; description?: string; onPress: () => void }) {
+  const { colors } = useAppTheme();
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({
         flexDirection: "row", alignItems: "center", justifyContent: "space-between",
         paddingHorizontal: 16, paddingVertical: 14,
-        backgroundColor: pressed ? "#FAFAF8" : "#fff",
+        backgroundColor: pressed ? colors.bgSubtle : colors.bgCard,
       })}
     >
       <View>
-        <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 0.8 }}>{label}</Text>
-        <Text style={{ fontSize: 14, fontWeight: "600", color: "#1C1917", marginTop: 2 }}>{value || "Non renseigné"}</Text>
-        {description && <Text style={{ fontSize: 11, color: "#A8A29E", marginTop: 2 }}>{description}</Text>}
+        <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 0.8 }}>{label}</Text>
+        <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text, marginTop: 2 }}>{value || "Non renseigné"}</Text>
+        {description && <Text style={{ fontSize: 11, color: colors.textSubtle, marginTop: 2 }}>{description}</Text>}
       </View>
       <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
         <Polyline points="9 18 15 12 9 6" />
@@ -100,21 +103,22 @@ function NavRow({ icon, label, description, onPress, destructive = false }: {
   onPress: () => void;
   destructive?: boolean;
 }) {
+  const { colors } = useAppTheme();
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({
         flexDirection: "row", alignItems: "center", gap: 12,
         paddingHorizontal: 16, paddingVertical: 14,
-        backgroundColor: pressed ? "#FAFAF8" : "#fff",
+        backgroundColor: pressed ? colors.bgSubtle : colors.bgCard,
       })}
     >
-      <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: destructive ? "#FEE2E2" : "#F5F3EF", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: destructive ? colors.dangerBg : colors.bgSurface, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
         {icon}
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 14, fontWeight: "600", color: destructive ? "#DC2626" : "#1C1917" }}>{label}</Text>
-        {description && <Text style={{ fontSize: 11, color: "#78716C", marginTop: 1 }}>{description}</Text>}
+        <Text style={{ fontSize: 14, fontWeight: "600", color: destructive ? colors.danger : colors.text }}>{label}</Text>
+        {description && <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 1 }}>{description}</Text>}
       </View>
       {!destructive && (
         <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E60" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -127,6 +131,7 @@ function NavRow({ icon, label, description, onPress, destructive = false }: {
 
 export function ProfileScreen() {
   const router = useRouter();
+  const { colors, preference, setPreference } = useAppTheme();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [household, setHousehold] = useState<Household | null>(null);
   const [userStores, setUserStores] = useState<UserStore[]>([]);
@@ -440,14 +445,14 @@ export function ProfileScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#FAF9F6", alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator color="#E8571C" size="large" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator color={colors.accent} size="large" />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#FAF9F6" }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top"]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
 
         <View style={{ alignItems: "center", paddingTop: 32, paddingBottom: 28, paddingHorizontal: 20 }}>
@@ -456,7 +461,7 @@ export function ProfileScreen() {
             <View style={{
               position: "absolute", bottom: 0, right: 0,
               width: 26, height: 26, borderRadius: 13,
-              backgroundColor: "#E8571C", borderWidth: 2, borderColor: "#FAF9F6",
+              backgroundColor: colors.accent, borderWidth: 2, borderColor: colors.bg,
               alignItems: "center", justifyContent: "center",
             }}>
               {uploadingAvatar
@@ -469,31 +474,31 @@ export function ProfileScreen() {
               }
             </View>
           </Pressable>
-          <Text style={{ fontSize: 22, fontWeight: "900", color: "#1C1917", marginTop: 16, letterSpacing: -0.3 }}>
+          <Text style={{ fontSize: 22, fontWeight: "900", color: colors.text, marginTop: 16, letterSpacing: -0.3 }}>
             {profile?.fullName || "Nom non renseigné"}
           </Text>
-          <Text style={{ fontSize: 13, color: "#78716C", marginTop: 2 }}>
+          <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>
             {profile?.email}
           </Text>
         </View>
 
         <View style={{ paddingHorizontal: 16, gap: 12 }}>
-          <View style={{ borderRadius: 14, backgroundColor: "#fff", overflow: "hidden" }}>
+          <View style={{ borderRadius: 14, backgroundColor: colors.bgCard, overflow: "hidden" }}>
             <SettingRow label="Nom affiché" value={profile?.fullName ?? ""} onPress={openNameSheet} />
-            <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
+            <View style={{ height: 1, backgroundColor: colors.bgSurface }} />
             <SettingRow
               label="Portions par repas"
               value={`${profile?.householdSize ?? 2} personne${(profile?.householdSize ?? 2) > 1 ? "s" : ""}`}
               description="Adapte les quantités dans tes recettes"
               onPress={openSizeSheet}
             />
-            <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
+            <View style={{ height: 1, backgroundColor: colors.bgSurface }} />
             <SettingRow
               label="Mot de passe"
               value="••••••••"
               onPress={() => { setCurrentPasswordInput(""); setPasswordInput(""); setConfirmPasswordInput(""); setPasswordError(null); setPasswordSuccess(false); setEditSheet("password"); }}
             />
-            <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
+            <View style={{ height: 1, backgroundColor: colors.bgSurface }} />
             <SettingRow
               label="Adresse email"
               value={profile?.email ?? ""}
@@ -538,33 +543,33 @@ export function ProfileScreen() {
                   </Pressable>
                 </View>
                 {resendError && (
-                  <Text style={{ fontSize: 11, color: "#DC2626" }}>{resendError}</Text>
+                  <Text style={{ fontSize: 11, color: colors.danger }}>{resendError}</Text>
                 )}
               </View>
             )}
-            <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
+            <View style={{ height: 1, backgroundColor: colors.bgSurface }} />
             <Pressable
               onPress={openDietarySheet}
               style={({ pressed }) => ({
                 flexDirection: "row", alignItems: "center", justifyContent: "space-between",
                 paddingHorizontal: 16, paddingVertical: 14,
-                backgroundColor: pressed ? "#FAFAF8" : "#fff",
+                backgroundColor: pressed ? colors.bgSubtle : colors.bgCard,
               })}
             >
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 0.8 }}>Régime alimentaire</Text>
+                <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 0.8 }}>Régime alimentaire</Text>
                 {(profile?.dietaryPreferences ?? []).length > 0 ? (
                   <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
                     {(profile?.dietaryPreferences ?? []).map((k) => (
                       <View key={k} style={{ borderRadius: 99, paddingHorizontal: 8, paddingVertical: 2, backgroundColor: "#E8571C1a" }}>
-                        <Text style={{ fontSize: 11, fontWeight: "600", color: "#E8571C" }}>
+                        <Text style={{ fontSize: 11, fontWeight: "600", color: colors.accent }}>
                           {DIETARY_OPTIONS.find((o) => o.key === k)?.label ?? k}
                         </Text>
                       </View>
                     ))}
                   </View>
                 ) : (
-                  <Text style={{ fontSize: 14, fontWeight: "600", color: "#1C1917", marginTop: 2 }}>Aucune restriction</Text>
+                  <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text, marginTop: 2 }}>Aucune restriction</Text>
                 )}
               </View>
               <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -573,12 +578,12 @@ export function ProfileScreen() {
             </Pressable>
           </View>
 
-          <View style={{ borderRadius: 14, backgroundColor: "#fff", overflow: "hidden" }}>
+          <View style={{ borderRadius: 14, backgroundColor: colors.bgCard, overflow: "hidden" }}>
             {household ? (
               <>
                 <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                  <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 0.8 }}>Mon foyer</Text>
-                  <Text style={{ fontSize: 11, fontWeight: "600", color: "#A8A29E" }}>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 0.8 }}>Mon foyer</Text>
+                  <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textSubtle }}>
                     {household.members.length} membre{household.members.length > 1 ? "s" : ""}
                   </Text>
                 </View>
@@ -594,39 +599,39 @@ export function ProfileScreen() {
                           avatarUrl={m.avatarUrl}
                           size={38}
                         />
-                        <Text style={{ fontSize: 14, fontWeight: "600", color: "#1C1917", flex: 1 }}>{m.displayName ?? "Membre"}</Text>
+                        <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text, flex: 1 }}>{m.displayName ?? "Membre"}</Text>
                         <View style={{ flexDirection: "row", gap: 5 }}>
                           {isCreator && (
                             <View style={{ borderRadius: 99, paddingHorizontal: 8, paddingVertical: 2, backgroundColor: "#E8571C1a" }}>
-                              <Text style={{ fontSize: 11, fontWeight: "600", color: "#E8571C" }}>créateur</Text>
+                              <Text style={{ fontSize: 11, fontWeight: "600", color: colors.accent }}>créateur</Text>
                             </View>
                           )}
                           {isMe && (
-                            <View style={{ borderRadius: 99, paddingHorizontal: 8, paddingVertical: 2, backgroundColor: "#F5F3EF" }}>
-                              <Text style={{ fontSize: 11, fontWeight: "600", color: "#A8A29E" }}>moi</Text>
+                            <View style={{ borderRadius: 99, paddingHorizontal: 8, paddingVertical: 2, backgroundColor: colors.bgSurface }}>
+                              <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textSubtle }}>moi</Text>
                             </View>
                           )}
                         </View>
                       </View>
-                      {i < Math.min(household.members.length, 4) - 1 && <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />}
+                      {i < Math.min(household.members.length, 4) - 1 && <View style={{ height: 1, backgroundColor: colors.bgSurface }} />}
                     </View>
                   );
                 })}
                 {household.members.length > 4 && (
                   <View style={{ paddingHorizontal: 16, paddingVertical: 10 }}>
-                    <Text style={{ fontSize: 13, color: "#A8A29E", fontWeight: "500" }}>
+                    <Text style={{ fontSize: 13, color: colors.textSubtle, fontWeight: "500" }}>
                       +{household.members.length - 4} autre{household.members.length - 4 > 1 ? "s" : ""} membre{household.members.length - 4 > 1 ? "s" : ""}
                     </Text>
                   </View>
                 )}
-                <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
+                <View style={{ height: 1, backgroundColor: colors.bgSurface }} />
                 <NavRow
                   icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Circle cx={18} cy={5} r={3} /><Circle cx={6} cy={12} r={3} /><Circle cx={18} cy={19} r={3} /><Line x1={8.59} y1={13.51} x2={15.42} y2={17.49} /><Line x1={15.41} y1={6.51} x2={8.59} y2={10.49} /></Svg>}
                   label="Inviter quelqu'un"
                   description="Partager le code d'invitation"
                   onPress={() => setShowInviteModal(true)}
                 />
-                <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
+                <View style={{ height: 1, backgroundColor: colors.bgSurface }} />
                 <NavRow
                   icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><Polyline points="16 17 21 12 16 7" /><Line x1={21} y1={12} x2={9} y2={12} /></Svg>}
                   label="Quitter le foyer"
@@ -637,21 +642,21 @@ export function ProfileScreen() {
             ) : (
               <>
                 <View style={{ paddingHorizontal: 16, paddingVertical: 14 }}>
-                  <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>Foyer</Text>
-                  <Text style={{ fontSize: 13, color: "#78716C" }}>Partage ta liste de courses et ton planning avec d'autres utilisateurs Deazl.</Text>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>Foyer</Text>
+                  <Text style={{ fontSize: 13, color: colors.textMuted }}>Partage ta liste de courses et ton planning avec d'autres utilisateurs Deazl.</Text>
                 </View>
                 {createError && (
-                  <View style={{ marginHorizontal: 16, marginBottom: 8, borderRadius: 10, backgroundColor: "#FEE2E2", paddingHorizontal: 12, paddingVertical: 8 }}>
-                    <Text style={{ fontSize: 12, color: "#DC2626", fontWeight: "600" }}>{createError}</Text>
+                  <View style={{ marginHorizontal: 16, marginBottom: 8, borderRadius: 10, backgroundColor: colors.dangerBg, paddingHorizontal: 12, paddingVertical: 8 }}>
+                    <Text style={{ fontSize: 12, color: colors.danger, fontWeight: "600" }}>{createError}</Text>
                   </View>
                 )}
-                <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
+                <View style={{ height: 1, backgroundColor: colors.bgSurface }} />
                 <Pressable
                   onPress={saving ? undefined : handleCreateHousehold}
                   style={({ pressed }) => ({
                     flexDirection: "row", alignItems: "center", gap: 12,
                     paddingHorizontal: 16, paddingVertical: 14,
-                    backgroundColor: pressed ? "#FDF0EB" : "#FEF3EE",
+                    backgroundColor: pressed ? colors.accentBg : colors.accentBg,
                   })}
                 >
                   <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: "#E8571C1a", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -661,14 +666,14 @@ export function ProfileScreen() {
                     }
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 14, fontWeight: "700", color: "#E8571C" }}>{saving ? "Création…" : "Créer un foyer"}</Text>
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: colors.accent }}>{saving ? "Création…" : "Créer un foyer"}</Text>
                     <Text style={{ fontSize: 11, color: "#E8571C99", marginTop: 1 }}>Générer un code d'invitation</Text>
                   </View>
                   <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#E8571C60" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                     <Polyline points="9 18 15 12 9 6" />
                   </Svg>
                 </Pressable>
-                <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
+                <View style={{ height: 1, backgroundColor: colors.bgSurface }} />
                 <NavRow
                   icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><Circle cx={8.5} cy={7} r={4} /><Line x1={20} y1={8} x2={20} y2={14} /><Line x1={23} y1={11} x2={17} y2={11} /></Svg>}
                   label="Rejoindre un foyer"
@@ -679,18 +684,18 @@ export function ProfileScreen() {
             )}
           </View>
 
-          <View style={{ borderRadius: 14, backgroundColor: "#fff", overflow: "hidden" }}>
+          <View style={{ borderRadius: 14, backgroundColor: colors.bgCard, overflow: "hidden" }}>
             <Pressable
               onPress={() => setEditSheet("stores")}
               style={({ pressed }) => ({
                 flexDirection: "row", alignItems: "center", gap: 12,
                 paddingHorizontal: 16, paddingTop: 14, paddingBottom: userStores.length > 0 ? 10 : 14,
-                backgroundColor: pressed ? "#FAFAF8" : "#fff",
+                backgroundColor: pressed ? colors.bgSubtle : colors.bgCard,
               })}
             >
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: userStores.length > 0 ? 0 : 4 }}>Mes magasins</Text>
-                {userStores.length === 0 && <Text style={{ fontSize: 14, fontWeight: "600", color: "#C4B8AF", marginTop: 2 }}>Aucun magasin sélectionné</Text>}
+                <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: userStores.length > 0 ? 0 : 4 }}>Mes magasins</Text>
+                {userStores.length === 0 && <Text style={{ fontSize: 14, fontWeight: "600", color: colors.textSubtle, marginTop: 2 }}>Aucun magasin sélectionné</Text>}
               </View>
               <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                 <Polyline points="9 18 15 12 9 6" />
@@ -701,7 +706,7 @@ export function ProfileScreen() {
                 {userStores.map((s, i) => (
                   <View key={s.id}>
                     <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, gap: 12 }}>
-                      <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#F5F3EF", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                         <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                           <Path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
                           <Line x1={3} y1={6} x2={21} y2={6} />
@@ -709,11 +714,11 @@ export function ProfileScreen() {
                         </Svg>
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 14, fontWeight: "600", color: "#1C1917" }}>{s.brand ? `${s.brand} — ${s.name}` : s.name}</Text>
-                        {s.city ? <Text style={{ fontSize: 12, color: "#78716C", marginTop: 1 }}>{s.city}</Text> : null}
+                        <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text }}>{s.brand ? `${s.brand} — ${s.name}` : s.name}</Text>
+                        {s.city ? <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 1 }}>{s.city}</Text> : null}
                       </View>
                     </View>
-                    {i < userStores.length - 1 && <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />}
+                    {i < userStores.length - 1 && <View style={{ height: 1, backgroundColor: colors.bgSurface }} />}
                   </View>
                 ))}
                 <View style={{ paddingBottom: 4 }} />
@@ -721,14 +726,43 @@ export function ProfileScreen() {
             )}
           </View>
 
-          <View style={{ borderRadius: 14, backgroundColor: "#fff", overflow: "hidden" }}>
+          <View style={{ marginBottom: 0 }}>
+            <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textMuted + "99", textTransform: "uppercase", letterSpacing: 2, paddingHorizontal: 16, marginBottom: 10 }}>
+              Apparence
+            </Text>
+            <View style={{ borderRadius: 20, backgroundColor: colors.bgCard, overflow: "hidden", marginHorizontal: 0, shadowColor: colors.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 1 }}>
+              <View style={{ flexDirection: "row", padding: 8, gap: 4 }}>
+                {([
+                  { value: "auto" as ThemePreference, label: "Auto", icon: "🌗" },
+                  { value: "light" as ThemePreference, label: "Clair", icon: "☀️" },
+                  { value: "dark" as ThemePreference, label: "Sombre", icon: "🌙" },
+                ] as const).map((opt) => (
+                  <Pressable
+                    key={opt.value}
+                    onPress={() => setPreference(opt.value)}
+                    style={{
+                      flex: 1, borderRadius: 14, paddingVertical: 10, alignItems: "center", gap: 4,
+                      backgroundColor: preference === opt.value ? colors.accent : "transparent",
+                    }}
+                  >
+                    <Text style={{ fontSize: 18 }}>{opt.icon}</Text>
+                    <Text style={{ fontSize: 11, fontWeight: "700", color: preference === opt.value ? "#fff" : colors.textMuted }}>
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          </View>
+
+          <View style={{ borderRadius: 14, backgroundColor: colors.bgCard, overflow: "hidden" }}>
             <NavRow
               icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M18 20V10" /><Path d="M12 20V4" /><Path d="M6 20v-6" /></Svg>}
               label="Statistiques"
               description="Tes habitudes et budget alimentaire"
               onPress={() => router.push("/analytics" as never)}
             />
-            <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
+            <View style={{ height: 1, backgroundColor: colors.bgSurface }} />
             <NavRow
               icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><Polyline points="16 17 21 12 16 7" /><Line x1={21} y1={12} x2={9} y2={12} /></Svg>}
               label="Se déconnecter"
@@ -736,13 +770,13 @@ export function ProfileScreen() {
             />
           </View>
 
-          <View style={{ borderRadius: 14, backgroundColor: "#fff", overflow: "hidden" }}>
+          <View style={{ borderRadius: 14, backgroundColor: colors.bgCard, overflow: "hidden" }}>
             <NavRow
               icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><Polyline points="14 2 14 8 20 8" /><Line x1={16} y1={13} x2={8} y2={13} /><Line x1={16} y1={17} x2={8} y2={17} /><Polyline points="10 9 9 9 8 9" /></Svg>}
               label="Conditions d'utilisation"
               onPress={() => Linking.openURL("https://deazl.fr/conditions")}
             />
-            <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />
+            <View style={{ height: 1, backgroundColor: colors.bgSurface }} />
             <NavRow
               icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></Svg>}
               label="Politique de confidentialité"
@@ -750,7 +784,7 @@ export function ProfileScreen() {
             />
           </View>
 
-          <Text style={{ fontSize: 11, color: "#C4B8AF", textAlign: "center", marginTop: 4 }}>
+          <Text style={{ fontSize: 11, color: colors.textSubtle, textAlign: "center", marginTop: 4 }}>
             Deazl v{Constants.expoConfig?.version ?? "—"}
           </Text>
 
@@ -758,13 +792,13 @@ export function ProfileScreen() {
             onPress={() => { setDeleteError(null); setConfirmDelete(true); }}
             style={({ pressed }) => ({ alignSelf: "center", marginTop: 16, marginBottom: 4, opacity: pressed ? 0.5 : 1 })}
           >
-            <Text style={{ fontSize: 12, color: "#C4B8AF", textDecorationLine: "underline" }}>Supprimer mon compte</Text>
+            <Text style={{ fontSize: 12, color: colors.textSubtle, textDecorationLine: "underline" }}>Supprimer mon compte</Text>
           </Pressable>
         </View>
       </ScrollView>
 
       <BottomModal isOpen={editSheet === "name"} onClose={() => setEditSheet(null)} height="auto">
-        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Nom affiché</Text>
+        <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 16 }}>Nom affiché</Text>
         <View style={{ gap: 12 }}>
           <TextInput
             value={nameInput}
@@ -773,33 +807,33 @@ export function ProfileScreen() {
             placeholderTextColor="#A8A29E"
             returnKeyType="done"
             onSubmitEditing={handleSaveName}
-            style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#1C1917" }}
+            style={{ borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: colors.text }}
           />
           <Pressable
             onPress={handleSaveName}
             disabled={saving || !nameInput.trim()}
-            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: saving || !nameInput.trim() ? "#F5F3EF" : "#E8571C", paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1 })}
+            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: saving || !nameInput.trim() ? colors.bgSurface : colors.accent, paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1 })}
           >
-            <Text style={{ fontSize: 15, fontWeight: "700", color: saving || !nameInput.trim() ? "#A8A29E" : "#fff" }}>{saving ? "Enregistrement…" : "Enregistrer"}</Text>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: saving || !nameInput.trim() ? colors.textSubtle : "#fff" }}>{saving ? "Enregistrement…" : "Enregistrer"}</Text>
           </Pressable>
         </View>
       </BottomModal>
 
       <BottomModal isOpen={editSheet === "size"} onClose={() => setEditSheet(null)} height="auto">
-        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Portions par repas</Text>
+        <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 16 }}>Portions par repas</Text>
         <View style={{ gap: 20 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 24 }}>
             <Pressable
               onPress={() => setSizeInput((s) => Math.max(1, s - 1))}
-              style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: "#F5F3EF", alignItems: "center", justifyContent: "center" }}
+              style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center" }}
             >
               <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                 <Line x1={5} y1={12} x2={19} y2={12} />
               </Svg>
             </Pressable>
             <View style={{ alignItems: "center" }}>
-              <Text style={{ fontSize: 48, fontWeight: "900", color: "#1C1917", lineHeight: 56 }}>{sizeInput}</Text>
-              <Text style={{ fontSize: 13, color: "#78716C" }}>personne{sizeInput > 1 ? "s" : ""}</Text>
+              <Text style={{ fontSize: 48, fontWeight: "900", color: colors.text, lineHeight: 56 }}>{sizeInput}</Text>
+              <Text style={{ fontSize: 13, color: colors.textMuted }}>personne{sizeInput > 1 ? "s" : ""}</Text>
             </View>
             <Pressable
               onPress={() => setSizeInput((s) => s + 1)}
@@ -814,15 +848,15 @@ export function ProfileScreen() {
           <Pressable
             onPress={handleSaveSize}
             disabled={saving}
-            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: saving ? "#F5F3EF" : "#E8571C", paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1 })}
+            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: saving ? colors.bgSurface : colors.accent, paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1 })}
           >
-            <Text style={{ fontSize: 15, fontWeight: "700", color: saving ? "#A8A29E" : "#fff" }}>{saving ? "Enregistrement…" : "Enregistrer"}</Text>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: saving ? colors.textSubtle : "#fff" }}>{saving ? "Enregistrement…" : "Enregistrer"}</Text>
           </Pressable>
         </View>
       </BottomModal>
 
       <BottomModal isOpen={editSheet === "dietary"} onClose={() => setEditSheet(null)} height="auto">
-        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Régime alimentaire</Text>
+        <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 16 }}>Régime alimentaire</Text>
         <BottomModalScrollView contentContainerStyle={{ paddingBottom: 40, gap: 8 }}>
           {DIETARY_OPTIONS.map((opt) => {
             const active = dietaryInput.includes(opt.key);
@@ -833,11 +867,11 @@ export function ProfileScreen() {
                 style={({ pressed }) => ({
                   flexDirection: "row", alignItems: "center", justifyContent: "space-between",
                   borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14,
-                  backgroundColor: pressed ? "#F0EDE8" : active ? "#FFF7ED" : "#F5F3EF",
+                  backgroundColor: pressed ? colors.border : active ? colors.accentBg : colors.bgSurface,
                   borderWidth: active ? 1.5 : 0, borderColor: active ? "#E8571C40" : "transparent",
                 })}
               >
-                <Text style={{ fontSize: 14, fontWeight: active ? "700" : "500", color: active ? "#E8571C" : "#1C1917" }}>
+                <Text style={{ fontSize: 14, fontWeight: active ? "700" : "500", color: active ? colors.accent : colors.text }}>
                   {opt.label}
                 </Text>
                 {active && (
@@ -851,15 +885,15 @@ export function ProfileScreen() {
           <Pressable
             onPress={handleSaveDietary}
             disabled={saving}
-            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: saving ? "#F5F3EF" : "#E8571C", paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1, marginTop: 4 })}
+            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: saving ? colors.bgSurface : colors.accent, paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1, marginTop: 4 })}
           >
-            <Text style={{ fontSize: 15, fontWeight: "700", color: saving ? "#A8A29E" : "#fff" }}>{saving ? "Enregistrement…" : "Enregistrer"}</Text>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: saving ? colors.textSubtle : "#fff" }}>{saving ? "Enregistrement…" : "Enregistrer"}</Text>
           </Pressable>
         </BottomModalScrollView>
       </BottomModal>
 
       <BottomModal isOpen={editSheet === "household"} onClose={() => setEditSheet(null)} height="auto">
-        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Rejoindre un foyer</Text>
+        <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 16 }}>Rejoindre un foyer</Text>
         <View style={{ gap: 12 }}>
           <TextInput
             value={joinCodeInput}
@@ -868,18 +902,18 @@ export function ProfileScreen() {
             placeholderTextColor="#A8A29E"
             autoCapitalize="characters"
             style={{
-              borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 14,
-              fontSize: 18, fontWeight: "700", color: "#1C1917", letterSpacing: 3, textAlign: "center",
-              borderWidth: joinError ? 1.5 : 0, borderColor: "#DC2626",
+              borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 16, paddingVertical: 14,
+              fontSize: 18, fontWeight: "700", color: colors.text, letterSpacing: 3, textAlign: "center",
+              borderWidth: joinError ? 1.5 : 0, borderColor: colors.danger,
             }}
           />
-          {joinError && <Text style={{ fontSize: 12, color: "#DC2626", fontWeight: "600", textAlign: "center" }}>{joinError}</Text>}
+          {joinError && <Text style={{ fontSize: 12, color: colors.danger, fontWeight: "600", textAlign: "center" }}>{joinError}</Text>}
           <Pressable
             onPress={handleJoinHousehold}
             disabled={saving || !joinCodeInput.trim()}
-            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: saving || !joinCodeInput.trim() ? "#F5F3EF" : "#E8571C", paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1 })}
+            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: saving || !joinCodeInput.trim() ? colors.bgSurface : colors.accent, paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1 })}
           >
-            <Text style={{ fontSize: 15, fontWeight: "700", color: saving || !joinCodeInput.trim() ? "#A8A29E" : "#fff" }}>{saving ? "Rejoindre…" : "Rejoindre"}</Text>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: saving || !joinCodeInput.trim() ? colors.textSubtle : "#fff" }}>{saving ? "Rejoindre…" : "Rejoindre"}</Text>
           </Pressable>
         </View>
       </BottomModal>
@@ -890,9 +924,9 @@ export function ProfileScreen() {
         height="85%"
         portalHostName="stores-sheet-dialog"
       >
-        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 12 }}>Mes magasins</Text>
+        <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 12 }}>Mes magasins</Text>
 
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 14, paddingVertical: 12, marginBottom: 10 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 10 }}>
           <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
             <Circle cx={11} cy={11} r={8} />
             <Line x1={21} y1={21} x2={16.65} y2={16.65} />
@@ -904,7 +938,7 @@ export function ProfileScreen() {
             placeholderTextColor="#A8A29E"
             autoFocus
             returnKeyType="search"
-            style={{ flex: 1, fontSize: 14, color: "#1C1917", padding: 0 }}
+            style={{ flex: 1, fontSize: 14, color: colors.text, padding: 0 }}
           />
           {storeQuery.length > 0 && (
             <Pressable onPress={() => { setStoreQuery(""); setStoreResults([]); setOsmResults([]); }} hitSlop={8}>
@@ -922,7 +956,7 @@ export function ProfileScreen() {
           style={({ pressed }) => ({
             flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start",
             borderRadius: 99, paddingHorizontal: 12, paddingVertical: 7, marginBottom: 14,
-            backgroundColor: geolocating ? "#F5F3EF" : "#E8571C1a",
+            backgroundColor: geolocating ? colors.bgSurface : "#E8571C1a",
             opacity: pressed ? 0.7 : 1,
           })}
         >
@@ -933,7 +967,7 @@ export function ProfileScreen() {
                 <Path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" />
               </Svg>
           }
-          <Text style={{ fontSize: 13, fontWeight: "600", color: geolocating ? "#A8A29E" : "#E8571C" }}>
+          <Text style={{ fontSize: 13, fontWeight: "600", color: geolocating ? colors.textSubtle : colors.accent }}>
             {geolocating ? "Localisation…" : "Autour de moi"}
           </Text>
         </Pressable>
@@ -952,12 +986,12 @@ export function ProfileScreen() {
           {storeSearching && (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
               <ActivityIndicator size="small" color="#E8571C" />
-              <Text style={{ fontSize: 12, color: "#A8A29E" }}>Recherche en cours…</Text>
+              <Text style={{ fontSize: 12, color: colors.textSubtle }}>Recherche en cours…</Text>
             </View>
           )}
 
           {(storeResults.length > 0 || osmResults.length > 0) && (
-            <View style={{ borderRadius: 16, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E7E5E4", overflow: "hidden", marginBottom: 14 }}>
+            <View style={{ borderRadius: 16, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, overflow: "hidden", marginBottom: 14 }}>
               {storeResults.map((s, i) => {
                 const alreadyAdded = userStores.some((us) => us.id === s.id);
                 const isAdding = addingStoreId === s.id;
@@ -967,7 +1001,7 @@ export function ProfileScreen() {
                       onPress={alreadyAdded ? undefined : () => handleAddStore(s)}
                       style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 13, opacity: pressed && !alreadyAdded ? 0.7 : 1 })}
                     >
-                      <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: "#F5F3EF", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                         <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                           <Path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
                           <Line x1={3} y1={6} x2={21} y2={6} />
@@ -975,8 +1009,8 @@ export function ProfileScreen() {
                         </Svg>
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 13, fontWeight: "600", color: "#1C1917" }}>{s.brand ? `${s.brand} — ${s.name}` : s.name}</Text>
-                        <Text style={{ fontSize: 11, color: "#78716C" }}>{s.city}{s.address ? ` · ${s.address}` : ""}</Text>
+                        <Text style={{ fontSize: 13, fontWeight: "600", color: colors.text }}>{s.brand ? `${s.brand} — ${s.name}` : s.name}</Text>
+                        <Text style={{ fontSize: 11, color: colors.textMuted }}>{s.city}{s.address ? ` · ${s.address}` : ""}</Text>
                       </View>
                       {isAdding
                         ? <ActivityIndicator size="small" color="#E8571C" />
@@ -985,7 +1019,7 @@ export function ProfileScreen() {
                           : <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><Line x1={12} y1={5} x2={12} y2={19} /><Line x1={5} y1={12} x2={19} y2={12} /></Svg>
                       }
                     </Pressable>
-                    {(i < storeResults.length - 1 || osmResults.length > 0) && <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />}
+                    {(i < storeResults.length - 1 || osmResults.length > 0) && <View style={{ height: 1, backgroundColor: colors.bgSurface }} />}
                   </View>
                 );
               })}
@@ -998,7 +1032,7 @@ export function ProfileScreen() {
                       onPress={alreadyAdded ? undefined : () => handleAddOSMStore(s)}
                       style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 13, opacity: pressed && !alreadyAdded ? 0.7 : 1 })}
                     >
-                      <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: "#F5F3EF", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                         <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                           <Path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
                           <Line x1={3} y1={6} x2={21} y2={6} />
@@ -1006,8 +1040,8 @@ export function ProfileScreen() {
                         </Svg>
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 13, fontWeight: "600", color: "#1C1917" }}>{s.brand ? `${s.brand} — ${s.name}` : s.name}</Text>
-                        <Text style={{ fontSize: 11, color: "#78716C" }}>
+                        <Text style={{ fontSize: 13, fontWeight: "600", color: colors.text }}>{s.brand ? `${s.brand} — ${s.name}` : s.name}</Text>
+                        <Text style={{ fontSize: 11, color: colors.textMuted }}>
                           {s.city}{s.address ? ` · ${s.address}` : ""}
                           {s.distanceM != null ? ` · ${s.distanceM < 1000 ? `${s.distanceM} m` : `${(s.distanceM / 1000).toFixed(1)} km`}` : ""}
                         </Text>
@@ -1019,7 +1053,7 @@ export function ProfileScreen() {
                           : <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><Line x1={12} y1={5} x2={12} y2={19} /><Line x1={5} y1={12} x2={19} y2={12} /></Svg>
                       }
                     </Pressable>
-                    {i < osmResults.length - 1 && <View style={{ height: 1, backgroundColor: "#F5F3EF" }} />}
+                    {i < osmResults.length - 1 && <View style={{ height: 1, backgroundColor: colors.bgSurface }} />}
                   </View>
                 );
               })}
@@ -1029,7 +1063,7 @@ export function ProfileScreen() {
           {storeQuery.trim().length > 0 && !storeSearching && storeResults.length === 0 && osmResults.length === 0 && (
             <Pressable
               onPress={() => { setCreateBrand(storeQuery.trim()); setCreateStoreSheet(true); }}
-              style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 14, backgroundColor: "#FFF7ED", padding: 12, marginBottom: 14, opacity: pressed ? 0.8 : 1 })}
+              style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 14, backgroundColor: colors.accentBg, padding: 12, marginBottom: 14, opacity: pressed ? 0.8 : 1 })}
             >
               <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                 <Line x1={12} y1={5} x2={12} y2={19} />
@@ -1041,14 +1075,14 @@ export function ProfileScreen() {
 
           {userStores.length > 0 && (
             <>
-              <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>
+              <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>
                 {userStores.length} magasin{userStores.length > 1 ? "s" : ""} sélectionné{userStores.length > 1 ? "s" : ""}
               </Text>
               {userStores.map((s) => (
-                <View key={s.id} style={{ flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 14, paddingVertical: 12, marginBottom: 8 }}>
+                <View key={s.id} style={{ flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 8 }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: "600", color: "#1C1917" }}>{s.brand ? `${s.brand} — ${s.name}` : s.name}</Text>
-                    <Text style={{ fontSize: 11, color: "#78716C" }}>{s.city}</Text>
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: colors.text }}>{s.brand ? `${s.brand} — ${s.name}` : s.name}</Text>
+                    <Text style={{ fontSize: 11, color: colors.textMuted }}>{s.city}</Text>
                   </View>
                   <Pressable
                     onPress={() => setRemoveDialogStore({ id: s.id, displayName: s.brand ? `${s.brand} — ${s.name}` : s.name })}
@@ -1066,7 +1100,7 @@ export function ProfileScreen() {
           )}
 
           {userStores.length === 0 && !storeQuery && osmResults.length === 0 && (
-            <Text style={{ fontSize: 13, color: "#A8A29E", textAlign: "center", marginTop: 4 }}>
+            <Text style={{ fontSize: 13, color: colors.textSubtle, textAlign: "center", marginTop: 4 }}>
               Recherche un magasin ou utilise la géolocalisation
             </Text>
           )}
@@ -1093,33 +1127,33 @@ export function ProfileScreen() {
       </BottomModal>
 
       <BottomModal isOpen={createStoreSheet} onClose={() => { setCreateStoreSheet(false); setCreateStoreError(null); }} height="auto">
-        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Créer un magasin</Text>
+        <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 16 }}>Créer un magasin</Text>
         <View style={{ gap: 10 }}>
-          <TextInput value={createBrand} onChangeText={setCreateBrand} placeholder="Enseigne (ex: Carrefour, Lidl…)" placeholderTextColor="#A8A29E" style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 13, fontSize: 14, color: "#1C1917" }} />
-          <TextInput value={createCity} onChangeText={setCreateCity} placeholder="Ville *" placeholderTextColor="#A8A29E" style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 13, fontSize: 14, color: "#1C1917" }} />
-          <TextInput value={createAddress} onChangeText={setCreateAddress} placeholder="Adresse (optionnel)" placeholderTextColor="#A8A29E" style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 13, fontSize: 14, color: "#1C1917" }} />
-          {createStoreError && <Text style={{ fontSize: 12, color: "#DC2626" }}>{createStoreError}</Text>}
+          <TextInput value={createBrand} onChangeText={setCreateBrand} placeholder="Enseigne (ex: Carrefour, Lidl…)" placeholderTextColor="#A8A29E" style={{ borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 16, paddingVertical: 13, fontSize: 14, color: colors.text }} />
+          <TextInput value={createCity} onChangeText={setCreateCity} placeholder="Ville *" placeholderTextColor="#A8A29E" style={{ borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 16, paddingVertical: 13, fontSize: 14, color: colors.text }} />
+          <TextInput value={createAddress} onChangeText={setCreateAddress} placeholder="Adresse (optionnel)" placeholderTextColor="#A8A29E" style={{ borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 16, paddingVertical: 13, fontSize: 14, color: colors.text }} />
+          {createStoreError && <Text style={{ fontSize: 12, color: colors.danger }}>{createStoreError}</Text>}
           <Pressable
             onPress={handleCreateStore}
             disabled={creatingStore || !createBrand.trim() || !createCity.trim()}
-            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: creatingStore || !createBrand.trim() || !createCity.trim() ? "#F5F3EF" : "#E8571C", paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1, marginTop: 2 })}
+            style={({ pressed }) => ({ borderRadius: 16, backgroundColor: creatingStore || !createBrand.trim() || !createCity.trim() ? colors.bgSurface : colors.accent, paddingVertical: 16, alignItems: "center", opacity: pressed ? 0.8 : 1, marginTop: 2 })}
           >
-            <Text style={{ fontSize: 15, fontWeight: "700", color: creatingStore || !createBrand.trim() || !createCity.trim() ? "#A8A29E" : "#fff" }}>{creatingStore ? "Création…" : "Créer et ajouter"}</Text>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: creatingStore || !createBrand.trim() || !createCity.trim() ? colors.textSubtle : "#fff" }}>{creatingStore ? "Création…" : "Créer et ajouter"}</Text>
           </Pressable>
         </View>
       </BottomModal>
 
       <BottomModal isOpen={showInviteModal} onClose={() => setShowInviteModal(false)} height="auto">
-        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 4 }}>Inviter quelqu'un</Text>
-        <Text style={{ fontSize: 13, color: "#78716C", marginBottom: 20 }}>Partage ce code ou envoie une invitation directe.</Text>
-        <View style={{ borderRadius: 16, backgroundColor: "#F5F3EF", paddingVertical: 22, alignItems: "center", marginBottom: 12 }}>
-          <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Code d'invitation</Text>
-          <Text style={{ fontSize: 34, fontWeight: "900", color: "#1C1917", letterSpacing: 8 }}>{household?.inviteCode}</Text>
+        <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 4 }}>Inviter quelqu'un</Text>
+        <Text style={{ fontSize: 13, color: colors.textMuted, marginBottom: 20 }}>Partage ce code ou envoie une invitation directe.</Text>
+        <View style={{ borderRadius: 16, backgroundColor: colors.bgSurface, paddingVertical: 22, alignItems: "center", marginBottom: 12 }}>
+          <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Code d'invitation</Text>
+          <Text style={{ fontSize: 34, fontWeight: "900", color: colors.text, letterSpacing: 8 }}>{household?.inviteCode}</Text>
         </View>
         <Pressable
           onPress={async () => { await handleShareInviteCode(); }}
           style={({ pressed }) => ({
-            borderRadius: 16, backgroundColor: pressed ? "#D14A18" : "#E8571C",
+            borderRadius: 16, backgroundColor: pressed ? colors.accentPress : colors.accent,
             paddingVertical: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8,
           })}
         >
@@ -1161,7 +1195,7 @@ export function ProfileScreen() {
       </Dialog>
 
       <BottomModal isOpen={editSheet === "email"} onClose={() => { setEditSheet(null); }} height="auto">
-        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Changer l'email</Text>
+        <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 16 }}>Changer l'email</Text>
         <View style={{ gap: 10 }}>
             <TextInput
               value={emailInput}
@@ -1173,20 +1207,20 @@ export function ProfileScreen() {
               onSubmitEditing={handleChangeEmail}
               returnKeyType="done"
               style={{
-                borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#1C1917",
-                borderWidth: emailError ? 1.5 : 0, borderColor: "#DC2626",
+                borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: colors.text,
+                borderWidth: emailError ? 1.5 : 0, borderColor: colors.danger,
               }}
             />
-            {emailError && <Text style={{ fontSize: 12, color: "#DC2626", fontWeight: "600" }}>{emailError}</Text>}
+            {emailError && <Text style={{ fontSize: 12, color: colors.danger, fontWeight: "600" }}>{emailError}</Text>}
             <Pressable
               onPress={handleChangeEmail}
               disabled={saving || !emailInput.trim()}
               style={({ pressed }) => ({
                 borderRadius: 16, paddingVertical: 16, alignItems: "center",
-                backgroundColor: saving || !emailInput.trim() ? "#F5F3EF" : pressed ? "#D14A18" : "#E8571C",
+                backgroundColor: saving || !emailInput.trim() ? colors.bgSurface : pressed ? colors.accentPress : colors.accent,
               })}
             >
-              <Text style={{ fontSize: 15, fontWeight: "700", color: saving || !emailInput.trim() ? "#A8A29E" : "#fff" }}>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: saving || !emailInput.trim() ? colors.textSubtle : "#fff" }}>
                 {saving ? "Envoi…" : "Envoyer la confirmation"}
               </Text>
             </Pressable>
@@ -1194,18 +1228,18 @@ export function ProfileScreen() {
       </BottomModal>
 
       <BottomModal isOpen={editSheet === "password"} onClose={() => { setEditSheet(null); setPasswordSuccess(false); }} height="auto">
-        <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginBottom: 16 }}>Changer le mot de passe</Text>
+        <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 16 }}>Changer le mot de passe</Text>
         {passwordSuccess ? (
           <View style={{ alignItems: "center", gap: 8, paddingVertical: 12 }}>
-            <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: "#F0FDF4", alignItems: "center", justifyContent: "center" }}>
+            <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: colors.greenBg, alignItems: "center", justifyContent: "center" }}>
               <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                 <Path d="M20 6 9 17l-5-5" />
               </Svg>
             </View>
-            <Text style={{ fontSize: 15, fontWeight: "700", color: "#1C1917" }}>Mot de passe modifié</Text>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.text }}>Mot de passe modifié</Text>
             <Pressable
               onPress={() => { setEditSheet(null); setPasswordSuccess(false); }}
-              style={({ pressed }) => ({ marginTop: 8, borderRadius: 16, backgroundColor: pressed ? "#D14A18" : "#E8571C", paddingVertical: 14, paddingHorizontal: 32 })}
+              style={({ pressed }) => ({ marginTop: 8, borderRadius: 16, backgroundColor: pressed ? colors.accentPress : colors.accent, paddingVertical: 14, paddingHorizontal: 32 })}
             >
               <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>Fermer</Text>
             </Pressable>
@@ -1219,18 +1253,18 @@ export function ProfileScreen() {
               placeholderTextColor="#A8A29E"
               secureTextEntry
               style={{
-                borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#1C1917",
-                borderWidth: passwordError === "Mot de passe actuel incorrect." ? 1.5 : 0, borderColor: "#DC2626",
+                borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: colors.text,
+                borderWidth: passwordError === "Mot de passe actuel incorrect." ? 1.5 : 0, borderColor: colors.danger,
               }}
             />
-            <View style={{ height: 1, backgroundColor: "#F5F3EF", marginHorizontal: -20 }} />
+            <View style={{ height: 1, backgroundColor: colors.bgSurface, marginHorizontal: -20 }} />
             <TextInput
               value={passwordInput}
               onChangeText={(v) => { setPasswordInput(v); setPasswordError(null); }}
               placeholder="Nouveau mot de passe"
               placeholderTextColor="#A8A29E"
               secureTextEntry
-              style={{ borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#1C1917" }}
+              style={{ borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: colors.text }}
             />
             <TextInput
               value={confirmPasswordInput}
@@ -1241,20 +1275,20 @@ export function ProfileScreen() {
               onSubmitEditing={handleChangePassword}
               returnKeyType="done"
               style={{
-                borderRadius: 14, backgroundColor: "#F5F3EF", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#1C1917",
-                borderWidth: passwordError && passwordError !== "Mot de passe actuel incorrect." ? 1.5 : 0, borderColor: "#DC2626",
+                borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: colors.text,
+                borderWidth: passwordError && passwordError !== "Mot de passe actuel incorrect." ? 1.5 : 0, borderColor: colors.danger,
               }}
             />
-            {passwordError && <Text style={{ fontSize: 12, color: "#DC2626", fontWeight: "600" }}>{passwordError}</Text>}
+            {passwordError && <Text style={{ fontSize: 12, color: colors.danger, fontWeight: "600" }}>{passwordError}</Text>}
             <Pressable
               onPress={handleChangePassword}
               disabled={saving || !currentPasswordInput || !passwordInput.trim() || !confirmPasswordInput.trim()}
               style={({ pressed }) => ({
                 borderRadius: 16, paddingVertical: 16, alignItems: "center", marginTop: 2,
-                backgroundColor: saving || !currentPasswordInput || !passwordInput.trim() || !confirmPasswordInput.trim() ? "#F5F3EF" : pressed ? "#D14A18" : "#E8571C",
+                backgroundColor: saving || !currentPasswordInput || !passwordInput.trim() || !confirmPasswordInput.trim() ? colors.bgSurface : pressed ? colors.accentPress : colors.accent,
               })}
             >
-              <Text style={{ fontSize: 15, fontWeight: "700", color: saving || !currentPasswordInput || !passwordInput.trim() || !confirmPasswordInput.trim() ? "#A8A29E" : "#fff" }}>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: saving || !currentPasswordInput || !passwordInput.trim() || !confirmPasswordInput.trim() ? colors.textSubtle : "#fff" }}>
                 {saving ? "Vérification…" : "Modifier le mot de passe"}
               </Text>
             </Pressable>
@@ -1271,8 +1305,8 @@ export function ProfileScreen() {
               Cette action est irréversible. Toutes tes données seront définitivement supprimées.
             </Dialog.Description>
             {deleteError && (
-              <View style={{ borderRadius: 10, backgroundColor: "#FEE2E2", paddingHorizontal: 12, paddingVertical: 8, marginTop: 12 }}>
-                <Text style={{ fontSize: 12, color: "#DC2626", fontWeight: "600" }}>{deleteError}</Text>
+              <View style={{ borderRadius: 10, backgroundColor: colors.dangerBg, paddingHorizontal: 12, paddingVertical: 8, marginTop: 12 }}>
+                <Text style={{ fontSize: 12, color: colors.danger, fontWeight: "600" }}>{deleteError}</Text>
               </View>
             )}
             <View style={{ flexDirection: "row", gap: 8, marginTop: 16 }}>

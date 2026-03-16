@@ -14,6 +14,7 @@ import { HeroUINativeProvider } from "heroui-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { supabase } from "../lib/supabase";
+import { ThemeProvider, useAppTheme } from "../shared/theme";
 import "../../global.css";
 
 SplashScreen.preventAutoHideAsync();
@@ -119,12 +120,27 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <StatusBar style="dark" />
+      <ThemeProvider>
+        <ThemedApp session={session} pendingRecovery={pendingRecovery} setPendingRecovery={setPendingRecovery} />
+      </ThemeProvider>
+    </GestureHandlerRootView>
+  );
+}
+
+function ThemedApp({ session, pendingRecovery, setPendingRecovery }: {
+  session: Session | null;
+  pendingRecovery: boolean;
+  setPendingRecovery: (v: boolean) => void;
+}) {
+  const { isDark } = useAppTheme();
+  return (
+    <>
+      <StatusBar style={isDark ? "light" : "dark"} />
       <HeroUINativeProvider config={{ devInfo: { stylingPrinciples: false } }}>
         <AuthGate session={session} pendingRecovery={pendingRecovery} onRecoveryHandled={() => setPendingRecovery(false)}>
           <Slot />
         </AuthGate>
       </HeroUINativeProvider>
-    </GestureHandlerRootView>
+    </>
   );
 }

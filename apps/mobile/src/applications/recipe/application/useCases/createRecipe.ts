@@ -13,6 +13,8 @@ export interface RecipeInput {
   prepTimeMinutes: number | null;
   cookTimeMinutes: number | null;
   dietaryTags: string[];
+  imageUrl: string | null;
+  isPublic?: boolean;
   ingredients: RecipeIngredientInput[];
   steps: string[];
 }
@@ -31,8 +33,8 @@ export async function createRecipe(input: RecipeInput): Promise<string | { error
       prep_time_minutes: input.prepTimeMinutes,
       cook_time_minutes: input.cookTimeMinutes,
       dietary_tags: input.dietaryTags,
-      is_public: false,
-      is_favorite: false,
+      image_url: input.imageUrl,
+      is_public: input.isPublic ?? false,
     })
     .select("id")
     .single();

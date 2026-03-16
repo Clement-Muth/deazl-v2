@@ -7,11 +7,13 @@ import Svg, { Path } from "react-native-svg";
 import { resendConfirmationEmail } from "../../../application/useCases/resendConfirmationEmail";
 import { signInWithGoogle } from "../../../application/useCases/signInWithGoogle";
 import { signUp } from "../../../application/useCases/signUp";
+import { useAppTheme } from "../../../../../shared/theme";
 import { mapAuthError, validateEmail, validatePassword } from "./authHelpers";
 import { AuthInput } from "./authInput";
 
 export function RegisterForm() {
   const router = useRouter();
+  const { colors } = useAppTheme();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -54,15 +56,15 @@ export function RegisterForm() {
 
   if (emailSent) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
         <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24 }}>
           <View style={{ marginTop: 64, marginBottom: 40 }}>
-            <Text style={{ fontSize: 28, fontWeight: "800", color: "#1C1917", letterSpacing: -1, lineHeight: 34 }}>
+            <Text style={{ fontSize: 28, fontWeight: "800", color: colors.text, letterSpacing: -1, lineHeight: 34 }}>
               Vérifie ta boîte mail
             </Text>
-            <Text style={{ fontSize: 14, color: "#78716C", marginTop: 8, lineHeight: 22 }}>
+            <Text style={{ fontSize: 14, color: colors.textMuted, marginTop: 8, lineHeight: 22 }}>
               Un email de confirmation a été envoyé à{" "}
-              <Text style={{ fontWeight: "600", color: "#1C1917" }}>{email}</Text>.
+              <Text style={{ fontWeight: "600", color: colors.text }}>{email}</Text>.
               Clique sur le lien pour activer ton compte.
             </Text>
           </View>
@@ -78,7 +80,7 @@ export function RegisterForm() {
 
           <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 24, gap: 4 }}>
             <Pressable onPress={() => router.back()}>
-              <Text style={{ fontSize: 14, fontWeight: "500", color: "#E8571C" }}>Retour à la connexion</Text>
+              <Text style={{ fontSize: 14, fontWeight: "500", color: colors.accent }}>Retour à la connexion</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -87,15 +89,15 @@ export function RegisterForm() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24 }} keyboardShouldPersistTaps="handled">
 
           <View style={{ marginTop: 64, marginBottom: 40 }}>
-            <Text style={{ fontSize: 46, fontWeight: "900", color: "#1C1917", letterSpacing: -3, lineHeight: 50 }}>
-              Deazl<Text style={{ color: "#E8571C" }}>.</Text>
+            <Text style={{ fontSize: 46, fontWeight: "900", color: colors.text, letterSpacing: -3, lineHeight: 50 }}>
+              Deazl<Text style={{ color: colors.accent }}>.</Text>
             </Text>
-            <Text style={{ fontSize: 13, color: "#78716C", marginTop: 8 }}>
+            <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 8 }}>
               Smart meal planning & grocery management
             </Text>
           </View>
@@ -142,7 +144,7 @@ export function RegisterForm() {
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginVertical: 8 }}>
             <Separator className="flex-1" />
-            <Text style={{ fontSize: 12, color: "#78716C" }}>ou</Text>
+            <Text style={{ fontSize: 12, color: colors.textMuted }}>ou</Text>
             <Separator className="flex-1" />
           </View>
 
@@ -157,9 +159,9 @@ export function RegisterForm() {
           </Button>
 
           <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 24, marginBottom: 32, gap: 4 }}>
-            <Text style={{ fontSize: 14, color: "#78716C" }}>Déjà un compte ?</Text>
+            <Text style={{ fontSize: 14, color: colors.textMuted }}>Déjà un compte ?</Text>
             <Pressable onPress={() => router.back()}>
-              <Text style={{ fontSize: 14, fontWeight: "500", color: "#E8571C" }}>Se connecter</Text>
+              <Text style={{ fontSize: 14, fontWeight: "500", color: colors.accent }}>Se connecter</Text>
             </Pressable>
           </View>
 

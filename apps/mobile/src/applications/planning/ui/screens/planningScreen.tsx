@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Line, Path, Rect } from "react-native-svg";
+import { useAppTheme } from "../../../../shared/theme";
 import { supabase } from "../../../../lib/supabase";
 import { usePlanning } from "../../api/usePlanning";
 import { clearMealSlot } from "../../application/useCases/clearMealSlot";
@@ -114,6 +115,7 @@ interface SlotActionState { dayOfWeek: number; mealType: MealType; recipeId: str
 interface SimpleRecipe { id: string; name: string; }
 
 export function PlanningScreen() {
+  const { colors } = useAppTheme();
   const today = useMemo(() => new Date(), []);
   const router = useRouter();
   const [currentWeekMonday, setCurrentWeekMonday] = useState(() => getMondayOf(today));
@@ -248,30 +250,30 @@ export function PlanningScreen() {
 
   if (loading && !localPlan) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#FAF9F6", alignItems: "center", justifyContent: "center" }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator color="#E8571C" size="large" />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#FAF9F6" }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top"]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
 
         {/* ── Header ── */}
         <View style={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 4, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
           <View>
-            <Text style={{ fontSize: 28, fontWeight: "900", color: "#1C1917", letterSpacing: -0.5 }}>Planning</Text>
-            <Text style={{ fontSize: 13, color: "#78716C", marginTop: 2 }}>{formatWeekRange(currentWeekMonday)}</Text>
+            <Text style={{ fontSize: 28, fontWeight: "900", color: colors.text, letterSpacing: -0.5 }}>Planning</Text>
+            <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>{formatWeekRange(currentWeekMonday)}</Text>
             {weekCoverage.filled > 0 && (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 }}>
-                <View style={{ flex: 1, height: 4, borderRadius: 99, backgroundColor: "#F5F3EF" }}>
+                <View style={{ flex: 1, height: 4, borderRadius: 99, backgroundColor: colors.bgSurface }}>
                   <View style={{
-                    height: 4, borderRadius: 99, backgroundColor: "#E8571C",
+                    height: 4, borderRadius: 99, backgroundColor: colors.accent,
                     width: `${(weekCoverage.filled / weekCoverage.total) * 100}%`,
                   }} />
                 </View>
-                <Text style={{ fontSize: 11, fontWeight: "600", color: "#A8A29E" }}>
+                <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textSubtle }}>
                   {weekCoverage.filled}/{weekCoverage.total}
                 </Text>
               </View>
@@ -284,7 +286,7 @@ export function PlanningScreen() {
             ].map(({ onPress, path }, idx) => (
               <Pressable key={idx} onPress={onPress} style={({ pressed }) => ({
                 width: 34, height: 34, borderRadius: 10,
-                backgroundColor: "#fff", alignItems: "center", justifyContent: "center",
+                backgroundColor: colors.bgCard, alignItems: "center", justifyContent: "center",
                 shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.07, shadowRadius: 4, elevation: 2,
                 opacity: pressed ? 0.7 : 1,
               })}>
@@ -313,7 +315,7 @@ export function PlanningScreen() {
                 style={({ pressed }) => ({
                   width: 44, borderRadius: 16, paddingVertical: 10,
                   alignItems: "center", gap: 4,
-                  backgroundColor: isSelected ? "#fff" : "transparent",
+                  backgroundColor: isSelected ? colors.bgCard : "transparent",
                   shadowColor: isSelected ? "#1C1917" : "transparent",
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: isSelected ? 0.08 : 0,
@@ -324,13 +326,13 @@ export function PlanningScreen() {
               >
                 <Text style={{
                   fontSize: 9, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1,
-                  color: isSelected ? "#E8571C" : "#A8A29E",
+                  color: isSelected ? colors.accent : colors.textSubtle,
                 }}>
                   {DAY_LETTERS[i]}
                 </Text>
                 <Text style={{
                   fontSize: isSelected ? 22 : 17, fontWeight: "900", lineHeight: isSelected ? 28 : 22,
-                  color: isSelected ? "#E8571C" : isToday ? "#E8571C" : "#1C1917",
+                  color: isSelected ? colors.accent : isToday ? colors.accent : colors.text,
                 }}>
                   {day.getDate()}
                 </Text>
@@ -339,8 +341,8 @@ export function PlanningScreen() {
                     <View key={j} style={{
                       width: 5, height: 5, borderRadius: 3,
                       backgroundColor: filled
-                        ? (isSelected ? "#E8571C" : "#E8571C60")
-                        : (isSelected ? "#E8E5E0" : "#D6D3D0"),
+                        ? (isSelected ? colors.accent : "#E8571C60")
+                        : (isSelected ? colors.border : "#D6D3D0"),
                     }} />
                   ))}
                 </View>
@@ -352,10 +354,10 @@ export function PlanningScreen() {
         {/* ── Selected day label ── */}
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12 }}>
           <View>
-            <Text style={{ fontSize: 20, fontWeight: "900", color: "#1C1917", letterSpacing: -0.3 }}>
+            <Text style={{ fontSize: 20, fontWeight: "900", color: colors.text, letterSpacing: -0.3 }}>
               {selectedDate.toLocaleDateString("fr-FR", { weekday: "long" }).replace(/^\w/, (c) => c.toUpperCase())}
             </Text>
-            <Text style={{ fontSize: 13, color: isSelectedToday ? "#E8571C" : "#78716C", marginTop: 1, fontWeight: "500" }}>
+            <Text style={{ fontSize: 13, color: isSelectedToday ? colors.accent : colors.textMuted, marginTop: 1, fontWeight: "500" }}>
               {selectedDate.toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}
             </Text>
           </View>
@@ -364,7 +366,7 @@ export function PlanningScreen() {
               onPress={() => setSelectedDayIndex(todayDayIndex)}
               style={({ pressed }) => ({
                 flexDirection: "row", alignItems: "center", gap: 5,
-                borderRadius: 99, backgroundColor: "#E8571C",
+                borderRadius: 99, backgroundColor: colors.accent,
                 paddingHorizontal: 12, paddingVertical: 7,
                 opacity: pressed ? 0.85 : 1,
               })}
@@ -402,22 +404,22 @@ export function PlanningScreen() {
                     style={({ pressed }) => ({
                       flexDirection: "row", alignItems: "center", gap: 12,
                       paddingHorizontal: 16, paddingVertical: 14,
-                      backgroundColor: pressed ? "#FAFAF8" : "transparent",
+                      backgroundColor: pressed ? colors.bgSubtle : "transparent",
                     })}
                   >
                     <View style={{
                       width: 36, height: 36, borderRadius: 12,
-                      backgroundColor: hasRecipe ? bg : "#F5F3EF",
+                      backgroundColor: hasRecipe ? bg : colors.bgSurface,
                       alignItems: "center", justifyContent: "center", flexShrink: 0,
                     }}>
                       <MealIcon mealType={mealType} color={hasRecipe ? icon : "#C2BDB8"} />
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={{ fontSize: 10, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 1, marginBottom: 2 }}>
+                      <Text style={{ fontSize: 10, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 1, marginBottom: 2 }}>
                         {MEAL_LABELS[mealType]}
                       </Text>
                       {hasRecipe ? (
-                        <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "700", color: "#1C1917" }}>
+                        <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>
                           {slot!.recipeName}
                         </Text>
                       ) : (
@@ -426,7 +428,7 @@ export function PlanningScreen() {
                     </View>
                     <View style={{
                       width: 8, height: 8, borderRadius: 4,
-                      backgroundColor: hasRecipe ? icon : "#E8E5E0",
+                      backgroundColor: hasRecipe ? icon : colors.border,
                     }} />
                   </Pressable>
                 </View>
@@ -455,8 +457,8 @@ export function PlanningScreen() {
             <Button.Label>{generating ? "Génération…" : "Générer la liste de courses"}</Button.Label>
           </Button>
           {generateResult && (
-            <View style={{ borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: generateResult.ok ? "#F0FDF4" : "#FEF2F2" }}>
-              <Text style={{ fontSize: 13, fontWeight: "600", color: generateResult.ok ? "#16A34A" : "#DC2626", textAlign: "center" }}>
+            <View style={{ borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: generateResult.ok ? colors.greenBg : colors.dangerBg }}>
+              <Text style={{ fontSize: 13, fontWeight: "600", color: generateResult.ok ? colors.green : colors.danger, textAlign: "center" }}>
                 {generateResult.msg}
               </Text>
             </View>
@@ -472,10 +474,10 @@ export function PlanningScreen() {
             <View style={{ paddingBottom: 24 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
                 <View style={{ flex: 1, marginRight: 12 }}>
-                  <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 1 }}>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 1 }}>
                     {slotAction ? MEAL_LABELS[slotAction.mealType] : ""}
                   </Text>
-                  <Text style={{ fontSize: 16, fontWeight: "800", color: "#1C1917", marginTop: 2 }} numberOfLines={1}>
+                  <Text style={{ fontSize: 16, fontWeight: "800", color: colors.text, marginTop: 2 }} numberOfLines={1}>
                     {slotAction?.recipeName}
                   </Text>
                 </View>
@@ -486,32 +488,32 @@ export function PlanningScreen() {
                   onPress={() => { if (slotAction) { setSlotAction(null); router.push(`/recipe/${slotAction.recipeId}` as never); } }}
                   style={({ pressed }) => ({
                     flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 14,
-                    backgroundColor: pressed ? "#FFF7ED" : "#FFF7ED",
+                    backgroundColor: colors.accentBg,
                     paddingHorizontal: 16, paddingVertical: 14,
-                    borderWidth: 1.5, borderColor: "#FED7AA",
+                    borderWidth: 1.5, borderColor: colors.accentBgBorder,
                   })}
                 >
-                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#E8571C", alignItems: "center", justifyContent: "center" }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
                     <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                       <Path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><Circle cx={12} cy={12} r={3} />
                     </Svg>
                   </View>
-                  <Text style={{ fontSize: 15, fontWeight: "700", color: "#E8571C" }}>Voir la recette</Text>
+                  <Text style={{ fontSize: 15, fontWeight: "700", color: colors.accent }}>Voir la recette</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => { if (slotAction) { const s = slotAction; setSlotAction(null); setPickerState({ dayOfWeek: s.dayOfWeek, mealType: s.mealType }); } }}
                   style={({ pressed }) => ({
                     flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 14,
-                    backgroundColor: pressed ? "#F5F3EF" : "#F5F3EF",
+                    backgroundColor: colors.bgSurface,
                     paddingHorizontal: 16, paddingVertical: 14,
                   })}
                 >
-                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#E8E5E1", alignItems: "center", justifyContent: "center" }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.border, alignItems: "center", justifyContent: "center" }}>
                     <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                       <Path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><Path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                     </Svg>
                   </View>
-                  <Text style={{ fontSize: 15, fontWeight: "700", color: "#44403C" }}>Changer la recette</Text>
+                  <Text style={{ fontSize: 15, fontWeight: "700", color: colors.text }}>Changer la recette</Text>
                 </Pressable>
                 <Pressable
                   onPress={async () => {
@@ -529,7 +531,7 @@ export function PlanningScreen() {
                   }}
                   style={({ pressed }) => ({
                     flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 14,
-                    backgroundColor: pressed ? "#FEF2F2" : "#FFF1F2",
+                    backgroundColor: colors.dangerBg,
                     paddingHorizontal: 16, paddingVertical: 14,
                   })}
                 >
@@ -558,11 +560,11 @@ export function PlanningScreen() {
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 8, marginBottom: 4 }}>
               <View>
                 {pickerState && (
-                  <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 1 }}>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 1 }}>
                     {selectedDate.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" })}
                   </Text>
                 )}
-                <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917", marginTop: 2 }}>
+                <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginTop: 2 }}>
                   {pickerState ? MEAL_LABELS[pickerState.mealType] : ""}
                 </Text>
               </View>
@@ -584,7 +586,7 @@ export function PlanningScreen() {
                     style={({ pressed }) => ({
                       flexDirection: "row", alignItems: "center", gap: 10,
                       borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12,
-                      backgroundColor: "#FFF1F2", marginBottom: 4,
+                      backgroundColor: colors.dangerBg, marginBottom: 4,
                       opacity: pressed ? 0.8 : 1,
                     })}
                   >
@@ -595,7 +597,7 @@ export function PlanningScreen() {
                     </View>
                     <Text style={{ fontSize: 14, fontWeight: "700", color: "#E11D48" }}>Retirer la recette</Text>
                   </Pressable>
-                  <View style={{ marginVertical: 8, height: 1, backgroundColor: "#F5F3EF" }} />
+                  <View style={{ marginVertical: 8, height: 1, backgroundColor: colors.bgSurface }} />
                 </>
               )}
 
@@ -605,7 +607,7 @@ export function PlanningScreen() {
                 </View>
               ) : filteredRecipes.length === 0 ? (
                 <View style={{ alignItems: "center", paddingVertical: 40 }}>
-                  <Text style={{ fontSize: 14, color: "#A8A29E" }}>
+                  <Text style={{ fontSize: 14, color: colors.textSubtle }}>
                     {recipeSearch ? "Aucune recette trouvée" : "Aucune recette"}
                   </Text>
                 </View>
@@ -619,23 +621,23 @@ export function PlanningScreen() {
                       style={({ pressed }) => ({
                         flexDirection: "row", alignItems: "center", gap: 12,
                         borderRadius: 14, paddingHorizontal: 14, paddingVertical: 13,
-                        backgroundColor: isActive ? "#FFF7ED" : pressed ? "#FAFAF9" : "transparent",
+                        backgroundColor: isActive ? colors.accentBg : pressed ? colors.bgSubtle : "transparent",
                         marginBottom: 2,
                       })}
                     >
                       <View style={{
                         width: 36, height: 36, borderRadius: 12,
-                        backgroundColor: isActive ? "#E8571C" : "#F5F3EF",
+                        backgroundColor: isActive ? colors.accent : colors.bgSurface,
                         alignItems: "center", justifyContent: "center", flexShrink: 0,
                       }}>
-                        <Text style={{ fontSize: 14, fontWeight: "900", color: isActive ? "#fff" : "#A8A29E" }}>
+                        <Text style={{ fontSize: 14, fontWeight: "900", color: isActive ? "#fff" : colors.textSubtle }}>
                           {recipe.name.charAt(0).toUpperCase()}
                         </Text>
                       </View>
                       <Text numberOfLines={1} style={{
                         flex: 1, fontSize: 14,
                         fontWeight: isActive ? "700" : "500",
-                        color: isActive ? "#E8571C" : "#1C1917",
+                        color: isActive ? colors.accent : colors.text,
                       }}>
                         {recipe.name}
                       </Text>

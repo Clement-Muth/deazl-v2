@@ -1,3 +1,4 @@
+import { useAppTheme } from "../../../../shared/theme";
 import * as Haptics from "expo-haptics";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -71,6 +72,7 @@ function StoreSelectorModal({
   onSelect: (s: UserStore) => void;
   canDismiss: boolean;
 }) {
+  const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(500);
   const backdropOpacity = useSharedValue(0);
@@ -95,7 +97,7 @@ function StoreSelectorModal({
       </Animated.View>
       <Animated.View style={[{
         position: "absolute", bottom: 0, left: 0, right: 0,
-        backgroundColor: "#fff",
+        backgroundColor: colors.bgCard,
         borderTopLeftRadius: 28, borderTopRightRadius: 28,
         paddingTop: 20, paddingHorizontal: 20,
         paddingBottom: insets.bottom + 24,
@@ -103,10 +105,10 @@ function StoreSelectorModal({
       }, panelStyle]}>
         <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: "#E0DDD7", alignSelf: "center", marginBottom: 4 }} />
         <View style={{ gap: 3 }}>
-          <Text style={{ fontSize: 20, fontWeight: "900", color: "#1C1917", letterSpacing: -0.5 }}>Vous êtes où ?</Text>
-          <Text style={{ fontSize: 13, color: "#78716C" }}>Les prix seront enregistrés pour ce magasin.</Text>
+          <Text style={{ fontSize: 20, fontWeight: "900", color: colors.text, letterSpacing: -0.5 }}>Vous êtes où ?</Text>
+          <Text style={{ fontSize: 13, color: colors.textMuted }}>Les prix seront enregistrés pour ce magasin.</Text>
         </View>
-        <View style={{ borderRadius: 14, backgroundColor: "#FAF9F6", overflow: "hidden" }}>
+        <View style={{ borderRadius: 14, backgroundColor: colors.bg, overflow: "hidden" }}>
           {stores.map((store, i) => (
             <View key={store.id}>
               <Pressable
@@ -118,8 +120,8 @@ function StoreSelectorModal({
                 })}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 16, fontWeight: "700", color: "#1C1917" }}>{store.name}</Text>
-                  {store.city && <Text style={{ fontSize: 12, color: "#A8A29E", marginTop: 2 }}>{store.city}</Text>}
+                  <Text style={{ fontSize: 16, fontWeight: "700", color: colors.text }}>{store.name}</Text>
+                  {store.city && <Text style={{ fontSize: 12, color: colors.textSubtle, marginTop: 2 }}>{store.city}</Text>}
                 </View>
                 <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#C4B8AF" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                   <Polyline points="9 18 15 12 9 6" />
@@ -145,6 +147,7 @@ function SplitEditSheet({
   settings: SplitSettings;
   onSave: (s: SplitSettings) => void;
 }) {
+  const { colors } = useAppTheme();
   const [draft, setDraft] = useState(settings);
 
   useEffect(() => { if (isOpen) setDraft(settings); }, [isOpen]);
@@ -160,19 +163,19 @@ function SplitEditSheet({
     <BottomModal isOpen={isOpen} onClose={() => { onSave(draft); onOpenChange(false); }}>
           <View style={{ gap: 20 }}>
             <View style={{ paddingVertical: 4 }}>
-              <Text style={{ fontSize: 17, fontWeight: "900", color: "#1C1917" }}>Partager les dépenses</Text>
+              <Text style={{ fontSize: 17, fontWeight: "900", color: colors.text }}>Partager les dépenses</Text>
             </View>
 
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#F9F8F6", borderRadius: 16, padding: 16 }}>
               <View style={{ gap: 2, flex: 1, marginRight: 12 }}>
-                <Text style={{ fontSize: 14, fontWeight: "700", color: "#1C1917" }}>Activer</Text>
-                <Text style={{ fontSize: 12, color: "#78716C" }}>Les articles sont répartis selon les budgets</Text>
+                <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>Activer</Text>
+                <Text style={{ fontSize: 12, color: colors.textMuted }}>Les articles sont répartis selon les budgets</Text>
               </View>
               <Pressable
                 onPress={() => setDraft((prev) => ({ ...prev, enabled: !prev.enabled }))}
                 style={{
                   width: 50, height: 28, borderRadius: 14,
-                  backgroundColor: draft.enabled ? "#E8571C" : "#D1CCC5",
+                  backgroundColor: draft.enabled ? colors.accent : "#D1CCC5",
                   justifyContent: "center", padding: 2,
                 }}
               >
@@ -188,14 +191,14 @@ function SplitEditSheet({
             {draft.enabled && (
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#F9F8F6", borderRadius: 16, padding: 16 }}>
                 <View style={{ gap: 2, flex: 1, marginRight: 12 }}>
-                  <Text style={{ fontSize: 14, fontWeight: "700", color: "#1C1917" }}>Carte Ticket Restaurant</Text>
-                  <Text style={{ fontSize: 12, color: "#78716C" }}>Le budget par personne s'applique uniquement aux articles alimentaires</Text>
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>Carte Ticket Restaurant</Text>
+                  <Text style={{ fontSize: 12, color: colors.textMuted }}>Le budget par personne s'applique uniquement aux articles alimentaires</Text>
                 </View>
                 <Pressable
                   onPress={() => setDraft((prev) => ({ ...prev, carteRestoEnabled: !prev.carteRestoEnabled }))}
                   style={{
                     width: 50, height: 28, borderRadius: 14,
-                    backgroundColor: draft.carteRestoEnabled ? "#E8571C" : "#D1CCC5",
+                    backgroundColor: draft.carteRestoEnabled ? colors.accent : "#D1CCC5",
                     justifyContent: "center", padding: 2,
                   }}
                 >
@@ -221,13 +224,13 @@ function SplitEditSheet({
                     <TextInput
                       value={m.name}
                       onChangeText={(v) => updateMember(i, { name: v })}
-                      style={{ fontSize: 15, fontWeight: "700", color: "#1C1917", textAlign: "center", width: "100%" }}
+                      style={{ fontSize: 15, fontWeight: "700", color: colors.text, textAlign: "center", width: "100%" }}
                       maxLength={20}
                       selectTextOnFocus
                     />
                     <View style={{ width: "100%", height: 1, backgroundColor: "#EDEAE4" }} />
                     <View style={{ gap: 6, alignItems: "center", width: "100%" }}>
-                      <Text style={{ fontSize: 11, fontWeight: "600", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 0.8 }}>Budget</Text>
+                      <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 0.8 }}>Budget</Text>
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                         <Pressable
                           onPress={() => updateMember(i, { budgetCap: Math.max(5, m.budgetCap - 5) })}
@@ -239,7 +242,7 @@ function SplitEditSheet({
                         >
                           <Text style={{ fontSize: 18, fontWeight: "600", color: "#44403C", lineHeight: 22 }}>−</Text>
                         </Pressable>
-                        <Text style={{ fontSize: 20, fontWeight: "900", color: "#1C1917", minWidth: 52, textAlign: "center" }}>
+                        <Text style={{ fontSize: 20, fontWeight: "900", color: colors.text, minWidth: 52, textAlign: "center" }}>
                           {m.budgetCap}€
                         </Text>
                         <Pressable
@@ -278,6 +281,7 @@ interface PricePromptProps {
 }
 
 function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, prefillContext, hasProduct, onConfirm, onSkip, onCheckWithoutPrice, onRescan }: PricePromptProps) {
+  const { colors } = useAppTheme();
   const [value, setValue] = useState(prefillPrice);
   const [priceMode, setPriceMode] = useState<"total" | "kg">("total");
   const [kgStep, setKgStep] = useState<"price" | "weight">("price");
@@ -376,10 +380,10 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, prefillContext,
                 <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                   <Polyline points="15 18 9 12 15 6" />
                 </Svg>
-                <Text style={{ fontSize: 13, color: "#E8571C", fontWeight: "600" }}>{kgPriceValue} €/kg</Text>
+                <Text style={{ fontSize: 13, color: colors.accent, fontWeight: "600" }}>{kgPriceValue} €/kg</Text>
               </Pressable>
             ) : (
-              <Text style={{ fontSize: 17, fontWeight: "800", color: "#1C1917", flex: 1, marginRight: 12 }} numberOfLines={1}>
+              <Text style={{ fontSize: 17, fontWeight: "800", color: colors.text, flex: 1, marginRight: 12 }} numberOfLines={1}>
                 {item.customName}
               </Text>
             )}
@@ -397,10 +401,10 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, prefillContext,
                   onPress={() => { Haptics.selectionAsync(); setPriceMode(mode); }}
                   style={{
                     flex: 1, paddingVertical: 9, borderRadius: 12, alignItems: "center",
-                    backgroundColor: priceMode === mode ? "#1C1917" : "#F0EDE8",
+                    backgroundColor: priceMode === mode ? colors.text : "#F0EDE8",
                   }}
                 >
-                  <Text style={{ fontSize: 13, fontWeight: "700", color: priceMode === mode ? "#fff" : "#78716C" }}>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: priceMode === mode ? "#fff" : colors.textMuted }}>
                     {mode === "total" ? "Prix unitaire" : "Prix au kg"}
                   </Text>
                 </Pressable>
@@ -415,13 +419,13 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, prefillContext,
                 onPress={() => { Haptics.selectionAsync(); setActualQty((q) => Math.max(1, q - 1)); }}
                 style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: "#F0EDE8", alignItems: "center", justifyContent: "center" }}
               >
-                <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={colors.textMuted} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                   <Line x1={5} y1={12} x2={19} y2={12} />
                 </Svg>
               </Pressable>
               <View style={{ alignItems: "center", minWidth: 52 }}>
-                <Text style={{ fontSize: 20, fontWeight: "900", color: "#1C1917" }}>{actualQty}</Text>
-                <Text style={{ fontSize: 11, color: "#A8A29E" }}>{item.unit || "pièce"}</Text>
+                <Text style={{ fontSize: 20, fontWeight: "900", color: colors.text }}>{actualQty}</Text>
+                <Text style={{ fontSize: 11, color: colors.textSubtle }}>{item.unit || "pièce"}</Text>
               </View>
               <Pressable
                 onPress={() => { Haptics.selectionAsync(); setActualQty((q) => q + 1); }}
@@ -436,7 +440,7 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, prefillContext,
 
           {/* Saisie prix */}
           <View style={{
-            borderRadius: 16, backgroundColor: "#FAF9F6",
+            borderRadius: 16, backgroundColor: colors.bg,
             paddingVertical: 14, paddingHorizontal: 20,
             flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4,
           }}>
@@ -449,15 +453,15 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, prefillContext,
               onSubmitEditing={handleConfirm}
               placeholder="0"
               placeholderTextColor="#D1CCC5"
-              style={{ fontSize: 46, fontWeight: "900", color: "#1C1917", letterSpacing: -2, minWidth: 60, textAlign: "right" }}
+              style={{ fontSize: 46, fontWeight: "900", color: colors.text, letterSpacing: -2, minWidth: 60, textAlign: "right" }}
             />
-            <Text style={{ fontSize: 24, fontWeight: "700", color: "#A8A29E", marginBottom: 2 }}>
+            <Text style={{ fontSize: 24, fontWeight: "700", color: colors.textSubtle, marginBottom: 2 }}>
               {isWeightStep ? "g" : (!hasProduct && priceMode === "kg" ? "€/kg" : "€")}
             </Text>
           </View>
 
           {isWeightStep && (
-            <Text style={{ fontSize: 12, fontWeight: "600", color: "#A8A29E", textAlign: "center", textTransform: "uppercase", letterSpacing: 1 }}>
+            <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textSubtle, textAlign: "center", textTransform: "uppercase", letterSpacing: 1 }}>
               Poids estimé (g)
             </Text>
           )}
@@ -465,19 +469,19 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, prefillContext,
           {/* Total payé — read-only */}
           {!isWeightStep && priceMode === "total" && computedTotal !== null && (actualQty > 1 || (isPromo && (hasDiscount || hasLotPrice))) && (
             <View style={{ alignItems: "center", gap: 2 }}>
-              <Text style={{ fontSize: 11, fontWeight: "700", color: "#A8A29E", textTransform: "uppercase", letterSpacing: 1 }}>Total payé</Text>
-              <Text style={{ fontSize: 26, fontWeight: "900", color: "#1C1917", letterSpacing: -0.5 }}>
+              <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 1 }}>Total payé</Text>
+              <Text style={{ fontSize: 26, fontWeight: "900", color: colors.text, letterSpacing: -0.5 }}>
                 {computedTotal.toFixed(2)} €
               </Text>
               {isPromo && promoMode === "discount" && hasDiscount && actualQty > 1 && (
-                <Text style={{ fontSize: 12, color: "#A8A29E", fontWeight: "500" }}>
+                <Text style={{ fontSize: 12, color: colors.textSubtle, fontWeight: "500" }}>
                   {actualQty === 2
                     ? `${parsed.toFixed(2)} + ${(parsed * (1 - discountNum / 100)).toFixed(2)}`
                     : `${actualQty - 1} × ${parsed.toFixed(2)} + ${(parsed * (1 - discountNum / 100)).toFixed(2)}`}
                 </Text>
               )}
               {isPromo && promoMode === "lot" && hasLotPrice && (
-                <Text style={{ fontSize: 12, color: "#A8A29E", fontWeight: "500" }}>
+                <Text style={{ fontSize: 12, color: colors.textSubtle, fontWeight: "500" }}>
                   {`${lotPrice.toFixed(2)} ÷ ${actualQty} = ${(lotPrice / actualQty).toFixed(2)} €/unité`}
                 </Text>
               )}
@@ -489,10 +493,10 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, prefillContext,
             <View style={{ gap: 10 }}>
               <Pressable
                 onPress={() => { Haptics.selectionAsync(); setIsPromo((v) => !v); setDiscountValue(""); setLotPriceValue(""); setPromoMode("discount"); }}
-                style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: isPromo ? "#FFF7F4" : "#FAF9F6", borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1, borderColor: isPromo ? "#F5C4B0" : "transparent" }}
+                style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: isPromo ? "#FFF7F4" : colors.bg, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1, borderColor: isPromo ? "#F5C4B0" : "transparent" }}
               >
-                <Text style={{ fontSize: 14, fontWeight: "700", color: isPromo ? "#E8571C" : "#78716C" }}>🏷 C'est une promo</Text>
-                <View style={{ width: 44, height: 26, borderRadius: 13, backgroundColor: isPromo ? "#E8571C" : "#D1CCC5", justifyContent: "center", padding: 2 }}>
+                <Text style={{ fontSize: 14, fontWeight: "700", color: isPromo ? colors.accent : colors.textMuted }}>🏷 C'est une promo</Text>
+                <View style={{ width: 44, height: 26, borderRadius: 13, backgroundColor: isPromo ? colors.accent : "#D1CCC5", justifyContent: "center", padding: 2 }}>
                   <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: "#fff", alignSelf: isPromo ? "flex-end" : "flex-start", shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 2 }} />
                 </View>
               </Pressable>
@@ -504,9 +508,9 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, prefillContext,
                       <Pressable
                         key={mode}
                         onPress={() => { Haptics.selectionAsync(); setPromoMode(mode); setDiscountValue(""); setLotPriceValue(""); }}
-                        style={{ flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center", backgroundColor: promoMode === mode ? "#1C1917" : "#F0EDE8" }}
+                        style={{ flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center", backgroundColor: promoMode === mode ? colors.text : "#F0EDE8" }}
                       >
-                        <Text style={{ fontSize: 12, fontWeight: "700", color: promoMode === mode ? "#fff" : "#78716C" }}>
+                        <Text style={{ fontSize: 12, fontWeight: "700", color: promoMode === mode ? "#fff" : colors.textMuted }}>
                           {mode === "discount" ? "% de remise" : "Prix du lot"}
                         </Text>
                       </Pressable>
@@ -514,8 +518,8 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, prefillContext,
                   </View>
 
                   {promoMode === "discount" && (
-                    <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#FAF9F6", borderRadius: 14, paddingVertical: 10, paddingHorizontal: 16, gap: 8 }}>
-                      <Text style={{ fontSize: 13, fontWeight: "600", color: "#A8A29E", flex: 1 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.bg, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 16, gap: 8 }}>
+                      <Text style={{ fontSize: 13, fontWeight: "600", color: colors.textSubtle, flex: 1 }}>
                         {actualQty > 1 ? `Remise sur le ${actualQty}ème` : "Remise"}
                       </Text>
                       <TextInput
@@ -525,15 +529,15 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, prefillContext,
                         returnKeyType="done"
                         placeholder="50"
                         placeholderTextColor="#D1CCC5"
-                        style={{ fontSize: 18, fontWeight: "800", color: "#1C1917", textAlign: "right", minWidth: 40 }}
+                        style={{ fontSize: 18, fontWeight: "800", color: colors.text, textAlign: "right", minWidth: 40 }}
                       />
-                      <Text style={{ fontSize: 14, fontWeight: "700", color: "#A8A29E" }}>%</Text>
+                      <Text style={{ fontSize: 14, fontWeight: "700", color: colors.textSubtle }}>%</Text>
                     </View>
                   )}
 
                   {promoMode === "lot" && (
-                    <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#FAF9F6", borderRadius: 14, paddingVertical: 10, paddingHorizontal: 16, gap: 8 }}>
-                      <Text style={{ fontSize: 13, fontWeight: "600", color: "#A8A29E", flex: 1 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.bg, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 16, gap: 8 }}>
+                      <Text style={{ fontSize: 13, fontWeight: "600", color: colors.textSubtle, flex: 1 }}>
                         {`Prix pour ${actualQty}`}
                       </Text>
                       <TextInput
@@ -543,9 +547,9 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, prefillContext,
                         returnKeyType="done"
                         placeholder="5.00"
                         placeholderTextColor="#D1CCC5"
-                        style={{ fontSize: 18, fontWeight: "800", color: "#1C1917", textAlign: "right", minWidth: 60 }}
+                        style={{ fontSize: 18, fontWeight: "800", color: colors.text, textAlign: "right", minWidth: 60 }}
                       />
-                      <Text style={{ fontSize: 14, fontWeight: "700", color: "#A8A29E" }}>€</Text>
+                      <Text style={{ fontSize: 14, fontWeight: "700", color: colors.textSubtle }}>€</Text>
                     </View>
                   )}
                 </View>
@@ -558,11 +562,11 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, prefillContext,
             onPress={handleConfirm}
             style={({ pressed }) => ({
               borderRadius: 18, paddingVertical: 16, alignItems: "center",
-              backgroundColor: canConfirm ? (pressed ? "#C94415" : "#E8571C") : "#F0EDE8",
+              backgroundColor: canConfirm ? (pressed ? "#C94415" : colors.accent) : "#F0EDE8",
               transform: [{ scale: pressed && canConfirm ? 0.97 : 1 }],
             })}
           >
-            <Text style={{ fontSize: 17, fontWeight: "900", color: canConfirm ? "#fff" : "#A8A29E", letterSpacing: -0.3 }}>
+            <Text style={{ fontSize: 17, fontWeight: "900", color: canConfirm ? "#fff" : colors.textSubtle, letterSpacing: -0.3 }}>
               {isWeightStep ? "✓ Confirmer le poids" : (priceMode === "kg" ? "Suivant →" : "✓ Confirmer")}
             </Text>
           </Pressable>
@@ -572,11 +576,11 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, prefillContext,
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 28 }}>
               {onRescan && (
                 <Pressable onPress={onRescan} hitSlop={12}>
-                  <Text style={{ fontSize: 13, color: "#E8571C", fontWeight: "600" }}>Autre produit</Text>
+                  <Text style={{ fontSize: 13, color: colors.accent, fontWeight: "600" }}>Autre produit</Text>
                 </Pressable>
               )}
               <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onCheckWithoutPrice(); }} hitSlop={12}>
-                <Text style={{ fontSize: 13, color: "#78716C", fontWeight: "600" }}>✓ Sans prix</Text>
+                <Text style={{ fontSize: 13, color: colors.textMuted, fontWeight: "600" }}>✓ Sans prix</Text>
               </Pressable>
             </View>
           )}
@@ -598,6 +602,7 @@ function AddItemSheet({
   splitSettings: SplitSettings;
   onConfirm: (name: string, actualPaid: number, memberIdx: number, mode: "total" | "kg", kgPrice?: number) => void;
 }) {
+  const { colors } = useAppTheme();
   const [name, setName] = useState("");
   const [priceValue, setPriceValue] = useState("");
   const [memberIdx, setMemberIdx] = useState(0);
@@ -650,13 +655,13 @@ function AddItemSheet({
           onPress={() => setMemberIdx(i)}
           style={{
             flex: 1, borderRadius: 12, paddingVertical: 10, alignItems: "center",
-            backgroundColor: memberIdx === i ? `${m.color}18` : "#F5F3EF",
+            backgroundColor: memberIdx === i ? `${m.color}18` : colors.bgSurface,
             borderWidth: 1.5, borderColor: memberIdx === i ? m.color : "transparent",
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
             <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: m.color }} />
-            <Text style={{ fontSize: 13, fontWeight: "700", color: memberIdx === i ? m.color : "#78716C" }}>{m.name}</Text>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: memberIdx === i ? m.color : colors.textMuted }}>{m.name}</Text>
           </View>
         </Pressable>
       ))}
@@ -680,7 +685,7 @@ function AddItemSheet({
                   </Svg>
                 </Pressable>
               )}
-              <Text style={{ fontSize: 17, fontWeight: "900", color: "#1C1917" }}>
+              <Text style={{ fontSize: 17, fontWeight: "900", color: colors.text }}>
                 {step === "name" ? "Ajouter un article" : name}
               </Text>
             </View>
@@ -698,8 +703,8 @@ function AddItemSheet({
                   returnKeyType="next"
                   onSubmitEditing={goToPrice}
                   style={{
-                    fontSize: 16, fontWeight: "600", color: "#1C1917",
-                    borderRadius: 14, backgroundColor: "#FAF9F6",
+                    fontSize: 16, fontWeight: "600", color: colors.text,
+                    borderRadius: 14, backgroundColor: colors.bg,
                     paddingHorizontal: 16, paddingVertical: 14,
                   }}
                 />
@@ -708,10 +713,10 @@ function AddItemSheet({
                   onPress={goToPrice}
                   style={({ pressed }) => ({
                     borderRadius: 16, paddingVertical: 16, alignItems: "center",
-                    backgroundColor: name.trim() ? (pressed ? "#C94415" : "#E8571C") : "#F0EDE8",
+                    backgroundColor: name.trim() ? (pressed ? "#C94415" : colors.accent) : "#F0EDE8",
                   })}
                 >
-                  <Text style={{ fontSize: 16, fontWeight: "900", color: name.trim() ? "#fff" : "#A8A29E" }}>
+                  <Text style={{ fontSize: 16, fontWeight: "900", color: name.trim() ? "#fff" : colors.textSubtle }}>
                     Suivant →
                   </Text>
                 </Pressable>
@@ -726,17 +731,17 @@ function AddItemSheet({
                       onPress={() => { Haptics.selectionAsync(); setPriceMode(mode); }}
                       style={{
                         flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: "center",
-                        backgroundColor: priceMode === mode ? "#1C1917" : "#F0EDE8",
+                        backgroundColor: priceMode === mode ? colors.text : "#F0EDE8",
                       }}
                     >
-                      <Text style={{ fontSize: 13, fontWeight: "700", color: priceMode === mode ? "#fff" : "#78716C" }}>
+                      <Text style={{ fontSize: 13, fontWeight: "700", color: priceMode === mode ? "#fff" : colors.textMuted }}>
                         {mode === "total" ? "Total payé" : "Prix au kg"}
                       </Text>
                     </Pressable>
                   ))}
                 </View>
                 <View style={{
-                  borderRadius: 16, backgroundColor: "#FAF9F6",
+                  borderRadius: 16, backgroundColor: colors.bg,
                   paddingVertical: 14, paddingHorizontal: 20,
                   flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4,
                 }}>
@@ -748,9 +753,9 @@ function AddItemSheet({
                     returnKeyType="done"
                     placeholder="0"
                     placeholderTextColor="#D1CCC5"
-                    style={{ fontSize: 46, fontWeight: "900", color: "#1C1917", letterSpacing: -2, minWidth: 60, textAlign: "right" }}
+                    style={{ fontSize: 46, fontWeight: "900", color: colors.text, letterSpacing: -2, minWidth: 60, textAlign: "right" }}
                   />
-                  <Text style={{ fontSize: 24, fontWeight: "700", color: "#A8A29E", marginBottom: 2 }}>
+                  <Text style={{ fontSize: 24, fontWeight: "700", color: colors.textSubtle, marginBottom: 2 }}>
                     {priceMode === "kg" ? "€/kg" : "€"}
                   </Text>
                 </View>
@@ -769,10 +774,10 @@ function AddItemSheet({
                   }}
                   style={({ pressed }) => ({
                     borderRadius: 16, paddingVertical: 16, alignItems: "center",
-                    backgroundColor: priceValid ? (pressed ? "#C94415" : "#E8571C") : "#F0EDE8",
+                    backgroundColor: priceValid ? (pressed ? "#C94415" : colors.accent) : "#F0EDE8",
                   })}
                 >
-                  <Text style={{ fontSize: 16, fontWeight: "900", color: priceValid ? "#fff" : "#A8A29E" }}>
+                  <Text style={{ fontSize: 16, fontWeight: "900", color: priceValid ? "#fff" : colors.textSubtle }}>
                     {priceMode === "kg" ? "Suivant →" : "+ Ajouter au panier"}
                   </Text>
                 </Pressable>
@@ -780,13 +785,13 @@ function AddItemSheet({
             ) : (
               <>
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ fontSize: 13, color: "#A8A29E", fontWeight: "600" }}>{kgPriceValue} €/kg</Text>
+                  <Text style={{ fontSize: 13, color: colors.textSubtle, fontWeight: "600" }}>{kgPriceValue} €/kg</Text>
                 </View>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: "#A8A29E", textAlign: "center", textTransform: "uppercase", letterSpacing: 1 }}>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textSubtle, textAlign: "center", textTransform: "uppercase", letterSpacing: 1 }}>
                   Poids estimé (g)
                 </Text>
                 <View style={{
-                  borderRadius: 16, backgroundColor: "#FAF9F6",
+                  borderRadius: 16, backgroundColor: colors.bg,
                   paddingVertical: 14, paddingHorizontal: 20,
                   flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4,
                 }}>
@@ -798,9 +803,9 @@ function AddItemSheet({
                     returnKeyType="done"
                     placeholder="0"
                     placeholderTextColor="#D1CCC5"
-                    style={{ fontSize: 46, fontWeight: "900", color: "#1C1917", letterSpacing: -2, minWidth: 60, textAlign: "right" }}
+                    style={{ fontSize: 46, fontWeight: "900", color: colors.text, letterSpacing: -2, minWidth: 60, textAlign: "right" }}
                   />
-                  <Text style={{ fontSize: 24, fontWeight: "700", color: "#A8A29E", marginBottom: 2 }}>g</Text>
+                  <Text style={{ fontSize: 24, fontWeight: "700", color: colors.textSubtle, marginBottom: 2 }}>g</Text>
                 </View>
                 <Pressable
                   onPress={() => {
@@ -813,10 +818,10 @@ function AddItemSheet({
                   }}
                   style={({ pressed }) => ({
                     borderRadius: 16, paddingVertical: 16, alignItems: "center",
-                    backgroundColor: priceValid ? (pressed ? "#C94415" : "#E8571C") : "#F0EDE8",
+                    backgroundColor: priceValid ? (pressed ? "#C94415" : colors.accent) : "#F0EDE8",
                   })}
                 >
-                  <Text style={{ fontSize: 16, fontWeight: "900", color: priceValid ? "#fff" : "#A8A29E" }}>
+                  <Text style={{ fontSize: 16, fontWeight: "900", color: priceValid ? "#fff" : colors.textSubtle }}>
                     + Ajouter au panier
                   </Text>
                 </Pressable>
@@ -842,6 +847,7 @@ function ScanOverlay({
   onSkipScan: () => void;
   onClose: () => void;
 }) {
+  const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const [loading, setLoading] = useState(false);
@@ -883,7 +889,7 @@ function ScanOverlay({
           <Text style={{ fontSize: 16, fontWeight: "700", color: "#fff", textAlign: "center" }}>
             Autorise la caméra pour scanner des produits
           </Text>
-          <Pressable onPress={requestPermission} style={{ borderRadius: 14, backgroundColor: "#E8571C", paddingVertical: 14, paddingHorizontal: 28 }}>
+          <Pressable onPress={requestPermission} style={{ borderRadius: 14, backgroundColor: colors.accent, paddingVertical: 14, paddingHorizontal: 28 }}>
             <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}>Autoriser</Text>
           </Pressable>
           <Pressable onPress={onClose}>
@@ -959,6 +965,7 @@ function EditVirtualPricePanel({ name, currentPrice, isOpen, onConfirm, onClose 
   onConfirm: (price: number) => void;
   onClose: () => void;
 }) {
+  const { colors } = useAppTheme();
   const [value, setValue] = useState(currentPrice > 0 ? currentPrice.toFixed(2) : "");
   const inputRef = useRef<TextInput>(null);
   const parsed = parseFloat(value);
@@ -977,9 +984,9 @@ function EditVirtualPricePanel({ name, currentPrice, isOpen, onConfirm, onClose 
   return (
     <BottomModal isOpen={isOpen} onClose={onClose} height="auto">
       <View style={{ gap: 14 }}>
-        <Text style={{ fontSize: 17, fontWeight: "800", color: "#1C1917" }} numberOfLines={1}>{name}</Text>
+        <Text style={{ fontSize: 17, fontWeight: "800", color: colors.text }} numberOfLines={1}>{name}</Text>
         <View style={{
-          borderRadius: 16, backgroundColor: "#FAF9F6",
+          borderRadius: 16, backgroundColor: colors.bg,
           paddingVertical: 14, paddingHorizontal: 20,
           flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4,
         }}>
@@ -992,19 +999,19 @@ function EditVirtualPricePanel({ name, currentPrice, isOpen, onConfirm, onClose 
             onSubmitEditing={() => { if (valid) { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); onConfirm(parsed); } }}
             placeholder="0"
             placeholderTextColor="#D1CCC5"
-            style={{ fontSize: 46, fontWeight: "900", color: "#1C1917", letterSpacing: -2, minWidth: 60, textAlign: "right" }}
+            style={{ fontSize: 46, fontWeight: "900", color: colors.text, letterSpacing: -2, minWidth: 60, textAlign: "right" }}
           />
-          <Text style={{ fontSize: 24, fontWeight: "700", color: "#A8A29E", marginBottom: 2 }}>€</Text>
+          <Text style={{ fontSize: 24, fontWeight: "700", color: colors.textSubtle, marginBottom: 2 }}>€</Text>
         </View>
         <Pressable
           onPress={() => { if (valid) { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); onConfirm(parsed); } }}
           style={({ pressed }) => ({
             borderRadius: 18, paddingVertical: 16, alignItems: "center",
-            backgroundColor: valid ? (pressed ? "#C94415" : "#E8571C") : "#F0EDE8",
+            backgroundColor: valid ? (pressed ? "#C94415" : colors.accent) : "#F0EDE8",
             transform: [{ scale: pressed && valid ? 0.97 : 1 }],
           })}
         >
-          <Text style={{ fontSize: 17, fontWeight: "900", color: valid ? "#fff" : "#A8A29E", letterSpacing: -0.3 }}>✓ Confirmer</Text>
+          <Text style={{ fontSize: 17, fontWeight: "900", color: valid ? "#fff" : colors.textSubtle, letterSpacing: -0.3 }}>✓ Confirmer</Text>
         </Pressable>
       </View>
     </BottomModal>
@@ -1040,11 +1047,12 @@ function CheckoutSummary({
   onEditPrice: (item: ShoppingItem) => void;
   onRebalance: () => void;
 }) {
+  const { colors } = useAppTheme();
   const hasSplit = splitSettings.enabled && splitSettings.members.length >= 2;
   const hasCarteCap = hasSplit && splitSettings.carteRestoEnabled;
 
   return (
-    <View style={{ position: "absolute", inset: 0, backgroundColor: "#FAF9F6", zIndex: 30 }}>
+    <View style={{ position: "absolute", inset: 0, backgroundColor: colors.bg, zIndex: 30 }}>
       <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
         <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, gap: 12 }}>
           <Pressable
@@ -1055,16 +1063,16 @@ function CheckoutSummary({
               alignItems: "center", justifyContent: "center",
             })}
           >
-            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#1C1917" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
               <Line x1={18} y1={6} x2={6} y2={18} /><Line x1={6} y1={6} x2={18} y2={18} />
             </Svg>
           </Pressable>
-          <Text style={{ flex: 1, fontSize: 17, fontWeight: "900", color: "#1C1917", letterSpacing: -0.3 }}>Récapitulatif</Text>
+          <Text style={{ flex: 1, fontSize: 17, fontWeight: "900", color: colors.text, letterSpacing: -0.3 }}>Récapitulatif</Text>
         </View>
 
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48, gap: 12 }} showsVerticalScrollIndicator={false}>
-          <View style={{ borderRadius: 20, backgroundColor: "#1C1917", padding: 22, gap: 4 }}>
-            <Text style={{ fontSize: 12, fontWeight: "600", color: "#78716C", textTransform: "uppercase", letterSpacing: 1.5 }}>Total panier</Text>
+          <View style={{ borderRadius: 20, backgroundColor: colors.text, padding: 22, gap: 4 }}>
+            <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1.5 }}>Total panier</Text>
             <Text style={{ fontSize: 44, fontWeight: "900", color: "#fff", letterSpacing: -1.5 }}>
               {confirmedTotal.toFixed(2)} €
             </Text>
@@ -1086,7 +1094,7 @@ function CheckoutSummary({
                 <Path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
                 <Path d="M3 3v5h5" />
               </Svg>
-              <Text style={{ fontSize: 14, fontWeight: "700", color: "#78716C" }}>Rééquilibrer la répartition</Text>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: colors.textMuted }}>Rééquilibrer la répartition</Text>
             </Pressable>
           )}
 
@@ -1103,19 +1111,19 @@ function CheckoutSummary({
             const allItems = [...memberChecked, ...memberVirtual];
 
             return (
-              <View key={i} style={{ borderRadius: 18, backgroundColor: "#fff", overflow: "hidden", shadowColor: "#1C1917", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 }}>
+              <View key={i} style={{ borderRadius: 18, backgroundColor: colors.bgCard, overflow: "hidden", shadowColor: "#1C1917", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 }}>
                 <View style={{ padding: 18, gap: 10 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                       <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: m.color }} />
-                      <Text style={{ fontSize: 16, fontWeight: "900", color: "#1C1917" }}>{m.name}</Text>
+                      <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text }}>{m.name}</Text>
                     </View>
                     <View style={{ alignItems: "flex-end" }}>
-                      <Text style={{ fontSize: 22, fontWeight: "900", color: over ? "#DC2626" : "#1C1917", letterSpacing: -0.5 }}>
+                      <Text style={{ fontSize: 22, fontWeight: "900", color: over ? colors.danger : colors.text, letterSpacing: -0.5 }}>
                         {total.toFixed(2)} €
                       </Text>
                       {over && (
-                        <Text style={{ fontSize: 11, color: "#DC2626", fontWeight: "600" }}>
+                        <Text style={{ fontSize: 11, color: colors.danger, fontWeight: "600" }}>
                           +{(displayTotal - m.budgetCap).toFixed(2)} € dépassement carte
                         </Text>
                       )}
@@ -1126,18 +1134,18 @@ function CheckoutSummary({
                   </View>
                   {hasCarteCap ? (
                     <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                      <Text style={{ fontSize: 11, color: "#A8A29E" }}>Carte : {carteTotal.toFixed(2)} € / {m.budgetCap} €</Text>
+                      <Text style={{ fontSize: 11, color: colors.textSubtle }}>Carte : {carteTotal.toFixed(2)} € / {m.budgetCap} €</Text>
                       {horsCarteTotal > 0 && (
-                        <Text style={{ fontSize: 11, color: "#78716C", fontWeight: "600" }}>Hors carte : {horsCarteTotal.toFixed(2)} €</Text>
+                        <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: "600" }}>Hors carte : {horsCarteTotal.toFixed(2)} €</Text>
                       )}
                     </View>
                   ) : (
-                    <Text style={{ fontSize: 11, color: "#A8A29E" }}>{total.toFixed(2)} € / {m.budgetCap} €</Text>
+                    <Text style={{ fontSize: 11, color: colors.textSubtle }}>{total.toFixed(2)} € / {m.budgetCap} €</Text>
                   )}
                 </View>
 
                 {allItems.length > 0 && (
-                  <View style={{ borderTopWidth: 1, borderTopColor: "#F5F3EF" }}>
+                  <View style={{ borderTopWidth: 1, borderTopColor: colors.bgSurface }}>
                     {memberChecked.map((item, idx) => {
                       const price = session.confirmedPrices.get(item.id);
                       const isHC = session.horsCarteIds.has(item.id);
@@ -1145,20 +1153,20 @@ function CheckoutSummary({
                         <View key={item.id} style={{
                           flexDirection: "row", alignItems: "center", gap: 8,
                           paddingHorizontal: 18, paddingVertical: 12,
-                          borderBottomWidth: idx < allItems.length - 1 ? 1 : 0, borderBottomColor: "#F5F3EF",
+                          borderBottomWidth: idx < allItems.length - 1 ? 1 : 0, borderBottomColor: colors.bgSurface,
                         }}>
                           {hasCarteCap && (
-                            <View style={{ borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2, backgroundColor: isHC ? "#FEE2E2" : "#F0FDF4" }}>
-                              <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? "#DC2626" : "#16A34A", letterSpacing: 0.5 }}>
+                            <View style={{ borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2, backgroundColor: isHC ? colors.dangerBg : "#F0FDF4" }}>
+                              <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? colors.danger : "#16A34A", letterSpacing: 0.5 }}>
                                 {isHC ? "HC" : "CR"}
                               </Text>
                             </View>
                           )}
                           <Text style={{ flex: 1, fontSize: 14, color: "#44403C" }} numberOfLines={1}>{item.customName}</Text>
                           {price !== undefined
-                            ? <Text style={{ fontSize: 14, fontWeight: "700", color: "#1C1917" }}>{price.toFixed(2)} €</Text>
+                            ? <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>{price.toFixed(2)} €</Text>
                             : <Pressable onPress={() => onEditPrice(item)} hitSlop={8}>
-                                <Text style={{ fontSize: 12, color: "#E8571C", fontWeight: "600" }}>+ Saisir le prix</Text>
+                                <Text style={{ fontSize: 12, color: colors.accent, fontWeight: "600" }}>+ Saisir le prix</Text>
                               </Pressable>}
                         </View>
                       );
@@ -1169,17 +1177,17 @@ function CheckoutSummary({
                         <View key={v.id} style={{
                           flexDirection: "row", alignItems: "center", gap: 8,
                           paddingHorizontal: 18, paddingVertical: 12,
-                          borderBottomWidth: idx < memberVirtual.length - 1 ? 1 : 0, borderBottomColor: "#F5F3EF",
+                          borderBottomWidth: idx < memberVirtual.length - 1 ? 1 : 0, borderBottomColor: colors.bgSurface,
                         }}>
                           {hasCarteCap && (
-                            <View style={{ borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2, backgroundColor: isHC ? "#FEE2E2" : "#F0FDF4" }}>
-                              <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? "#DC2626" : "#16A34A", letterSpacing: 0.5 }}>
+                            <View style={{ borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2, backgroundColor: isHC ? colors.dangerBg : "#F0FDF4" }}>
+                              <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? colors.danger : "#16A34A", letterSpacing: 0.5 }}>
                                 {isHC ? "HC" : "CR"}
                               </Text>
                             </View>
                           )}
                           <Text style={{ flex: 1, fontSize: 14, color: "#44403C", fontStyle: "italic" }} numberOfLines={1}>{v.customName}</Text>
-                          <Text style={{ fontSize: 14, fontWeight: "700", color: "#1C1917" }}>{v.price.toFixed(2)} €</Text>
+                          <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>{v.price.toFixed(2)} €</Text>
                         </View>
                       );
                     })}
@@ -1190,7 +1198,7 @@ function CheckoutSummary({
           })}
 
           {!hasSplit && (
-            <View style={{ borderRadius: 18, backgroundColor: "#fff", overflow: "hidden" }}>
+            <View style={{ borderRadius: 18, backgroundColor: colors.bgCard, overflow: "hidden" }}>
               {[...checkedItems, ...virtualItems.map((v) => ({ ...v, isVirtual: true }))].map((item, idx, arr) => {
                 const isVirtual = "isVirtual" in item;
                 const price = isVirtual ? (item as VirtualItem).price : session.confirmedPrices.get(item.id);
@@ -1199,14 +1207,14 @@ function CheckoutSummary({
                   <View key={item.id} style={{
                     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
                     paddingHorizontal: 18, paddingVertical: 14,
-                    borderBottomWidth: idx < arr.length - 1 ? 1 : 0, borderBottomColor: "#F5F3EF",
+                    borderBottomWidth: idx < arr.length - 1 ? 1 : 0, borderBottomColor: colors.bgSurface,
                   }}>
                     <Text style={{ flex: 1, fontSize: 14, color: "#44403C", fontStyle: isVirtual ? "italic" : "normal" }} numberOfLines={1}>{name}</Text>
                     {price !== undefined
-                      ? <Text style={{ fontSize: 14, fontWeight: "700", color: "#1C1917" }}>{price.toFixed(2)} €</Text>
+                      ? <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>{price.toFixed(2)} €</Text>
                       : !isVirtual
                         ? <Pressable onPress={() => onEditPrice(item as ShoppingItem)} hitSlop={8}>
-                            <Text style={{ fontSize: 12, color: "#E8571C", fontWeight: "600" }}>+ Saisir le prix</Text>
+                            <Text style={{ fontSize: 12, color: colors.accent, fontWeight: "600" }}>+ Saisir le prix</Text>
                           </Pressable>
                         : null}
                   </View>
@@ -1220,7 +1228,7 @@ function CheckoutSummary({
               onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); onFinishWithPantry(); }}
               style={({ pressed }) => ({
                 borderRadius: 18, paddingVertical: 18, alignItems: "center",
-                backgroundColor: pressed ? "#C94415" : "#E8571C",
+                backgroundColor: pressed ? "#C94415" : colors.accent,
                 transform: [{ scale: pressed ? 0.97 : 1 }],
               })}
             >
@@ -1232,7 +1240,7 @@ function CheckoutSummary({
               onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); onFinish(); }}
               style={{ paddingVertical: 12, alignItems: "center" }}
             >
-              <Text style={{ fontSize: 15, fontWeight: "600", color: "#A8A29E" }}>
+              <Text style={{ fontSize: 15, fontWeight: "600", color: colors.textSubtle }}>
                 Terminer sans mettre au stock
               </Text>
             </Pressable>
@@ -1279,6 +1287,7 @@ const EMPTY_SESSION: Session = {
 };
 
 export function ModeCourses() {
+  const { colors } = useAppTheme();
   const router = useRouter();
   const { list, setList, loading, reload, silentReload } = useShoppingList();
   const insets = useSafeAreaInsets();
@@ -1664,16 +1673,16 @@ export function ModeCourses() {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#FAF9F6", alignItems: "center", justifyContent: "center" }} edges={["top"]}>
-        <ActivityIndicator color="#E8571C" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center" }} edges={["top"]}>
+        <ActivityIndicator color={colors.accent} />
       </SafeAreaView>
     );
   }
 
   if (storesLoaded && stores.length === 0) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#FAF9F6" }} edges={["top"]}>
-        <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, gap: 10, borderBottomWidth: 1, borderBottomColor: "#F0EDE8" }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top"]}>
+        <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, gap: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
           <Pressable
             onPress={() => router.navigate("/(tabs)/shopping")}
             style={({ pressed }) => ({
@@ -1682,25 +1691,25 @@ export function ModeCourses() {
               alignItems: "center", justifyContent: "center",
             })}
           >
-            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#1C1917" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
               <Line x1={18} y1={6} x2={6} y2={18} /><Line x1={6} y1={6} x2={18} y2={18} />
             </Svg>
           </Pressable>
-          <Text style={{ flex: 1, fontSize: 17, fontWeight: "900", color: "#1C1917", letterSpacing: -0.3 }}>Mode courses</Text>
+          <Text style={{ flex: 1, fontSize: 17, fontWeight: "900", color: colors.text, letterSpacing: -0.3 }}>Mode courses</Text>
         </View>
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 40, gap: 24 }}>
           <View style={{ width: 72, height: 72, borderRadius: 24, backgroundColor: "#FEF0EC", alignItems: "center", justifyContent: "center" }}>
-            <Svg width={32} height={32} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+            <Svg width={32} height={32} viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
               <Path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
               <Line x1={3} y1={6} x2={21} y2={6} />
               <Path d="M16 10a4 4 0 0 1-8 0" />
             </Svg>
           </View>
           <View style={{ alignItems: "center", gap: 8 }}>
-            <Text style={{ fontSize: 20, fontWeight: "900", color: "#1C1917", letterSpacing: -0.3, textAlign: "center" }}>
+            <Text style={{ fontSize: 20, fontWeight: "900", color: colors.text, letterSpacing: -0.3, textAlign: "center" }}>
               Aucun magasin configuré
             </Text>
-            <Text style={{ fontSize: 14, color: "#78716C", textAlign: "center", lineHeight: 22 }}>
+            <Text style={{ fontSize: 14, color: colors.textMuted, textAlign: "center", lineHeight: 22 }}>
               Pour enregistrer les prix pendant tes courses, ajoute d'abord un magasin dans ton profil.
             </Text>
           </View>
@@ -1708,7 +1717,7 @@ export function ModeCourses() {
             onPress={() => router.navigate("/(tabs)/profile")}
             style={({ pressed }) => ({
               borderRadius: 16, paddingVertical: 16, paddingHorizontal: 40,
-              backgroundColor: pressed ? "#D14A18" : "#E8571C",
+              backgroundColor: pressed ? "#D14A18" : colors.accent,
             })}
           >
             <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff" }}>Configurer mes magasins</Text>
@@ -1720,8 +1729,8 @@ export function ModeCourses() {
 
   return (
     <>
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#FAF9F6" }} edges={["top"]}>
-      <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, gap: 10, borderBottomWidth: 1, borderBottomColor: "#F0EDE8" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top"]}>
+      <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, gap: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
         <Pressable
           onPress={confirmLeave}
           style={({ pressed }) => ({
@@ -1730,20 +1739,20 @@ export function ModeCourses() {
             alignItems: "center", justifyContent: "center",
           })}
         >
-          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#1C1917" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
             <Line x1={18} y1={6} x2={6} y2={18} /><Line x1={6} y1={6} x2={18} y2={18} />
           </Svg>
         </Pressable>
 
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 17, fontWeight: "900", color: "#1C1917", letterSpacing: -0.3 }}>Mode courses</Text>
+          <Text style={{ fontSize: 17, fontWeight: "900", color: colors.text, letterSpacing: -0.3 }}>Mode courses</Text>
           {selectedStore ? (
             <Pressable
               onPress={() => { if (stores.length > 1) { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setStoreSelectorOpen(true); } }}
               hitSlop={8}
               style={{ flexDirection: "row", alignItems: "center", gap: 3 }}
             >
-              <Text style={{ fontSize: 12, color: "#A8A29E", fontWeight: "500" }}>{selectedStore.name}</Text>
+              <Text style={{ fontSize: 12, color: colors.textSubtle, fontWeight: "500" }}>{selectedStore.name}</Text>
               {stores.length > 1 && (
                 <Svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="#C4B8AF" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                   <Polyline points="6 9 12 15 18 9" />
@@ -1759,17 +1768,17 @@ export function ModeCourses() {
       <>
           <Pressable
             onPress={() => { if (hasCartItems) { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setCheckoutOpen(true); } }}
-            style={{ margin: 16, borderRadius: 22, backgroundColor: "#fff", padding: 18, gap: 12, shadowColor: "#1C1917", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 10, elevation: 4 }}
+            style={{ margin: 16, borderRadius: 22, backgroundColor: colors.bgCard, padding: 18, gap: 12, shadowColor: "#1C1917", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 10, elevation: 4 }}
           >
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <View>
                 <Animated.View style={totalAnimatedStyle}>
-                  <Text style={{ fontSize: 40, fontWeight: "900", color: "#1C1917", letterSpacing: -1.5 }}>
+                  <Text style={{ fontSize: 40, fontWeight: "900", color: colors.text, letterSpacing: -1.5 }}>
                     {confirmedTotal > 0 ? `${confirmedTotal.toFixed(2)} €` : "0 €"}
                   </Text>
                 </Animated.View>
                 {hasCartItems && (
-                  <Text style={{ fontSize: 12, color: "#A8A29E", fontWeight: "500", marginTop: 1 }}>
+                  <Text style={{ fontSize: 12, color: colors.textSubtle, fontWeight: "500", marginTop: 1 }}>
                     {checked.length + session.virtualItems.length} article{checked.length + session.virtualItems.length > 1 ? "s" : ""}
                   </Text>
                 )}
@@ -1811,11 +1820,11 @@ export function ModeCourses() {
                     }}>
                       <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: m.color }} />
                       <Text style={{ fontSize: 12, fontWeight: "700", color: "#44403C" }}>{m.name}</Text>
-                      <Text style={{ fontSize: 12, fontWeight: "900", color: over ? "#DC2626" : "#1C1917" }}>
+                      <Text style={{ fontSize: 12, fontWeight: "900", color: over ? colors.danger : colors.text }}>
                         {splitSettings.carteRestoEnabled ? carteTotal.toFixed(2) : total.toFixed(2)} €
                       </Text>
                       {splitSettings.carteRestoEnabled && memberHorsCarteTotals[i] > 0 && (
-                        <Text style={{ fontSize: 10, color: "#78716C", fontWeight: "600" }}>
+                        <Text style={{ fontSize: 10, color: colors.textMuted, fontWeight: "600" }}>
                           +{(memberHorsCarteTotals[i] ?? 0).toFixed(2)} HC
                         </Text>
                       )}
@@ -1829,19 +1838,19 @@ export function ModeCourses() {
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <View style={{ flex: 1, height: 3, borderRadius: 99, backgroundColor: "#F0EDE8" }}>
                   <View style={{
-                    height: 3, borderRadius: 99, backgroundColor: "#E8571C",
+                    height: 3, borderRadius: 99, backgroundColor: colors.accent,
                     width: `${((list?.items.length ?? 0) > 0 ? (checked.length / (list?.items.length ?? 1)) * 100 : 0)}%`,
                   }} />
                 </View>
-                <Text style={{ fontSize: 11, fontWeight: "600", color: "#A8A29E" }}>
+                <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textSubtle }}>
                   {checked.length}/{list?.items.length ?? 0}
                 </Text>
               </View>
             )}
             {hasCartItems && (
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, paddingTop: 2 }}>
-                <Text style={{ fontSize: 12, fontWeight: "700", color: "#E8571C" }}>Voir le récap</Text>
-                <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <Text style={{ fontSize: 12, fontWeight: "700", color: colors.accent }}>Voir le récap</Text>
+                <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                   <Polyline points="9 18 15 12 9 6" />
                 </Svg>
               </View>
@@ -1851,8 +1860,8 @@ export function ModeCourses() {
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100, flexGrow: 1 }}>
             {unchecked.length === 0 && !hasCartItems && (
               <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 60, gap: 8 }}>
-                <Text style={{ fontSize: 15, fontWeight: "800", color: "#1C1917" }}>Liste vide</Text>
-                <Text style={{ fontSize: 13, color: "#A8A29E", textAlign: "center", lineHeight: 18 }}>
+                <Text style={{ fontSize: 15, fontWeight: "800", color: colors.text }}>Liste vide</Text>
+                <Text style={{ fontSize: 13, color: colors.textSubtle, textAlign: "center", lineHeight: 18 }}>
                   Ajoutez des articles à votre liste de courses avant de démarrer.
                 </Text>
               </View>
@@ -1864,10 +1873,10 @@ export function ModeCourses() {
                 <View key={cat} style={{ marginTop: catIdx === 0 ? 4 : 20 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 4, paddingBottom: 8 }}>
                     <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: color }} />
-                    <Text style={{ flex: 1, fontSize: 11, fontWeight: "700", color: "#78716C", textTransform: "uppercase", letterSpacing: 1.5 }}>{cat}</Text>
-                    <Text style={{ fontSize: 11, fontWeight: "600", color: "#A8A29E" }}>{catItems.length}</Text>
+                    <Text style={{ flex: 1, fontSize: 11, fontWeight: "700", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1.5 }}>{cat}</Text>
+                    <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textSubtle }}>{catItems.length}</Text>
                   </View>
-                  <View style={{ borderRadius: 14, backgroundColor: "#fff", overflow: "hidden" }}>
+                  <View style={{ borderRadius: 14, backgroundColor: colors.bgCard, overflow: "hidden" }}>
                     {catItems.map((item, i) => {
                       return (
                         <View key={item.id}>
@@ -1883,12 +1892,12 @@ export function ModeCourses() {
                             <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8 }}>
                               {item.quantity > 0 && (
                                 <View style={{ borderRadius: 6, backgroundColor: "#FEF3ED", paddingHorizontal: 7, paddingVertical: 3, flexShrink: 0 }}>
-                                  <Text style={{ fontSize: 12, fontWeight: "700", color: "#E8571C" }}>
+                                  <Text style={{ fontSize: 12, fontWeight: "700", color: colors.accent }}>
                                     {item.quantity}{item.unit ? ` ${item.unit}` : ""}
                                   </Text>
                                 </View>
                               )}
-                              <Text style={{ flex: 1, fontSize: 15, fontWeight: "600", color: "#1C1917" }} numberOfLines={1}>
+                              <Text style={{ flex: 1, fontSize: 15, fontWeight: "600", color: colors.text }} numberOfLines={1}>
                                 {item.customName}
                               </Text>
                             </View>
@@ -1896,7 +1905,7 @@ export function ModeCourses() {
                               <Text style={{ fontSize: 12, fontWeight: "600", color: "#C4B8AF" }}>~{getPrefillPrice(item)} €</Text>
                             ) : null}
                           </Pressable>
-                          {i < catItems.length - 1 && <View style={{ height: 1, backgroundColor: "#F5F3EF", marginLeft: 60 }} />}
+                          {i < catItems.length - 1 && <View style={{ height: 1, backgroundColor: colors.bgSurface, marginLeft: 60 }} />}
                         </View>
                       );
                     })}
@@ -1908,13 +1917,13 @@ export function ModeCourses() {
             {hasCartItems && (
               <View style={{ marginTop: 32 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 4, paddingBottom: 8 }}>
-                  <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: "#E8571C" }} />
-                  <Text style={{ flex: 1, fontSize: 11, fontWeight: "700", color: "#78716C", textTransform: "uppercase", letterSpacing: 1.5 }}>
+                  <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.accent }} />
+                  <Text style={{ flex: 1, fontSize: 11, fontWeight: "700", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1.5 }}>
                     Dans le panier
                   </Text>
-                  <Text style={{ fontSize: 11, fontWeight: "600", color: "#A8A29E" }}>{checked.length + session.virtualItems.length}</Text>
+                  <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textSubtle }}>{checked.length + session.virtualItems.length}</Text>
                 </View>
-                <View style={{ borderRadius: 14, backgroundColor: "#fff", overflow: "hidden" }}>
+                <View style={{ borderRadius: 14, backgroundColor: colors.bgCard, overflow: "hidden" }}>
                 {checked.map((item, i) => {
                   const price = session.confirmedPrices.get(item.id);
                   const memberIdx = session.assignments.get(item.id) ?? 0;
@@ -1943,35 +1952,35 @@ export function ModeCourses() {
                         }}
                         renderRightActions={() => (
                           <View style={{ width: 90, backgroundColor: "#F0EDE8", alignItems: "center", justifyContent: "center" }}>
-                            <Text style={{ fontSize: 12, fontWeight: "700", color: "#78716C" }}>Décocher</Text>
+                            <Text style={{ fontSize: 12, fontWeight: "700", color: colors.textMuted }}>Décocher</Text>
                           </View>
                         )}
                         renderLeftActions={() => (
-                          <View style={{ width: 90, backgroundColor: "#E8571C", alignItems: "center", justifyContent: "center" }}>
+                          <View style={{ width: 90, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
                             <Text style={{ fontSize: 12, fontWeight: "700", color: "#fff" }}>Modifier</Text>
                           </View>
                         )}
                       >
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 16, paddingVertical: 14, backgroundColor: "#fff" }}>
-                          <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: "#E8571C", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 16, paddingVertical: 14, backgroundColor: colors.bgCard }}>
+                          <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                             <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
                               <Polyline points="20 6 9 17 4 12" />
                             </Svg>
                           </View>
                           <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8 }}>
                             {item.quantity > 0 && (
-                              <View style={{ borderRadius: 6, backgroundColor: "#F5F3EF", paddingHorizontal: 7, paddingVertical: 3, flexShrink: 0 }}>
-                                <Text style={{ fontSize: 12, fontWeight: "700", color: "#A8A29E" }}>
+                              <View style={{ borderRadius: 6, backgroundColor: colors.bgSurface, paddingHorizontal: 7, paddingVertical: 3, flexShrink: 0 }}>
+                                <Text style={{ fontSize: 12, fontWeight: "700", color: colors.textSubtle }}>
                                   {item.quantity}{item.unit ? ` ${item.unit}` : ""}
                                 </Text>
                               </View>
                             )}
-                            <Text style={{ flex: 1, fontSize: 14, color: "#A8A29E", textDecorationLine: "line-through" }} numberOfLines={1}>
+                            <Text style={{ flex: 1, fontSize: 14, color: colors.textSubtle, textDecorationLine: "line-through" }} numberOfLines={1}>
                               {item.customName}
                             </Text>
                           </View>
                           {price !== undefined && (
-                            <Text style={{ fontSize: 13, fontWeight: "700", color: "#1C1917" }}>{price.toFixed(2)} €</Text>
+                            <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text }}>{price.toFixed(2)} €</Text>
                           )}
                           {splitSettings.carteRestoEnabled && splitSettings.enabled && (() => {
                             const isHC = session.horsCarteIds.has(item.id);
@@ -1979,9 +1988,9 @@ export function ModeCourses() {
                               <Pressable
                                 onPress={() => toggleHorsCarte(item.id)}
                                 hitSlop={8}
-                                style={{ borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, backgroundColor: isHC ? "#FEE2E2" : "#F0FDF4" }}
+                                style={{ borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, backgroundColor: isHC ? colors.dangerBg : "#F0FDF4" }}
                               >
-                                <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? "#DC2626" : "#16A34A", letterSpacing: 0.5 }}>
+                                <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? colors.danger : "#16A34A", letterSpacing: 0.5 }}>
                                   {isHC ? "HC" : "CR"}
                                 </Text>
                               </Pressable>
@@ -2010,7 +2019,7 @@ export function ModeCourses() {
                           )}
                         </View>
                       </ReanimatedSwipeable>
-                      {i < totalRows - 1 && <View style={{ height: 1, backgroundColor: "#F5F3EF", marginLeft: 60 }} />}
+                      {i < totalRows - 1 && <View style={{ height: 1, backgroundColor: colors.bgSurface, marginLeft: 60 }} />}
                     </View>
                   );
                 })}
@@ -2029,35 +2038,35 @@ export function ModeCourses() {
                           else setEditVirtualId(v.id);
                         }}
                         renderRightActions={() => (
-                          <View style={{ width: 90, backgroundColor: "#FEE2E2", alignItems: "center", justifyContent: "center" }}>
-                            <Text style={{ fontSize: 12, fontWeight: "700", color: "#DC2626" }}>Supprimer</Text>
+                          <View style={{ width: 90, backgroundColor: colors.dangerBg, alignItems: "center", justifyContent: "center" }}>
+                            <Text style={{ fontSize: 12, fontWeight: "700", color: colors.danger }}>Supprimer</Text>
                           </View>
                         )}
                         renderLeftActions={() => (
-                          <View style={{ width: 90, backgroundColor: "#E8571C", alignItems: "center", justifyContent: "center" }}>
+                          <View style={{ width: 90, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }}>
                             <Text style={{ fontSize: 12, fontWeight: "700", color: "#fff" }}>Modifier</Text>
                           </View>
                         )}
                       >
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 16, paddingVertical: 14, backgroundColor: "#fff" }}>
-                          <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: "#E8571C", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 16, paddingVertical: 14, backgroundColor: colors.bgCard }}>
+                          <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                             <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
                               <Polyline points="20 6 9 17 4 12" />
                             </Svg>
                           </View>
-                          <Text style={{ flex: 1, fontSize: 14, color: "#A8A29E", textDecorationLine: "line-through", fontStyle: "italic" }} numberOfLines={1}>
+                          <Text style={{ flex: 1, fontSize: 14, color: colors.textSubtle, textDecorationLine: "line-through", fontStyle: "italic" }} numberOfLines={1}>
                             {v.customName}
                           </Text>
-                          <Text style={{ fontSize: 13, fontWeight: "700", color: "#1C1917" }}>{v.price.toFixed(2)} €</Text>
+                          <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text }}>{v.price.toFixed(2)} €</Text>
                           {splitSettings.carteRestoEnabled && splitSettings.enabled && (() => {
                             const isHC = session.horsCarteIds.has(v.id);
                             return (
                               <Pressable
                                 onPress={() => toggleHorsCarte(v.id)}
                                 hitSlop={8}
-                                style={{ borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, backgroundColor: isHC ? "#FEE2E2" : "#F0FDF4" }}
+                                style={{ borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, backgroundColor: isHC ? colors.dangerBg : "#F0FDF4" }}
                               >
-                                <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? "#DC2626" : "#16A34A", letterSpacing: 0.5 }}>
+                                <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? colors.danger : "#16A34A", letterSpacing: 0.5 }}>
                                   {isHC ? "HC" : "CR"}
                                 </Text>
                               </Pressable>
@@ -2086,7 +2095,7 @@ export function ModeCourses() {
                           </Pressable>
                         </View>
                       </ReanimatedSwipeable>
-                      {i < session.virtualItems.length - 1 && <View style={{ height: 1, backgroundColor: "#F5F3EF", marginLeft: 60 }} />}
+                      {i < session.virtualItems.length - 1 && <View style={{ height: 1, backgroundColor: colors.bgSurface, marginLeft: 60 }} />}
                     </View>
                   );
                 })}
@@ -2100,7 +2109,7 @@ export function ModeCourses() {
             style={({ pressed }) => ({
               position: "absolute", bottom: insets.bottom + 20, right: 20,
               width: 56, height: 56, borderRadius: 28,
-              backgroundColor: pressed ? "#C94415" : "#E8571C",
+              backgroundColor: pressed ? "#C94415" : colors.accent,
               alignItems: "center", justifyContent: "center",
               shadowColor: "#E8571C", shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.35, shadowRadius: 12, elevation: 6,
@@ -2216,21 +2225,21 @@ export function ModeCourses() {
       >
         <Pressable
           onPress={() => {}}
-          style={{ width: "100%", backgroundColor: "#fff", borderRadius: 24, padding: 24, gap: 16,
+          style={{ width: "100%", backgroundColor: colors.bgCard, borderRadius: 24, padding: 24, gap: 16,
             shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 24, elevation: 12 }}
         >
-          <Text style={{ fontSize: 17, fontWeight: "900", color: "#1C1917", letterSpacing: -0.3 }}>Quitter les courses ?</Text>
-          <Text style={{ fontSize: 14, color: "#78716C", lineHeight: 20 }}>Ta session en cours sera perdue.</Text>
+          <Text style={{ fontSize: 17, fontWeight: "900", color: colors.text, letterSpacing: -0.3 }}>Quitter les courses ?</Text>
+          <Text style={{ fontSize: 14, color: colors.textMuted, lineHeight: 20 }}>Ta session en cours sera perdue.</Text>
           <View style={{ flexDirection: "row", gap: 10 }}>
             <Pressable
               onPress={() => setLeaveDialogOpen(false)}
               style={({ pressed }) => ({ flex: 1, borderRadius: 14, paddingVertical: 14, alignItems: "center", backgroundColor: pressed ? "#E8E4DF" : "#F0EDE8" })}
             >
-              <Text style={{ fontSize: 15, fontWeight: "700", color: "#78716C" }}>Annuler</Text>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: colors.textMuted }}>Annuler</Text>
             </Pressable>
             <Pressable
               onPress={() => { setLeaveDialogOpen(false); router.navigate("/(tabs)/shopping"); }}
-              style={({ pressed }) => ({ flex: 1, borderRadius: 14, paddingVertical: 14, alignItems: "center", backgroundColor: pressed ? "#C94415" : "#E8571C" })}
+              style={({ pressed }) => ({ flex: 1, borderRadius: 14, paddingVertical: 14, alignItems: "center", backgroundColor: pressed ? "#C94415" : colors.accent })}
             >
               <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>Quitter</Text>
             </Pressable>

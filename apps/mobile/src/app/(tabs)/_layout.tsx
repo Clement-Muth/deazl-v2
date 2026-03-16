@@ -2,6 +2,7 @@ import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Tabs } from "expo-router";
 import { useEffect } from "react";
 import { Dimensions, Pressable, View } from "react-native";
+import { useAppTheme } from "../../shared/theme";
 import Animated, {
   interpolate,
   type SharedValue,
@@ -122,6 +123,7 @@ function TabItem({
 
 function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const { colors } = useAppTheme();
   const activeIndex = useSharedValue(state.index);
 
   useEffect(() => {
@@ -147,11 +149,11 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         style={{
           flexDirection: "row",
           alignItems: "center",
-          backgroundColor: "#fff",
+          backgroundColor: colors.bgCard,
           borderRadius: 9999,
           paddingHorizontal: INNER_PAD,
           paddingVertical: 5,
-          shadowColor: "#1C1917",
+          shadowColor: colors.shadow,
           shadowOffset: { width: 0, height: 6 },
           shadowOpacity: 0.09,
           shadowRadius: 20,
@@ -166,7 +168,7 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
               width: TAB_W,
               height: PILL_H,
               borderRadius: 999,
-              backgroundColor: "#E8571C",
+              backgroundColor: colors.accent,
             },
             pillStyle,
           ]}
