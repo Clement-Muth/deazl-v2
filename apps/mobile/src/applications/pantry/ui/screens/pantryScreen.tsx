@@ -539,7 +539,7 @@ function EditPantryItemSheet({ item, isOpen, onClose, onSaved }: { item: PantryI
 
 export function PantryScreen() {
   const { colors } = useAppTheme();
-  const { items, loading, reload } = usePantryItems();
+  const { items, setItems, loading, reload } = usePantryItems();
   const [addOpen, setAddOpen] = useState(false);
   const [editItem, setEditItem] = useState<PantryItem | null>(null);
   const [openLocations, setOpenLocations] = useState<Set<StorageLocation>>(() => new Set(LOCATION_ORDER));
@@ -578,10 +578,10 @@ export function PantryScreen() {
     reload();
   }
 
-  async function handleQuantityChange(id: string, newQty: number) {
+  function handleQuantityChange(id: string, newQty: number) {
     const qty = newQty <= 0 ? null : newQty;
-    await updatePantryItemQuantity(id, qty);
-    reload();
+    setItems((prev) => prev.map((i) => i.id === id ? { ...i, quantity: qty } : i));
+    updatePantryItemQuantity(id, qty).catch(() => reload());
   }
 
   async function handleDeleteExpired() {
