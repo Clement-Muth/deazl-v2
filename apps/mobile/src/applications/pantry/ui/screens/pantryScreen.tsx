@@ -17,6 +17,12 @@ import type { PantryItem, StorageLocation } from "../../domain/entities/pantry";
 import { LOCATION_LABELS, LOCATION_ORDER } from "../../domain/entities/pantry";
 import { BottomModal, BottomModalScrollView } from "../../../shopping/ui/components/bottomModal";
 
+const PANTRY_UNITS = ["pièce", "kg", "g", "L", "cL", "mL", "boîte"];
+
+function normalizeUnit(raw: string): string {
+  return PANTRY_UNITS.find((u) => u.toLowerCase() === raw.toLowerCase()) ?? "pièce";
+}
+
 function daysUntilExpiry(dateStr: string): number {
   return Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
 }
@@ -227,7 +233,7 @@ function AddPantryItemSheet({ isOpen, onClose, onAdded }: { isOpen: boolean; onC
   const { colors } = useAppTheme();
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
-  const [unit, setUnit] = useState("");
+  const [unit, setUnit] = useState("pièce");
   const [location, setLocation] = useState<StorageLocation>("pantry");
   const [expiryDate, setExpiryDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -249,7 +255,7 @@ function AddPantryItemSheet({ isOpen, onClose, onAdded }: { isOpen: boolean; onC
     });
     setSubmitting(false);
     if (result.error) { setError(result.error); return; }
-    setName(""); setQuantity(""); setUnit(""); setLocation("pantry"); setExpiryDate(""); setError(null);
+    setName(""); setQuantity(""); setUnit("pièce"); setLocation("pantry"); setExpiryDate(""); setError(null);
     onAdded();
     onClose();
   }
@@ -277,7 +283,7 @@ function AddPantryItemSheet({ isOpen, onClose, onAdded }: { isOpen: boolean; onC
           const qty = json.product.quantity;
           if (qty) {
             const match = qty.match(/^([\d.,]+)\s*(.*)$/);
-            if (match) { setQuantity(match[1]); setUnit(match[2].trim()); }
+            if (match) { setQuantity(match[1]); setUnit(normalizeUnit(match[2].trim())); }
           }
         }
       }
@@ -287,7 +293,7 @@ function AddPantryItemSheet({ isOpen, onClose, onAdded }: { isOpen: boolean; onC
   }
 
   return (
-    <BottomModal isOpen={isOpen} onClose={onClose} height="75%">
+    <BottomModal isOpen={isOpen} onClose={onClose} height="auto">
       <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 8 }}>Ajouter au stock</Text>
       {scanning && (
         <View style={{ height: 220, borderRadius: 16, overflow: "hidden", marginBottom: 12 }}>
@@ -309,7 +315,7 @@ function AddPantryItemSheet({ isOpen, onClose, onAdded }: { isOpen: boolean; onC
           </Pressable>
         </View>
       )}
-      <BottomModalScrollView contentContainerStyle={{ paddingBottom: 40, gap: 12 }}>
+      <View style={{ gap: 12 }}>
         {error && <Text style={{ color: colors.danger, fontSize: 13, fontWeight: "600" }}>{error}</Text>}
         <View style={{ gap: 4 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -330,8 +336,8 @@ function AddPantryItemSheet({ isOpen, onClose, onAdded }: { isOpen: boolean; onC
             style={{ borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: colors.text }}
           />
         </View>
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          <View style={{ flex: 1, gap: 4 }}>
+        <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+          <View style={{ gap: 6 }}>
             <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Quantité</Text>
             <TextInput
               value={quantity}
@@ -339,18 +345,22 @@ function AddPantryItemSheet({ isOpen, onClose, onAdded }: { isOpen: boolean; onC
               placeholder="1"
               keyboardType="numeric"
               placeholderTextColor="#A8A29E"
-              style={{ borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: colors.text }}
+              style={{ width: 72, borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 12, paddingVertical: 14, fontSize: 16, fontWeight: "700", color: colors.text, textAlign: "center" }}
             />
           </View>
-          <View style={{ flex: 1, gap: 4 }}>
+          <View style={{ flex: 1, gap: 6 }}>
             <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Unité</Text>
-            <TextInput
-              value={unit}
-              onChangeText={setUnit}
-              placeholder="kg, L, pièce..."
-              placeholderTextColor="#A8A29E"
-              style={{ borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: colors.text }}
-            />
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+              {PANTRY_UNITS.map((u) => (
+                <Pressable
+                  key={u}
+                  onPress={() => setUnit(u)}
+                  style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 99, backgroundColor: unit === u ? colors.accent : colors.bgSurface }}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: unit === u ? "#fff" : colors.textMuted }}>{u}</Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
         </View>
         <View style={{ gap: 4 }}>
@@ -370,7 +380,7 @@ function AddPantryItemSheet({ isOpen, onClose, onAdded }: { isOpen: boolean; onC
             {submitting ? "Ajout…" : "Ajouter"}
           </Text>
         </Pressable>
-      </BottomModalScrollView>
+      </View>
     </BottomModal>
   );
 }
@@ -433,9 +443,9 @@ function EditPantryItemSheet({ item, isOpen, onClose, onSaved }: { item: PantryI
   if (!item) return null;
 
   return (
-    <BottomModal isOpen={isOpen} onClose={onClose} height="80%">
+    <BottomModal isOpen={isOpen} onClose={onClose} height="auto">
       <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 8 }}>Modifier</Text>
-      <BottomModalScrollView contentContainerStyle={{ paddingBottom: 40, gap: 12 }}>
+      <BottomModalScrollView contentContainerStyle={{ paddingBottom: 32, gap: 12 }}>
         {error && <Text style={{ color: colors.danger, fontSize: 13, fontWeight: "600" }}>{error}</Text>}
         <View style={{ gap: 4 }}>
           <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Produit *</Text>
@@ -447,26 +457,30 @@ function EditPantryItemSheet({ item, isOpen, onClose, onSaved }: { item: PantryI
             style={{ borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: colors.text }}
           />
         </View>
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          <View style={{ flex: 1, gap: 4 }}>
+        <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+          <View style={{ gap: 6 }}>
             <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Quantité</Text>
             <TextInput
               value={quantity}
               onChangeText={setQuantity}
               keyboardType="numeric"
               placeholderTextColor="#A8A29E"
-              style={{ borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: colors.text }}
+              style={{ width: 72, borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 12, paddingVertical: 14, fontSize: 16, fontWeight: "700", color: colors.text, textAlign: "center" }}
             />
           </View>
-          <View style={{ flex: 1, gap: 4 }}>
+          <View style={{ flex: 1, gap: 6 }}>
             <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted }}>Unité</Text>
-            <TextInput
-              value={unit}
-              onChangeText={setUnit}
-              placeholder="kg, L, pièce..."
-              placeholderTextColor="#A8A29E"
-              style={{ borderRadius: 14, backgroundColor: colors.bgSurface, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: colors.text }}
-            />
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+              {PANTRY_UNITS.map((u) => (
+                <Pressable
+                  key={u}
+                  onPress={() => setUnit(u)}
+                  style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 99, backgroundColor: unit === u ? colors.accent : colors.bgSurface }}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: unit === u ? "#fff" : colors.textMuted }}>{u}</Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
         </View>
         <View style={{ gap: 4 }}>
