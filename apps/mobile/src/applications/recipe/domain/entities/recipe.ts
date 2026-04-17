@@ -26,6 +26,8 @@ export interface RecipeStep {
   section: string | null;
 }
 
+export type BatchCookingTag = "rapide" | "legere" | "proteinee" | "gourmande" | "vegetarienne";
+
 export interface Recipe {
   id: string;
   userId: string;
@@ -38,6 +40,10 @@ export interface Recipe {
   dietaryTags: string[];
   isPublic: boolean;
   isFavorite: boolean;
+  isCurated: boolean;
+  fridgeDays: number | null;
+  freezerMonths: number | null;
+  batchCookingTags: BatchCookingTag[];
   createdAt: Date;
   updatedAt: Date;
   ingredients: RecipeIngredient[];
