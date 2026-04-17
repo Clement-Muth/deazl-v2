@@ -1,5 +1,5 @@
 import { supabase } from "../../../lib/supabase";
-import type { Recipe } from "../domain/entities/recipe";
+import type { BatchCookingTag, Recipe } from "../domain/entities/recipe";
 
 export async function fetchRecipes(): Promise<Recipe[]> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -53,7 +53,7 @@ export async function fetchRecipes(): Promise<Recipe[]> {
     isCurated: (row.is_curated as boolean) ?? false,
     fridgeDays: (row.fridge_days as number | null) ?? null,
     freezerMonths: (row.freezer_months as number | null) ?? null,
-    batchCookingTags: (row.batch_cooking_tags as string[]) ?? [],
+    batchCookingTags: (row.batch_cooking_tags as BatchCookingTag[]) ?? [],
     createdAt: new Date(row.created_at as string),
     updatedAt: new Date(row.updated_at as string),
     ingredients: ((row.recipe_ingredients as Record<string, unknown>[] | undefined) ?? [])

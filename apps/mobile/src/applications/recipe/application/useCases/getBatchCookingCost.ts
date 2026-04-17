@@ -121,7 +121,7 @@ export async function getBatchCookingCost(
       }
     }
 
-    rawItems = (ingRows as Array<{
+    rawItems = (ingRows as unknown as Array<{
       recipe_id: string;
       custom_name: string | null;
       quantity: number;
