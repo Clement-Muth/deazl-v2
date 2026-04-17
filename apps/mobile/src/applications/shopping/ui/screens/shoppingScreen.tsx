@@ -1,6 +1,7 @@
 import * as Haptics from "expo-haptics";
 import { useFocusEffect, useRouter } from "expo-router";
 import { BottomModal } from "../components/bottomModal";
+import { Button, Dialog } from "heroui-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Animated, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -125,9 +126,14 @@ function ItemRow({
             {item.customName}
           </Text>
           {item.price && (
-            <Text style={{ fontSize: 12, fontWeight: "600", color: item.isChecked ? "#D1CCC5" : "#C4B8AF" }}>
-              ~{item.price.estimatedCost.toFixed(2)} €
-            </Text>
+            <View style={{ alignItems: "flex-end" }}>
+              <Text style={{ fontSize: 12, fontWeight: "600", color: item.isChecked ? "#D1CCC5" : "#C4B8AF" }}>
+                ~{item.price.estimatedCost.toFixed(2)} €
+              </Text>
+              {item.price.storeName ? (
+                <Text style={{ fontSize: 10, color: colors.textSubtle }}>{item.price.storeName}</Text>
+              ) : null}
+            </View>
           )}
         </View>
 
@@ -228,6 +234,7 @@ export function ShoppingScreen() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [groupBy, setGroupBy] = useState<"category" | "recipe">("category");
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const router = useRouter();
 
   useFocusEffect(useCallback(() => { silentReload(); }, []));
@@ -315,6 +322,7 @@ export function ShoppingScreen() {
 
   async function handleClear() {
     if (!list) return;
+    setClearDialogOpen(false);
     setList((prev) => prev ? { ...prev, items: prev.items.filter((i) => !i.isChecked) } : prev);
     await clearCheckedItems(list.id);
   }
@@ -388,27 +396,25 @@ export function ShoppingScreen() {
                 </Text>
               )}
             </View>
-            {totalItems > 0 && (
-              <Pressable
-                onPress={() => router.push("/shopping/mode-courses")}
-                style={({ pressed }) => ({
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 6,
-                  paddingHorizontal: 14,
-                  paddingVertical: 9,
-                  borderRadius: 99,
-                  backgroundColor: pressed ? colors.accentPress : colors.accent,
-                })}
-              >
-                <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <Path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                  <Line x1={3} y1={6} x2={21} y2={6} />
-                  <Path d="M16 10a4 4 0 0 1-8 0" />
-                </Svg>
-                <Text style={{ fontSize: 13, fontWeight: "700", color: "#fff" }}>Mode courses</Text>
-              </Pressable>
-            )}
+            <Pressable
+              onPress={() => router.push("/shopping/mode-courses")}
+              style={({ pressed }) => ({
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                paddingHorizontal: 14,
+                paddingVertical: 9,
+                borderRadius: 99,
+                backgroundColor: pressed ? colors.accentPress : colors.accent,
+              })}
+            >
+              <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <Path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                <Line x1={3} y1={6} x2={21} y2={6} />
+                <Path d="M16 10a4 4 0 0 1-8 0" />
+              </Svg>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: "#fff" }}>Mode courses</Text>
+            </Pressable>
           </View>
         </View>
 
@@ -567,7 +573,7 @@ export function ShoppingScreen() {
                   </Text>
                   <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textSubtle, marginRight: 4 }}>{checked.length}</Text>
                   <Pressable
-                    onPress={handleClear}
+                    onPress={() => setClearDialogOpen(true)}
                     style={({ pressed }) => ({ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: pressed ? colors.dangerBg : "#FEF2F2" })}
                   >
                     <Text style={{ fontSize: 12, fontWeight: "600", color: colors.danger }}>Effacer</Text>
@@ -699,6 +705,26 @@ export function ShoppingScreen() {
         onClose={() => setDetailOpen(false)}
         onReload={silentReload}
       />
+
+      <Dialog isOpen={clearDialogOpen} onOpenChange={(open) => { if (!open) setClearDialogOpen(false); }}>
+        <Dialog.Portal>
+          <Dialog.Overlay />
+          <Dialog.Content>
+            <Dialog.Title>Effacer les articles cochés ?</Dialog.Title>
+            <Dialog.Description>
+              {`${list?.items.filter((i) => i.isChecked).length ?? 0} article(s) seront supprimés de la liste.`}
+            </Dialog.Description>
+            <View style={{ flexDirection: "row", gap: 8, marginTop: 16 }}>
+              <Button variant="secondary" style={{ flex: 1 }} onPress={() => setClearDialogOpen(false)}>
+                <Button.Label>Annuler</Button.Label>
+              </Button>
+              <Button variant="danger" style={{ flex: 1 }} onPress={handleClear}>
+                <Button.Label>Effacer</Button.Label>
+              </Button>
+            </View>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog>
 
     </SafeAreaView>
   );
