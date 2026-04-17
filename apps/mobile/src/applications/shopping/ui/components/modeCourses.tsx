@@ -322,11 +322,11 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, prefillContext,
     }
   }, [prefillPrice, item?.id]);
   useEffect(() => {
-    if (isOpen) {
-      const t = setTimeout(() => priceInputRef.current?.focus(), 200);
-      return () => clearTimeout(t);
-    }
-  }, [isOpen, kgStep]);
+    if (!isOpen) return;
+    if (kgStep === "price" && prefillPrice) return;
+    const t = setTimeout(() => priceInputRef.current?.focus(), 200);
+    return () => clearTimeout(t);
+  }, [isOpen, kgStep, prefillPrice]);
   function handlePriceChange(text: string) {
     const cleaned = text.replace(",", ".");
     if (cleaned === "" || /^\d{0,5}(\.\d{0,2})?$/.test(cleaned)) setValue(cleaned);
@@ -380,7 +380,7 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, prefillContext,
         <View style={{ gap: 14 }}>
 
           {/* Header : nom produit + Passer */}
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
             {isWeightStep ? (
               <Pressable
                 onPress={() => { setKgStep("price"); setValue(kgPriceValue); setKgPriceValue(""); }}
@@ -393,13 +393,10 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, prefillContext,
                 <Text style={{ fontSize: 13, color: colors.accent, fontWeight: "600" }}>{kgPriceValue} €/kg</Text>
               </Pressable>
             ) : (
-              <Text style={{ fontSize: 17, fontWeight: "800", color: colors.text, flex: 1, marginRight: 12 }} numberOfLines={1}>
+              <Text style={{ fontSize: 17, fontWeight: "800", color: colors.text, flex: 1 }} numberOfLines={1}>
                 {item.customName}
               </Text>
             )}
-            <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onSkip(); }} hitSlop={16}>
-              <Text style={{ fontSize: 14, color: "#C4B8AF", fontWeight: "500" }}>Ignorer</Text>
-            </Pressable>
           </View>
 
           {/* Mode toggle (sans produit scanné) */}
@@ -616,7 +613,7 @@ function AddItemSheet({
   const [name, setName] = useState("");
   const [priceValue, setPriceValue] = useState("");
   const [memberIdx, setMemberIdx] = useState(0);
-  const [step, setStep] = useState<"name" | "price" | "weight">("name");
+  const [step, setStep] = useState<"main" | "weight">("main");
   const [priceMode, setPriceMode] = useState<"total" | "kg">("total");
   const [kgPriceValue, setKgPriceValue] = useState("");
   const [isPromo, setIsPromo] = useState(false);
@@ -628,7 +625,7 @@ function AddItemSheet({
 
   useEffect(() => {
     if (!isOpen) {
-      setName(""); setPriceValue(""); setStep("name"); setMemberIdx(0); setPriceMode("total"); setKgPriceValue(""); setIsPromo(false); setPromoMode("discount"); setDiscountValue(""); setLotQty("2");
+      setName(""); setPriceValue(""); setStep("main"); setMemberIdx(0); setPriceMode("total"); setKgPriceValue(""); setIsPromo(false); setPromoMode("discount"); setDiscountValue(""); setLotQty("2");
     } else {
       const t = setTimeout(() => nameInputRef.current?.focus(), 200);
       return () => clearTimeout(t);
@@ -636,11 +633,11 @@ function AddItemSheet({
   }, [isOpen]);
 
   useEffect(() => {
-    if (isOpen && step === "name") {
+    if (isOpen && step === "main") {
       const t = setTimeout(() => nameInputRef.current?.focus(), 50);
       return () => clearTimeout(t);
     }
-    if (isOpen && (step === "price" || step === "weight")) {
+    if (isOpen && step === "weight") {
       const t = setTimeout(() => priceInputRef.current?.focus(), 100);
       return () => clearTimeout(t);
     }
@@ -662,12 +659,6 @@ function AddItemSheet({
   const hasDiscount = !Number.isNaN(discountNum) && discountNum > 0 && discountNum <= 100;
   const promoTotal = isPromo && hasDiscount ? parsed * (1 - discountNum / 100) : parsed;
   const valid = name.trim().length > 0 && priceValid;
-
-  function goToPrice() {
-    if (!name.trim()) return;
-    Keyboard.dismiss();
-    setStep("price");
-  }
 
   const MemberSelector = () => splitSettings.enabled && splitSettings.members.length >= 2 ? (
     <View style={{ flexDirection: "row", gap: 8 }}>
@@ -694,12 +685,9 @@ function AddItemSheet({
     <BottomModal isOpen={isOpen} onClose={() => onOpenChange(false)} height="60%">
           <View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 16 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-              {step !== "name" && (
+              {step === "weight" && (
                 <Pressable
-                  onPress={() => {
-                    if (step === "weight") { setStep("price"); setPriceValue(kgPriceValue); setKgPriceValue(""); }
-                    else { setStep("name"); }
-                  }}
+                  onPress={() => { setStep("main"); setPriceValue(kgPriceValue); setKgPriceValue(""); }}
                   hitSlop={8}
                 >
                   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
@@ -708,13 +696,13 @@ function AddItemSheet({
                 </Pressable>
               )}
               <Text style={{ fontSize: 17, fontWeight: "900", color: colors.text }}>
-                {step === "name" ? "Ajouter un article" : name}
+                {step === "weight" ? name : "Ajouter un article"}
               </Text>
             </View>
           </View>
 
           <View style={{ gap: 14 }}>
-            {step === "name" ? (
+            {step === "main" ? (
               <>
                 <TextInput
                   ref={nameInputRef}
@@ -723,28 +711,13 @@ function AddItemSheet({
                   placeholder="Nom de l'article"
                   placeholderTextColor="#C4B8AF"
                   returnKeyType="next"
-                  onSubmitEditing={goToPrice}
+                  onSubmitEditing={() => priceInputRef.current?.focus()}
                   style={{
                     fontSize: 16, fontWeight: "600", color: colors.text,
                     borderRadius: 14, backgroundColor: colors.bg,
                     paddingHorizontal: 16, paddingVertical: 14,
                   }}
                 />
-                <MemberSelector />
-                <Pressable
-                  onPress={goToPrice}
-                  style={({ pressed }) => ({
-                    borderRadius: 16, paddingVertical: 16, alignItems: "center",
-                    backgroundColor: name.trim() ? (pressed ? "#C94415" : colors.accent) : "#F0EDE8",
-                  })}
-                >
-                  <Text style={{ fontSize: 16, fontWeight: "900", color: name.trim() ? "#fff" : colors.textSubtle }}>
-                    Suivant →
-                  </Text>
-                </Pressable>
-              </>
-            ) : step === "price" ? (
-              <>
                 <MemberSelector />
                 <View style={{ flexDirection: "row", gap: 8 }}>
                   {(["total", "kg"] as const).map((mode) => (
@@ -841,13 +814,13 @@ function AddItemSheet({
                 )}
                 <Pressable
                   onPress={() => {
-                    if (!priceValid) return;
+                    if (!valid) return;
                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                     if (priceMode === "kg") {
                       setKgPriceValue(priceValue);
                       setPriceValue("");
                       setStep("weight");
-                    } else {
+                    } else if (name.trim()) {
                       let promo: { normalUnitPrice: number; promoTriggerQty: number } | undefined;
                       if (isPromo) {
                         if (promoMode === "discount" && hasDiscount) {
@@ -864,10 +837,10 @@ function AddItemSheet({
                   }}
                   style={({ pressed }) => ({
                     borderRadius: 16, paddingVertical: 16, alignItems: "center",
-                    backgroundColor: priceValid ? (pressed ? "#C94415" : colors.accent) : "#F0EDE8",
+                    backgroundColor: valid ? (pressed ? "#C94415" : colors.accent) : "#F0EDE8",
                   })}
                 >
-                  <Text style={{ fontSize: 16, fontWeight: "900", color: priceValid ? "#fff" : colors.textSubtle }}>
+                  <Text style={{ fontSize: 16, fontWeight: "900", color: valid ? "#fff" : colors.textSubtle }}>
                     {priceMode === "kg" ? "Suivant →" : "+ Ajouter au panier"}
                   </Text>
                 </Pressable>
