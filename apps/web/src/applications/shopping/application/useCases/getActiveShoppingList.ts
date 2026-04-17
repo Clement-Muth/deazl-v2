@@ -134,6 +134,8 @@ export async function getActiveShoppingList(): Promise<ShoppingList | null> {
         candidates = ingredientPriceRows.filter((p) => p.ingredient_name === normalizedName);
       }
 
+      candidates = candidates.filter((c) => c.confidence === "exact");
+
       const allStorePrices: ShoppingItemStorePrice[] = [];
       for (const [storeId, store] of storeMap) {
         if (!store) continue;
@@ -207,10 +209,10 @@ export async function getActiveShoppingList(): Promise<ShoppingList | null> {
         );
       }
 
-      if (p) {
+      if (p && p.confidence === "exact") {
         totalCost += estimateCost(rawItem.quantity, rawItem.unit, p.price, p.quantity, p.unit);
         coveredCount++;
-        if (p.confidence !== "exact") hasEstimates = true;
+        hasEstimates = false;
         if (p.reported_at && (!latestReportedAt || p.reported_at > latestReportedAt)) {
           latestReportedAt = p.reported_at;
         }
