@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bunx supabase:*)",
+      "Bash(git check-ignore:*)"
+    ]
+  }
+}
