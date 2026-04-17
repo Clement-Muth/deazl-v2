@@ -1,15 +1,18 @@
 import Constants from "expo-constants";
 import * as ImagePicker from "expo-image-picker";
+import { CameraView, useCameraPermissions } from "expo-camera";
+import QRCode from "react-native-qrcode-svg";
 import * as Linking from "expo-linking";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { BottomModal, BottomModalScrollView } from "../../../shopping/ui/components/bottomModal";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, AppState, Image, Pressable, ScrollView, Share, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, AppState, Image, Modal, Pressable, ScrollView, Share, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Svg, { Circle, Line, Path, Polyline } from "react-native-svg";
+import Svg, { Circle, Line, Path, Polyline, Rect } from "react-native-svg";
 import { Button, Dialog } from "heroui-native";
 import { addUserStore } from "../../application/useCases/addUserStore";
+import { getBatchCookingMargin, setBatchCookingMargin, DEFAULT_MARGIN } from "../../../recipe/application/useCases/batchCookingMarginStore";
 import { addUserStoreFromOSM } from "../../application/useCases/addUserStoreFromOSM";
 import type { OSMStore } from "../../application/useCases/searchStoresOSM";
 import { searchStoresOSMByText, searchStoresOSMNearby } from "../../application/useCases/searchStoresOSM";
@@ -23,6 +26,8 @@ import { getHousehold } from "../../application/useCases/getHousehold";
 import type { Household } from "../../application/useCases/getHousehold";
 import { getProfile } from "../../application/useCases/getProfile";
 import type { UserProfile } from "../../application/useCases/getProfile";
+import { getBadgeStats, type BadgeStats } from "../../application/useCases/getBadgeStats";
+import { BADGE_DEFINITIONS, BADGE_GROUPS, getBadgesByGroup } from "../../domain/badges";
 import { joinHousehold } from "../../application/useCases/joinHousehold";
 import { removeUserStore } from "../../application/useCases/removeUserStore";
 import { saveDietaryPreferences } from "../../application/useCases/saveDietaryPreferences";
@@ -134,6 +139,9 @@ export function ProfileScreen() {
   const { colors, preference, setPreference } = useAppTheme();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [household, setHousehold] = useState<Household | null>(null);
+  const [unlockedBadgeKeys, setUnlockedBadgeKeys] = useState<string[]>([]);
+  const [badgeStats, setBadgeStats] = useState<BadgeStats | null>(null);
+  const [selectedBadgeGroup, setSelectedBadgeGroup] = useState<string | null>(null);
   const [userStores, setUserStores] = useState<UserStore[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -144,6 +152,9 @@ export function ProfileScreen() {
   const [joinCodeInput, setJoinCodeInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [showQrScanner, setShowQrScanner] = useState(false);
+  const joinQrScannedRef = useRef(false);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [createError, setCreateError] = useState<string | null>(null);
   const [currentPasswordInput, setCurrentPasswordInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
@@ -172,6 +183,7 @@ export function ProfileScreen() {
   const [creatingStore, setCreatingStore] = useState(false);
   const [createStoreError, setCreateStoreError] = useState<string | null>(null);
   const [removeDialogStore, setRemoveDialogStore] = useState<{ id: string; displayName: string } | null>(null);
+  const [margin, setMarginState] = useState(DEFAULT_MARGIN);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -180,10 +192,19 @@ export function ProfileScreen() {
   const [resendError, setResendError] = useState<string | null>(null);
 
   async function reload() {
-    const [p, h, s] = await Promise.all([getProfile(), getHousehold(), getUserStores()]);
+    const [p, h, s, bs, m] = await Promise.all([getProfile(), getHousehold(), getUserStores(), getBadgeStats(), getBatchCookingMargin()]);
     setProfile(p);
     setHousehold(h);
+    setUnlockedBadgeKeys(bs.unlockedKeys);
+    setBadgeStats(bs);
     setUserStores(s);
+    setMarginState(m);
+  }
+
+  async function handleMarginChange(delta: number) {
+    const next = Math.min(0.5, Math.max(0, Math.round((margin + delta) * 20) / 20));
+    setMarginState(next);
+    await setBatchCookingMargin(next);
   }
 
   useEffect(() => {
@@ -339,6 +360,35 @@ export function ProfileScreen() {
     setSaving(false);
   }
 
+  async function handleQrScan(data: string) {
+    if (joinQrScannedRef.current) return;
+    joinQrScannedRef.current = true;
+    const match = data.match(/deazl:\/\/join\/([A-Z0-9]+)/i);
+    const code = match ? match[1].toUpperCase() : data.trim().toUpperCase();
+    setShowQrScanner(false);
+    setJoinCodeInput(code);
+    setJoinError(null);
+    setSaving(true);
+    const result = await joinHousehold(code);
+    setSaving(false);
+    if ("error" in result) {
+      setJoinError(result.error);
+      joinQrScannedRef.current = false;
+    } else {
+      await reload();
+      setEditSheet(null);
+    }
+  }
+
+  async function openQrScanner() {
+    if (!cameraPermission?.granted) {
+      const res = await requestCameraPermission();
+      if (!res.granted) return;
+    }
+    joinQrScannedRef.current = false;
+    setShowQrScanner(true);
+  }
+
   async function handleJoinHousehold() {
     if (!joinCodeInput.trim()) return;
     setSaving(true);
@@ -480,6 +530,128 @@ export function ProfileScreen() {
           <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>
             {profile?.email}
           </Text>
+          {unlockedBadgeKeys.length > 0 && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 8, paddingHorizontal: 12, paddingVertical: 5, backgroundColor: colors.bgSurface, borderRadius: 99 }}>
+              <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <Path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+              </Svg>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: colors.textMuted }}>
+                {unlockedBadgeKeys.length} badge{unlockedBadgeKeys.length > 1 ? "s" : ""} débloqué{unlockedBadgeKeys.length > 1 ? "s" : ""}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* ── Mes badges ── */}
+        <View style={{ paddingHorizontal: 16, marginBottom: 20 }}>
+          <Text style={{ fontSize: 18, fontWeight: "900", color: colors.text, marginBottom: 14, letterSpacing: -0.3 }}>
+            Mes badges
+          </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}>
+            {BADGE_GROUPS.map((group) => {
+              const levels = getBadgesByGroup(group.group);
+              const unlockedLevels = levels.filter((b) => unlockedBadgeKeys.includes(b.key));
+              const isUnlocked = unlockedLevels.length > 0;
+              const topUnlocked = unlockedLevels[unlockedLevels.length - 1];
+              const badge = topUnlocked ?? levels[0];
+              return (
+                <Pressable
+                  key={group.group}
+                  onPress={() => setSelectedBadgeGroup(group.group)}
+                  style={({ pressed }) => ({
+                    width: 96, height: 112,
+                    borderRadius: 18,
+                    backgroundColor: isUnlocked ? badge.color + "18" : colors.bgSurface,
+                    borderWidth: 1.5,
+                    borderColor: isUnlocked ? badge.color + "40" : colors.border,
+                    alignItems: "center", justifyContent: "center", padding: 10, gap: 8,
+                    opacity: pressed ? 0.75 : 1,
+                  })}
+                >
+                  <View style={{
+                    width: 44, height: 44, borderRadius: 22,
+                    backgroundColor: isUnlocked ? badge.color + "25" : colors.border,
+                    alignItems: "center", justifyContent: "center",
+                  }}>
+                    {isUnlocked ? (
+                      <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={badge.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                        <Path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                      </Svg>
+                    ) : (
+                      <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke={colors.textSubtle} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <Path d="M18 11V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v0" /><Path d="M14 10V4a2 2 0 0 0-2-2 2 2 0 0 0-2 2v2" /><Path d="M10 10.5V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v8" /><Path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
+                      </Svg>
+                    )}
+                  </View>
+                  <Text style={{ fontSize: 10, fontWeight: "800", color: isUnlocked ? badge.color : colors.textSubtle, textAlign: "center", lineHeight: 14 }} numberOfLines={2}>
+                    {group.name}
+                  </Text>
+                  <Text style={{ fontSize: 8, fontWeight: "600", color: isUnlocked ? badge.color + "cc" : colors.textSubtle, textAlign: "center", textTransform: "uppercase", letterSpacing: 0.5 }} numberOfLines={1}>
+                    {isUnlocked ? `Niv. ${unlockedLevels.length}` : "Verrouillé"}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          {(() => {
+            if (!badgeStats) return null;
+            const statMap: Record<string, { current: number; total: number }> = {
+              batch_cooker_1: { current: badgeStats.totalSessions, total: 1 },
+              batch_cooker_2: { current: badgeStats.totalSessions, total: 5 },
+              batch_cooker_3: { current: badgeStats.totalSessions, total: 10 },
+              monthly_goal_1: { current: badgeStats.sessionsThisMonth, total: badgeStats.monthlyGoal },
+              full_week_1: { current: badgeStats.fullWeeksCount, total: 1 },
+              full_week_2: { current: badgeStats.fullWeeksCount, total: 4 },
+              full_week_3: { current: badgeStats.fullWeeksCount, total: 10 },
+              streak_1: { current: badgeStats.currentStreak, total: 7 },
+              streak_2: { current: badgeStats.currentStreak, total: 30 },
+              streak_3: { current: badgeStats.currentStreak, total: 100 },
+              shopper_1: { current: badgeStats.shoppingListsCompleted, total: 1 },
+              shopper_2: { current: badgeStats.shoppingListsCompleted, total: 5 },
+              shopper_3: { current: badgeStats.shoppingListsCompleted, total: 20 },
+            };
+            const nudge = BADGE_DEFINITIONS
+              .filter((b) => !unlockedBadgeKeys.includes(b.key))
+              .map((b) => {
+                const s = statMap[b.key];
+                if (!s || s.current === 0) return null;
+                return { badge: b, current: s.current, total: s.total, pct: s.current / s.total };
+              })
+              .filter((n): n is NonNullable<typeof n> => n !== null && n.pct > 0.6 && n.pct < 1)
+              .sort((a, b) => b.pct - a.pct)[0];
+            if (!nudge) return null;
+            return (
+              <Pressable
+                onPress={() => setSelectedBadgeGroup(nudge.badge.group)}
+                style={({ pressed }) => ({
+                  marginTop: 12, borderRadius: 16,
+                  backgroundColor: nudge.badge.color + "12",
+                  borderWidth: 1.5, borderColor: nudge.badge.color + "30",
+                  padding: 14, opacity: pressed ? 0.75 : 1,
+                })}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={nudge.badge.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
+                    <Path d="M14 10V4a2 2 0 0 0-2-2 2 2 0 0 0-2 2v2" />
+                  </Svg>
+                  <Text style={{ fontSize: 13, fontWeight: "800", color: nudge.badge.color, flex: 1 }}>
+                    Presque là — {nudge.badge.name}
+                  </Text>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: nudge.badge.color }}>
+                    {nudge.current}/{nudge.total}
+                  </Text>
+                </View>
+                <View style={{ height: 6, borderRadius: 99, backgroundColor: nudge.badge.color + "20" }}>
+                  <View style={{ height: 6, borderRadius: 99, backgroundColor: nudge.badge.color, width: `${Math.min(nudge.pct * 100, 100)}%` }} />
+                </View>
+                <Text style={{ fontSize: 11, color: nudge.badge.color + "99", marginTop: 6 }}>
+                  {nudge.badge.criteriaLabel}
+                </Text>
+              </Pressable>
+            );
+          })()}
         </View>
 
         <View style={{ paddingHorizontal: 16, gap: 12 }}>
@@ -755,12 +927,58 @@ export function ProfileScreen() {
             </View>
           </View>
 
+          <View style={{ marginBottom: 0 }}>
+            <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textMuted + "99", textTransform: "uppercase", letterSpacing: 2, paddingHorizontal: 16, marginBottom: 10 }}>
+              Batch cooking
+            </Text>
+            <View style={{ borderRadius: 20, backgroundColor: colors.bgCard, overflow: "hidden", shadowColor: colors.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 1 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 14 }}>
+                <View>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 0.8 }}>Marge de revente</Text>
+                  <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>Appliquée au coût des ingrédients</Text>
+                </View>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <Pressable onPress={() => handleMarginChange(-0.05)} style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center" }}>
+                    <Text style={{ fontSize: 18, fontWeight: "600", color: colors.textMuted }}>−</Text>
+                  </Pressable>
+                  <View style={{ minWidth: 52, alignItems: "center" }}>
+                    <Text style={{ fontSize: 17, fontWeight: "900", color: colors.accent }}>{Math.round(margin * 100)}%</Text>
+                  </View>
+                  <Pressable onPress={() => handleMarginChange(0.05)} style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center" }}>
+                    <Text style={{ fontSize: 18, fontWeight: "600", color: colors.accent }}>+</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          </View>
+
           <View style={{ borderRadius: 14, backgroundColor: colors.bgCard, overflow: "hidden" }}>
+            <NavRow
+              icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><Polyline points="3.27 6.96 12 12.01 20.73 6.96" /><Line x1={12} y1={22.08} x2={12} y2={12} /></Svg>}
+              label="Mon stock"
+              description="Gérer tes produits et dates de péremption"
+              onPress={() => router.push("/(tabs)/pantry" as never)}
+            />
+            <View style={{ height: 1, backgroundColor: colors.bgSurface }} />
             <NavRow
               icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M18 20V10" /><Path d="M12 20V4" /><Path d="M6 20v-6" /></Svg>}
               label="Statistiques"
               description="Tes habitudes et budget alimentaire"
               onPress={() => router.push("/analytics" as never)}
+            />
+            <View style={{ height: 1, backgroundColor: colors.bgSurface }} />
+            <NavRow
+              icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" /><Path d="M7 7h.01" /></Svg>}
+              label="Mes prix"
+              description="Produits et prix que vous avez reportés"
+              onPress={() => router.push("/my-prices" as never)}
+            />
+            <View style={{ height: 1, backgroundColor: colors.bgSurface }} />
+            <NavRow
+              icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Rect x={4} y={2} width={16} height={20} rx={2} /><Line x1={8} y1={8} x2={16} y2={8} /><Line x1={8} y1={12} x2={16} y2={12} /><Line x1={8} y1={16} x2={12} y2={16} /></Svg>}
+              label="Tickets de caisse"
+              description="Historique de vos sessions de courses"
+              onPress={() => router.push("/shopping/receipts" as never)}
             />
             <View style={{ height: 1, backgroundColor: colors.bgSurface }} />
             <NavRow
@@ -796,6 +1014,79 @@ export function ProfileScreen() {
           </Pressable>
         </View>
       </ScrollView>
+
+      {/* ── Badge detail sheet ── */}
+      <BottomModal isOpen={selectedBadgeGroup !== null} onClose={() => setSelectedBadgeGroup(null)} height="auto">
+        {(() => {
+          if (!selectedBadgeGroup) return null;
+          const groupMeta = BADGE_GROUPS.find((g) => g.group === selectedBadgeGroup);
+          const levels = getBadgesByGroup(selectedBadgeGroup);
+          return (
+            <View style={{ paddingBottom: 8 }}>
+              <Text style={{ fontSize: 18, fontWeight: "900", color: colors.text, marginBottom: 4 }}>
+                {groupMeta?.name}
+              </Text>
+              <Text style={{ fontSize: 13, color: colors.textMuted, marginBottom: 24, lineHeight: 18 }}>
+                {groupMeta?.description}
+              </Text>
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                {levels.map((badge) => {
+                  const isUnlocked = unlockedBadgeKeys.includes(badge.key);
+                  return (
+                    <View
+                      key={badge.key}
+                      style={{
+                        flex: 1, borderRadius: 18, padding: 16,
+                        backgroundColor: isUnlocked ? badge.color + "15" : colors.bgSurface,
+                        borderWidth: 1.5,
+                        borderColor: isUnlocked ? badge.color + "40" : colors.border,
+                        alignItems: "center", gap: 10,
+                      }}
+                    >
+                      <View style={{
+                        width: 52, height: 52, borderRadius: 26,
+                        backgroundColor: isUnlocked ? badge.color + "25" : colors.border,
+                        alignItems: "center", justifyContent: "center",
+                      }}>
+                        {isUnlocked ? (
+                          <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={badge.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                            <Path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                          </Svg>
+                        ) : (
+                          <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.textSubtle} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                            <Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                          </Svg>
+                        )}
+                      </View>
+                      <Text style={{ fontSize: 10, fontWeight: "700", color: isUnlocked ? badge.color : colors.textSubtle, textTransform: "uppercase", letterSpacing: 1 }}>
+                        Niveau {badge.level}
+                      </Text>
+                      <Text style={{ fontSize: 13, fontWeight: "800", color: isUnlocked ? colors.text : colors.textSubtle, textAlign: "center", lineHeight: 18 }}>
+                        {badge.levelLabel}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: isUnlocked ? colors.textMuted : colors.textSubtle, textAlign: "center", lineHeight: 16 }}>
+                        {badge.criteriaLabel}
+                      </Text>
+                      {isUnlocked && (
+                        <View style={{ alignItems: "center", gap: 4 }}>
+                          <View style={{ paddingHorizontal: 10, paddingVertical: 4, backgroundColor: badge.color + "20", borderRadius: 100 }}>
+                            <Text style={{ fontSize: 10, fontWeight: "700", color: badge.color }}>Obtenu ✓</Text>
+                          </View>
+                          {badgeStats?.unlockedDates[badge.key] && (
+                            <Text style={{ fontSize: 9, color: colors.textSubtle, textAlign: "center" }}>
+                              {new Date(badgeStats.unlockedDates[badge.key]).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+                            </Text>
+                          )}
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          );
+        })()}
+      </BottomModal>
 
       <BottomModal isOpen={editSheet === "name"} onClose={() => setEditSheet(null)} height="auto">
         <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 16 }}>Nom affiché</Text>
@@ -907,6 +1198,23 @@ export function ProfileScreen() {
               borderWidth: joinError ? 1.5 : 0, borderColor: colors.danger,
             }}
           />
+          <Pressable
+            onPress={openQrScanner}
+            style={({ pressed }) => ({
+              flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+              borderRadius: 14, paddingVertical: 14, opacity: pressed ? 0.7 : 1,
+              borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.bgSurface,
+            })}
+          >
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <Path d="M3 7V5a2 2 0 0 1 2-2h2" />
+              <Path d="M17 3h2a2 2 0 0 1 2 2v2" />
+              <Path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+              <Path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+              <Rect x={7} y={7} width={10} height={10} rx={1} />
+            </Svg>
+            <Text style={{ fontSize: 14, fontWeight: "600", color: colors.textMuted }}>Scanner un QR code</Text>
+          </Pressable>
           {joinError && <Text style={{ fontSize: 12, color: colors.danger, fontWeight: "600", textAlign: "center" }}>{joinError}</Text>}
           <Pressable
             onPress={handleJoinHousehold}
@@ -917,6 +1225,31 @@ export function ProfileScreen() {
           </Pressable>
         </View>
       </BottomModal>
+
+      <Modal visible={showQrScanner} animationType="slide" onRequestClose={() => setShowQrScanner(false)}>
+        <View style={{ flex: 1, backgroundColor: "#000" }}>
+          <CameraView
+            style={{ flex: 1 }}
+            barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+            onBarcodeScanned={(e) => handleQrScan(e.data)}
+          />
+          <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+            <View style={{ width: 220, height: 220, borderRadius: 20, borderWidth: 2, borderColor: "rgba(255,255,255,0.6)" }} />
+            <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, fontWeight: "600", marginTop: 20 }}>
+              Pointe vers le QR code du foyer
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => setShowQrScanner(false)}
+            style={{ position: "absolute", top: 60, right: 20, backgroundColor: "rgba(0,0,0,0.55)", borderRadius: 99, width: 40, height: 40, alignItems: "center", justifyContent: "center" }}
+          >
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+              <Line x1={18} y1={6} x2={6} y2={18} />
+              <Line x1={6} y1={6} x2={18} y2={18} />
+            </Svg>
+          </Pressable>
+        </View>
+      </Modal>
 
       <BottomModal
         isOpen={editSheet === "stores"}
@@ -1145,10 +1478,20 @@ export function ProfileScreen() {
 
       <BottomModal isOpen={showInviteModal} onClose={() => setShowInviteModal(false)} height="auto">
         <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 4 }}>Inviter quelqu'un</Text>
-        <Text style={{ fontSize: 13, color: colors.textMuted, marginBottom: 20 }}>Partage ce code ou envoie une invitation directe.</Text>
-        <View style={{ borderRadius: 16, backgroundColor: colors.bgSurface, paddingVertical: 22, alignItems: "center", marginBottom: 12 }}>
-          <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Code d'invitation</Text>
-          <Text style={{ fontSize: 34, fontWeight: "900", color: colors.text, letterSpacing: 8 }}>{household?.inviteCode}</Text>
+        <Text style={{ fontSize: 13, color: colors.textMuted, marginBottom: 20 }}>Fais scanner ce QR code ou partage le code.</Text>
+        <View style={{ borderRadius: 16, backgroundColor: colors.bgSurface, paddingVertical: 24, alignItems: "center", gap: 16, marginBottom: 12 }}>
+          {household?.inviteCode && (
+            <QRCode
+              value={`deazl://join/${household.inviteCode}`}
+              size={160}
+              color={colors.text}
+              backgroundColor={colors.bgSurface}
+            />
+          )}
+          <View style={{ alignItems: "center", gap: 4 }}>
+            <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, letterSpacing: 1.5, textTransform: "uppercase" }}>Code d'invitation</Text>
+            <Text style={{ fontSize: 34, fontWeight: "900", color: colors.text, letterSpacing: 8 }}>{household?.inviteCode}</Text>
+          </View>
         </View>
         <Pressable
           onPress={async () => { await handleShareInviteCode(); }}
