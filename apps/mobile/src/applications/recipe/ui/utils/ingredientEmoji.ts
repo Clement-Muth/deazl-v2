@@ -124,6 +124,8 @@ function normalize(s: string): string {
     .toLowerCase()
     .trim()
     .replace(/['''`]/g, " ")
+    .replace(/œ/g, "oe")
+    .replace(/æ/g, "ae")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9\s-]/g, "")
@@ -136,6 +138,70 @@ export function getIngredientEmoji(name: string): string | null {
   if (EMOJI_MAP[key]) return EMOJI_MAP[key];
   for (const [k, v] of Object.entries(EMOJI_MAP)) {
     if (key.startsWith(k) || k.startsWith(key)) return v;
+  }
+  return null;
+}
+
+const USTENSILE_EMOJI_MAP: Record<string, string> = {
+  "poele": "🍳",
+  "poele antiadhesive": "🍳",
+  "poele en fonte": "🍳",
+  "casserole": "🥘",
+  "grande casserole": "🥘",
+  "petite casserole": "🥘",
+  "cocotte": "🫕",
+  "cocotte en fonte": "🫕",
+  "faitout": "🫕",
+  "plat": "🥗",
+  "plat a gratin": "🥗",
+  "plat four": "🥗",
+  "saladier": "🥗",
+  "bol": "🥣",
+  "grand bol": "🥣",
+  "couteau": "🔪",
+  "couteau de chef": "🔪",
+  "couteau office": "🔪",
+  "couteau scie": "🔪",
+  "planche": "🪵",
+  "planche a decouper": "🪵",
+  "cuillere": "🥄",
+  "cuillere en bois": "🥄",
+  "cuillere a soupe": "🥄",
+  "cuillere en silicone": "🥄",
+  "spatule": "🥄",
+  "fouet": "🪡",
+  "fouet electrique": "🪡",
+  "batteur": "🪡",
+  "robot": "🤖",
+  "mixeur": "🫙",
+  "blender": "🫙",
+  "mixeur plongeant": "🫙",
+  "rape": "🧀",
+  "passoire": "🪣",
+  "egoutoir": "🪣",
+  "chinois": "🪣",
+  "four": "♨️",
+  "micro-ondes": "📡",
+  "balance": "⚖️",
+  "verre mesureur": "🧪",
+  "verre doseur": "🧪",
+  "presse-ail": "🧄",
+  "presse ail": "🧄",
+  "econome": "🔧",
+  "eplucheur": "🔧",
+  "mandoline": "🔧",
+  "papier sulfurise": "📄",
+  "film alimentaire": "📦",
+  "boite hermetique": "📦",
+  "torchon": "🧻",
+  "papier absorbant": "🧻",
+};
+
+export function getUstensileEmoji(name: string): string | null {
+  const key = normalize(name);
+  if (USTENSILE_EMOJI_MAP[key]) return USTENSILE_EMOJI_MAP[key];
+  for (const [k, v] of Object.entries(USTENSILE_EMOJI_MAP)) {
+    if (key.includes(k) || k.includes(key)) return v;
   }
   return null;
 }

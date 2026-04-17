@@ -1,7 +1,8 @@
 import { supabase } from "../../../../lib/supabase";
 import { categorizeItem } from "../../../shopping/domain/categorizeItem";
 
-function normalizeIngredientName(name: string): string {
+function normalizeIngredientName(name: string | null | undefined): string {
+  if (!name) return "";
   return name
     .toLowerCase()
     .trim()
@@ -78,7 +79,7 @@ export async function generateShoppingListFromPlan(): Promise<void> {
   const [{ data: ingredients }, { data: recipes }, { data: pantryItems }] = await Promise.all([
     supabase
       .from("recipe_ingredients")
-      .select("recipe_id, custom_name, quantity, unit")
+      .select("recipe_id, custom_name, quantity, unit, product_id")
       .in("recipe_id", recipeIds),
     supabase
       .from("recipes")
@@ -94,17 +95,23 @@ export async function generateShoppingListFromPlan(): Promise<void> {
 
   const recipeNameById = new Map((recipes ?? []).map((r: { id: string; name: string }) => [r.id, r.name]));
 
-  type RecipeIngredient = { recipe_id: string; custom_name: string; quantity: number; unit: string };
+  type RecipeIngredient = { recipe_id: string; custom_name: string; quantity: number; unit: string; product_id: string | null };
   const typedIngredients = ingredients as RecipeIngredient[];
 
-  const globalAgg = new Map<string, number>();
+  const globalAgg = new Map<string, { qty: number; productId: string | null }>();
   for (const ing of typedIngredients) {
     const key = `${normalizeIngredientName(ing.custom_name)}||${ing.unit.trim().toLowerCase()}`;
-    globalAgg.set(key, (globalAgg.get(key) ?? 0) + ing.quantity);
+    const existing = globalAgg.get(key);
+    if (existing) {
+      existing.qty += ing.quantity;
+      if (existing.productId !== ing.product_id) existing.productId = null;
+    } else {
+      globalAgg.set(key, { qty: ing.quantity, productId: ing.product_id });
+    }
   }
 
   const pantryByKey = new Map<string, number | null>();
-  for (const p of pantryItems ?? []) {
+  for (const p of (pantryItems ?? []).filter((p) => p.custom_name)) {
     const key = `${normalizeIngredientName(p.custom_name)}||${(p.unit ?? "").trim().toLowerCase()}`;
     const qty = p.quantity ? Number(p.quantity) : null;
     const prev = pantryByKey.get(key);
@@ -118,7 +125,7 @@ export async function generateShoppingListFromPlan(): Promise<void> {
   }
 
   const coverageRatio = new Map<string, { ratio: number; fullyChecked: boolean; skip: boolean }>();
-  for (const [key, totalNeeded] of globalAgg) {
+  for (const [key, { qty: totalNeeded }] of globalAgg) {
     const pantry = pantryByKey.get(key);
     if (pantry === undefined) {
       coverageRatio.set(key, { ratio: 1, fullyChecked: false, skip: false });
@@ -153,6 +160,7 @@ export async function generateShoppingListFromPlan(): Promise<void> {
     custom_name: string;
     quantity: number;
     unit: string;
+    product_id?: string;
     is_checked: boolean;
     sort_order: number;
     category: string;
@@ -166,11 +174,13 @@ export async function generateShoppingListFromPlan(): Promise<void> {
     const coverage = coverageRatio.get(globalKey);
     if (!coverage || coverage.skip) continue;
     const quantity = coverage.fullyChecked ? item.quantity : Math.ceil(item.quantity * coverage.ratio * 100) / 100;
+    const productId = globalAgg.get(globalKey)?.productId;
     shoppingItems.push({
       shopping_list_id: newList.id,
       custom_name: item.customName,
       quantity,
       unit: item.unit,
+      ...(productId ? { product_id: productId } : {}),
       is_checked: coverage.fullyChecked,
       sort_order: sortOrder++,
       category: categorizeItem(item.customName),

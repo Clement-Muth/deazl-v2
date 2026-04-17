@@ -1,3 +1,6 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "../../../../lib/supabase";
+import { categorizeItem } from "../../domain/categorizeItem";
 import { useAppTheme } from "../../../../shared/theme";
 import * as Haptics from "expo-haptics";
 import { CameraView, useCameraPermissions } from "expo-camera";
@@ -7,7 +10,6 @@ import {
   ActivityIndicator,
   BackHandler,
   Keyboard,
-  Modal,
   Pressable,
   ScrollView,
   Text,
@@ -15,7 +17,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg, { Line, Path, Polyline, Rect } from "react-native-svg";
+import Svg, { Circle, Line, Path, Polyline, Rect } from "react-native-svg";
 import ReanimatedSwipeable, { type SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
 import Animated, { useSharedValue, useAnimatedStyle, withSequence, withTiming, withSpring } from "react-native-reanimated";
 import { BottomModal } from "./bottomModal";
@@ -27,11 +29,16 @@ import type { UserStore } from "../../application/useCases/getUserStores";
 import { linkShoppingItemProduct } from "../../application/useCases/linkShoppingItemProduct";
 import { addShoppingItem } from "../../application/useCases/addShoppingItem";
 import { reportProductPrice } from "../../application/useCases/reportProductPrice";
-import { reportIngredientPrice } from "../../application/useCases/reportIngredientPrice";
+import { getProductPriceAtStore } from "../../application/useCases/getProductPriceAtStore";
+import { findOrCreateGenericProduct } from "../../application/useCases/findOrCreateGenericProduct";
+import { createEmptyShoppingList } from "../../application/useCases/createEmptyShoppingList";
 import { reportPriceForProduct } from "../../application/useCases/reportPriceForProduct";
 import { toggleShoppingItem } from "../../application/useCases/toggleShoppingItem";
 import { transferCheckedToPantry } from "../../application/useCases/transferCheckedToPantry";
 import { clearCheckedItems } from "../../application/useCases/clearCheckedItems";
+import { completeShoppingList } from "../../application/useCases/completeShoppingList";
+import { checkAndUnlockBadges } from "../../../user/application/useCases/checkAndUnlockBadges";
+import { setPendingBadges } from "../../../user/application/useCases/pendingBadgeStore";
 import {
   getSplitSettings,
   updateSplitSettings,
@@ -41,6 +48,9 @@ import type { SplitSettings, SplitMember } from "../../application/useCases/getS
 import { rebalanceAssignments } from "../../application/useCases/rebalanceAssignments";
 import type { ShoppingItem, ShoppingList } from "../../domain/entities/shopping";
 import { useShoppingList } from "../../api/useShoppingList";
+import { ItemDetailSheet } from "./itemDetailSheet";
+
+const NON_FOOD_CATEGORIES = new Set(["Hygiène & Beauté", "Entretien"]);
 
 const CATEGORY_ORDER = [
   "Fruits & Légumes","Viandes & Poissons","Produits laitiers","Boulangerie",
@@ -105,7 +115,7 @@ function StoreSelectorModal({
       }, panelStyle]}>
         <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: "#E0DDD7", alignSelf: "center", marginBottom: 4 }} />
         <View style={{ gap: 3 }}>
-          <Text style={{ fontSize: 20, fontWeight: "900", color: colors.text, letterSpacing: -0.5 }}>Vous êtes où ?</Text>
+          <Text style={{ fontSize: 20, fontWeight: "900", color: colors.text, letterSpacing: -0.5 }}>Quel magasin ?</Text>
           <Text style={{ fontSize: 13, color: colors.textMuted }}>Les prix seront enregistrés pour ce magasin.</Text>
         </View>
         <View style={{ borderRadius: 14, backgroundColor: colors.bg, overflow: "hidden" }}>
@@ -388,7 +398,7 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, prefillContext,
               </Text>
             )}
             <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onSkip(); }} hitSlop={16}>
-              <Text style={{ fontSize: 14, color: "#C4B8AF", fontWeight: "500" }}>Passer</Text>
+              <Text style={{ fontSize: 14, color: "#C4B8AF", fontWeight: "500" }}>Ignorer</Text>
             </Pressable>
           </View>
 
@@ -469,7 +479,7 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, prefillContext,
           {/* Total payé — read-only */}
           {!isWeightStep && priceMode === "total" && computedTotal !== null && (actualQty > 1 || (isPromo && (hasDiscount || hasLotPrice))) && (
             <View style={{ alignItems: "center", gap: 2 }}>
-              <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 1 }}>Total payé</Text>
+              <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 1 }}>Prix sur l'étiquette</Text>
               <Text style={{ fontSize: 26, fontWeight: "900", color: colors.text, letterSpacing: -0.5 }}>
                 {computedTotal.toFixed(2)} €
               </Text>
@@ -600,7 +610,7 @@ function AddItemSheet({
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   splitSettings: SplitSettings;
-  onConfirm: (name: string, actualPaid: number, memberIdx: number, mode: "total" | "kg", kgPrice?: number) => void;
+  onConfirm: (name: string, actualPaid: number, memberIdx: number, mode: "total" | "kg", kgPrice?: number, promo?: { normalUnitPrice: number; promoTriggerQty: number }) => void;
 }) {
   const { colors } = useAppTheme();
   const [name, setName] = useState("");
@@ -609,12 +619,16 @@ function AddItemSheet({
   const [step, setStep] = useState<"name" | "price" | "weight">("name");
   const [priceMode, setPriceMode] = useState<"total" | "kg">("total");
   const [kgPriceValue, setKgPriceValue] = useState("");
+  const [isPromo, setIsPromo] = useState(false);
+  const [promoMode, setPromoMode] = useState<"discount" | "lot">("discount");
+  const [discountValue, setDiscountValue] = useState("");
+  const [lotQty, setLotQty] = useState("2");
   const nameInputRef = useRef<TextInput>(null);
   const priceInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     if (!isOpen) {
-      setName(""); setPriceValue(""); setStep("name"); setMemberIdx(0); setPriceMode("total"); setKgPriceValue("");
+      setName(""); setPriceValue(""); setStep("name"); setMemberIdx(0); setPriceMode("total"); setKgPriceValue(""); setIsPromo(false); setPromoMode("discount"); setDiscountValue(""); setLotQty("2");
     } else {
       const t = setTimeout(() => nameInputRef.current?.focus(), 200);
       return () => clearTimeout(t);
@@ -637,8 +651,16 @@ function AddItemSheet({
     if (cleaned === "" || /^\d{0,5}(\.\d{0,2})?$/.test(cleaned)) setPriceValue(cleaned);
   }
 
+  function handleChangeDiscountValue(text: string) {
+    const cleaned = text.replace(",", ".");
+    if (cleaned === "" || /^\d{0,3}(\.\d{0,1})?$/.test(cleaned)) setDiscountValue(cleaned);
+  }
+
   const parsed = parseFloat(priceValue);
   const priceValid = !Number.isNaN(parsed) && parsed > 0;
+  const discountNum = parseFloat(discountValue);
+  const hasDiscount = !Number.isNaN(discountNum) && discountNum > 0 && discountNum <= 100;
+  const promoTotal = isPromo && hasDiscount ? parsed * (1 - discountNum / 100) : parsed;
   const valid = name.trim().length > 0 && priceValid;
 
   function goToPrice() {
@@ -735,7 +757,7 @@ function AddItemSheet({
                       }}
                     >
                       <Text style={{ fontSize: 13, fontWeight: "700", color: priceMode === mode ? "#fff" : colors.textMuted }}>
-                        {mode === "total" ? "Total payé" : "Prix au kg"}
+                        {mode === "total" ? "Prix unitaire" : "Prix au kg"}
                       </Text>
                     </Pressable>
                   ))}
@@ -759,6 +781,64 @@ function AddItemSheet({
                     {priceMode === "kg" ? "€/kg" : "€"}
                   </Text>
                 </View>
+                {priceMode === "total" && (
+                  <Pressable
+                    onPress={() => { Haptics.selectionAsync(); setIsPromo((v) => !v); setDiscountValue(""); }}
+                    style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: isPromo ? "#FFF7F4" : colors.bg, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1, borderColor: isPromo ? "#F5C4B0" : "transparent" }}
+                  >
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: isPromo ? colors.accent : colors.textMuted }}>🏷 C'est une promo</Text>
+                    <View style={{ width: 44, height: 26, borderRadius: 13, backgroundColor: isPromo ? colors.accent : "#D1CCC5", justifyContent: "center", padding: 2 }}>
+                      <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: "#fff", alignSelf: isPromo ? "flex-end" : "flex-start", shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 2 }} />
+                    </View>
+                  </Pressable>
+                )}
+                {isPromo && priceMode === "total" && (
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    {(["discount", "lot"] as const).map((mode) => (
+                      <Pressable
+                        key={mode}
+                        onPress={() => setPromoMode(mode)}
+                        style={{
+                          flex: 1, paddingVertical: 8, borderRadius: 12, alignItems: "center",
+                          backgroundColor: promoMode === mode ? colors.text : "#F0EDE8",
+                        }}
+                      >
+                        <Text style={{ fontSize: 13, fontWeight: "700", color: promoMode === mode ? "#fff" : colors.textMuted }}>
+                          {mode === "discount" ? "Réduction %" : "Lot (3 pour 2…)"}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
+                {isPromo && priceMode === "total" && promoMode === "discount" && (
+                  <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.bg, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 16, gap: 8 }}>
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: colors.textSubtle, flex: 1 }}>Remise</Text>
+                    <TextInput
+                      value={discountValue}
+                      onChangeText={handleChangeDiscountValue}
+                      keyboardType="decimal-pad"
+                      returnKeyType="done"
+                      placeholder="50"
+                      placeholderTextColor="#D1CCC5"
+                      style={{ fontSize: 18, fontWeight: "800", color: colors.text, textAlign: "right", minWidth: 40 }}
+                    />
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: colors.textSubtle }}>%</Text>
+                  </View>
+                )}
+                {isPromo && priceMode === "total" && promoMode === "lot" && (
+                  <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.bg, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 16, gap: 8 }}>
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: colors.textSubtle, flex: 1 }}>Nb articles dans le lot</Text>
+                    <TextInput
+                      value={lotQty}
+                      onChangeText={setLotQty}
+                      keyboardType="number-pad"
+                      returnKeyType="done"
+                      placeholder="2"
+                      placeholderTextColor="#D1CCC5"
+                      style={{ fontSize: 18, fontWeight: "800", color: colors.text, textAlign: "right", minWidth: 40 }}
+                    />
+                  </View>
+                )}
                 <Pressable
                   onPress={() => {
                     if (!priceValid) return;
@@ -768,7 +848,17 @@ function AddItemSheet({
                       setPriceValue("");
                       setStep("weight");
                     } else {
-                      onConfirm(name.trim(), parsed, memberIdx, "total");
+                      let promo: { normalUnitPrice: number; promoTriggerQty: number } | undefined;
+                      if (isPromo) {
+                        if (promoMode === "discount" && hasDiscount) {
+                          promo = { normalUnitPrice: parsed, promoTriggerQty: 1 };
+                        } else if (promoMode === "lot") {
+                          const qty = parseInt(lotQty, 10);
+                          if (qty > 1) promo = { normalUnitPrice: parsed / qty, promoTriggerQty: qty };
+                        }
+                      }
+                      const actualPaidFinal = promoMode === "discount" ? promoTotal : parsed;
+                      onConfirm(name.trim(), actualPaidFinal, memberIdx, "total", undefined, promo);
                       onOpenChange(false);
                     }
                   }}
@@ -1031,7 +1121,6 @@ function CheckoutSummary({
   onFinish,
   onFinishWithPantry,
   onEditPrice,
-  onRebalance,
 }: {
   checkedItems: ShoppingItem[];
   virtualItems: VirtualItem[];
@@ -1045,7 +1134,6 @@ function CheckoutSummary({
   onFinish: () => void;
   onFinishWithPantry: () => void;
   onEditPrice: (item: ShoppingItem) => void;
-  onRebalance: () => void;
 }) {
   const { colors } = useAppTheme();
   const hasSplit = splitSettings.enabled && splitSettings.members.length >= 2;
@@ -1081,22 +1169,6 @@ function CheckoutSummary({
             </Text>
           </View>
 
-          {hasSplit && (
-            <Pressable
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onRebalance(); }}
-              style={({ pressed }) => ({
-                flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-                borderRadius: 14, paddingVertical: 12,
-                backgroundColor: pressed ? "#EDEAE4" : "#F0EDE8",
-              })}
-            >
-              <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#78716C" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                <Path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                <Path d="M3 3v5h5" />
-              </Svg>
-              <Text style={{ fontSize: 14, fontWeight: "700", color: colors.textMuted }}>Rééquilibrer la répartition</Text>
-            </Pressable>
-          )}
 
           {hasSplit && splitSettings.members.map((m, i) => {
             const total = memberTotals[i] ?? 0;
@@ -1286,6 +1358,29 @@ const EMPTY_SESSION: Session = {
   horsCarteIds: new Set(),
 };
 
+function serializeSession(s: Session): string {
+  return JSON.stringify({
+    confirmedPrices: Array.from(s.confirmedPrices.entries()),
+    confirmedContexts: Array.from(s.confirmedContexts.entries()),
+    assignments: Array.from(s.assignments.entries()),
+    lockedAssignments: Array.from(s.lockedAssignments),
+    virtualItems: s.virtualItems,
+    horsCarteIds: Array.from(s.horsCarteIds),
+  });
+}
+
+function deserializeSession(raw: string): Session {
+  const p = JSON.parse(raw);
+  return {
+    confirmedPrices: new Map(p.confirmedPrices),
+    confirmedContexts: new Map(p.confirmedContexts),
+    assignments: new Map(p.assignments),
+    lockedAssignments: new Set(p.lockedAssignments),
+    virtualItems: p.virtualItems ?? [],
+    horsCarteIds: new Set(p.horsCarteIds),
+  };
+}
+
 export function ModeCourses() {
   const { colors } = useAppTheme();
   const router = useRouter();
@@ -1301,15 +1396,16 @@ export function ModeCourses() {
   useEffect(() => { splitRef.current = splitSettings; }, [splitSettings]);
 
   const [session, setSession] = useState<Session>(EMPTY_SESSION);
-  const [pricePrompt, setPricePrompt] = useState<{ item: ShoppingItem; product: OFFProductResult | null; returnToCheckout?: boolean } | null>(null);
+  const sessionRestoredRef = useRef(false);
+  const [pricePrompt, setPricePrompt] = useState<{ item: ShoppingItem; product: OFFProductResult | null; returnToCheckout?: boolean; prefillOverride?: string } | null>(null);
   const [scanOpen, setScanOpen] = useState(false);
   const [scanTargetItem, setScanTargetItem] = useState<ShoppingItem | null>(null);
   const [splitEditOpen, setSplitEditOpen] = useState(false);
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [editVirtualId, setEditVirtualId] = useState<string | null>(null);
-  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [groupBy, setGroupBy] = useState<"category" | "recipe">("category");
+  const [detailItem, setDetailItem] = useState<ShoppingItem | null>(null);
   const swipeableRefs = useRef<Map<string, { close: () => void }>>(new Map());
 
   useFocusEffect(useCallback(() => {
@@ -1342,6 +1438,58 @@ export function ModeCourses() {
     getSplitSettings().then(setSplitSettings);
     loadStores();
   }, []);
+
+  useEffect(() => {
+    if (!list?.id) return;
+    AsyncStorage.getItem(`mode_courses_session_${list.id}`).then((raw) => {
+      if (raw) {
+        setSession(deserializeSession(raw));
+      } else {
+        const initialHC = new Set(
+          (list.items ?? [])
+            .filter((item) => NON_FOOD_CATEGORIES.has(item.category ?? ""))
+            .map((item) => item.id),
+        );
+        if (initialHC.size > 0) {
+          setSession((prev) => ({ ...prev, horsCarteIds: initialHC }));
+        }
+      }
+      sessionRestoredRef.current = true;
+    });
+  }, [list?.id]);
+
+  useEffect(() => {
+    if (!list?.id || !sessionRestoredRef.current) return;
+    AsyncStorage.setItem(`mode_courses_session_${list.id}`, serializeSession(session));
+  }, [session, list?.id]);
+
+  useEffect(() => {
+    if (splitSettings.members[1]?.name !== "Nous·elle") return;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: membership } = await supabase
+        .from("household_members")
+        .select("household_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (!membership?.household_id) return;
+      const { data } = await supabase
+        .from("household_members")
+        .select("profiles(display_name)")
+        .eq("household_id", membership.household_id)
+        .neq("user_id", user.id)
+        .limit(1)
+        .maybeSingle();
+      const profile = data?.profiles;
+      const name = (Array.isArray(profile) ? profile[0] : profile)?.display_name;
+      if (name) {
+        const updated = { ...splitSettings, members: [splitSettings.members[0], { ...splitSettings.members[1], name }] };
+        setSplitSettings(updated);
+        updateSplitSettings(updated);
+      }
+    })();
+  }, [splitSettings.members[1]?.name]);
 
   useFocusEffect(useCallback(() => {
     if (storesLoaded && stores.length === 0) loadStores();
@@ -1448,16 +1596,17 @@ export function ModeCourses() {
       if (sessionPrice !== undefined) return sum + sessionPrice;
       if (!selectedStore) return sum;
       const sp = item.allStorePrices.find((p) => p.storeId === selectedStore.id);
-      return sp ? sum + sp.estimatedCost : sum;
+      return (sp && sp.confidence === "exact") ? sum + sp.estimatedCost : sum;
     }, 0);
   }, [unchecked, session.confirmedPrices, selectedStore]);
 
   function getPrefillPrice(item: ShoppingItem): string {
+    if (pricePrompt?.prefillOverride) return pricePrompt.prefillOverride;
     const sessionPrice = session.confirmedPrices.get(item.id);
     if (sessionPrice !== undefined) return sessionPrice.toFixed(2);
     if (!selectedStore) return "";
     const sp = item.allStorePrices.find((p) => p.storeId === selectedStore.id);
-    if (sp) return sp.estimatedCost.toFixed(2);
+    if (sp && sp.confidence === "exact") return sp.estimatedCost.toFixed(2);
     return "";
   }
 
@@ -1505,10 +1654,16 @@ export function ModeCourses() {
         if (productDbId && !item.productId) await linkShoppingItemProduct(item.id, productDbId);
       } else if (item.productId) {
         await reportPriceForProduct(item.productId, selectedStore.id, unitPrice, 1, item.unit || "pièce", promo);
-      } else if (mode === "kg" && kgPrice !== undefined) {
-        await reportIngredientPrice(item.customName, selectedStore.id, kgPrice, 1000, "g");
       } else {
-        await reportIngredientPrice(item.customName, selectedStore.id, unitPrice, 1, item.unit || "pièce", promo);
+        const genericId = await findOrCreateGenericProduct(item.customName);
+        if (genericId) {
+          const priceVal = mode === "kg" && kgPrice !== undefined ? kgPrice : unitPrice;
+          const priceQty = mode === "kg" && kgPrice !== undefined ? 1000 : 1;
+          const priceUnit = mode === "kg" && kgPrice !== undefined ? "g" : item.unit || "pièce";
+          const pricePromo = mode === "kg" ? undefined : promo;
+          await reportPriceForProduct(genericId, selectedStore.id, priceVal, priceQty, priceUnit, pricePromo);
+          if (!item.productId) await linkShoppingItemProduct(item.id, genericId);
+        }
       }
       silentReload();
     }
@@ -1563,11 +1718,22 @@ export function ModeCourses() {
 
   async function handleScanNewProduct(product: OFFProductResult) {
     closeScan();
-    if (!list?.id) return;
-    const { itemId, error } = await addShoppingItem(list.id, product.name);
+    let listId = list?.id;
+    if (!listId) {
+      const created = await createEmptyShoppingList();
+      if (!created) return;
+      listId = created.id;
+      setList({ id: listId, status: "active", items: [], storeSummaries: [], estimatedTotal: 0, itemsWithoutPrice: 0 });
+    }
+    const { itemId, error } = await addShoppingItem(listId, product.name);
     if (error || !itemId) return;
     const productDbId = await findOrCreateProduct(product);
     if (productDbId) await linkShoppingItemProduct(itemId, productDbId);
+    let prefillOverride: string | undefined;
+    if (productDbId && selectedStore) {
+      const knownPrice = await getProductPriceAtStore(productDbId, selectedStore.id);
+      if (knownPrice !== null) prefillOverride = knownPrice.toFixed(2);
+    }
     const newItem: ShoppingItem = {
       id: itemId,
       customName: product.name,
@@ -1581,7 +1747,7 @@ export function ModeCourses() {
     };
     setList((prev) => prev ? { ...prev, items: [...prev.items, newItem] } : prev);
     toggleShoppingItem(itemId, true);
-    setPricePrompt({ item: newItem, product });
+    setPricePrompt({ item: newItem, product, prefillOverride });
   }
 
   function handleScanSkip() {
@@ -1620,15 +1786,6 @@ export function ModeCourses() {
     }
   }
 
-  function handleRebalance() {
-    setSession((prev) => {
-      const split = splitRef.current;
-      if (!split.enabled || split.members.length < 2) return prev;
-      const { assignments, virtualItems } = rebalanceWithVirtuals(prev, split.members, prev.horsCarteIds);
-      return { ...prev, assignments, virtualItems };
-    });
-  }
-
   function toggleHorsCarte(itemId: string) {
     Haptics.selectionAsync();
     setSession((prev) => {
@@ -1642,22 +1799,28 @@ export function ModeCourses() {
     });
   }
 
-  function handleAddVirtualItem(name: string, actualPaid: number, memberIdx: number, mode: "total" | "kg", kgPrice?: number) {
+  function handleAddVirtualItem(name: string, actualPaid: number, memberIdx: number, mode: "total" | "kg", kgPrice?: number, promo?: { normalUnitPrice: number; promoTriggerQty: number }) {
     const id = `virtual_${Date.now()}`;
+    const isNonFood = NON_FOOD_CATEGORIES.has(categorizeItem(name));
     setSession((prev) => {
       const split = splitRef.current;
+      const newHorsCarteIds = isNonFood ? new Set([...prev.horsCarteIds, id]) : prev.horsCarteIds;
       const newVirtualItems = [...prev.virtualItems, { id, customName: name, memberIdx, price: actualPaid }];
-      if (!split.enabled || split.members.length < 2) return { ...prev, virtualItems: newVirtualItems };
-      const withNew = { ...prev, virtualItems: newVirtualItems };
-      const { assignments, virtualItems } = rebalanceWithVirtuals(withNew, split.members, prev.horsCarteIds);
-      return { ...prev, assignments, virtualItems };
+      if (!split.enabled || split.members.length < 2) return { ...prev, virtualItems: newVirtualItems, horsCarteIds: newHorsCarteIds };
+      const withNew = { ...prev, virtualItems: newVirtualItems, horsCarteIds: newHorsCarteIds };
+      const { assignments, virtualItems } = rebalanceWithVirtuals(withNew, split.members, newHorsCarteIds);
+      return { ...prev, assignments, virtualItems, horsCarteIds: newHorsCarteIds };
     });
     if (selectedStore) {
-      if (mode === "kg" && kgPrice !== undefined) {
-        reportIngredientPrice(name, selectedStore.id, kgPrice, 1000, "g");
-      } else {
-        reportIngredientPrice(name, selectedStore.id, actualPaid, 1, "pièce");
-      }
+      const storeId = selectedStore.id;
+      findOrCreateGenericProduct(name).then((genericId) => {
+        if (!genericId) return;
+        if (mode === "kg" && kgPrice !== undefined) {
+          reportPriceForProduct(genericId, storeId, kgPrice, 1000, "g");
+        } else {
+          reportPriceForProduct(genericId, storeId, actualPaid, 1, "pièce", promo);
+        }
+      });
     }
   }
 
@@ -1671,8 +1834,7 @@ export function ModeCourses() {
   useEffect(() => { hasCartItemsRef.current = hasCartItems; }, [hasCartItems]);
 
   function confirmLeave() {
-    if (!hasCartItemsRef.current) { router.navigate("/(tabs)/shopping"); return; }
-    setLeaveDialogOpen(true);
+    router.navigate("/(tabs)/shopping");
   }
 
   const totalScale = useSharedValue(1);
@@ -1943,6 +2105,19 @@ export function ModeCourses() {
                             {getPrefillPrice(item) ? (
                               <Text style={{ fontSize: 12, fontWeight: "600", color: "#C4B8AF" }}>~{getPrefillPrice(item)} €</Text>
                             ) : null}
+                            {(item.productId || item.allStorePrices.length > 0) && (
+                              <Pressable
+                                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setDetailItem(item); }}
+                                hitSlop={8}
+                                style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center" }}
+                              >
+                                <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke={colors.textSubtle} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                                  <Circle cx={12} cy={12} r={10} />
+                                  <Line x1={12} y1={16} x2={12} y2={12} />
+                                  <Line x1={12} y1={8} x2={12} y2={8} />
+                                </Svg>
+                              </Pressable>
+                            )}
                           </Pressable>
                           {i < groupItems.length - 1 && <View style={{ height: 1, backgroundColor: colors.bgSurface, marginLeft: 60 }} />}
                         </View>
@@ -2020,6 +2195,19 @@ export function ModeCourses() {
                           </View>
                           {price !== undefined && (
                             <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text }}>{price.toFixed(2)} €</Text>
+                          )}
+                          {item.productId && (
+                            <Pressable
+                              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setDetailItem(item); }}
+                              hitSlop={8}
+                              style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center" }}
+                            >
+                              <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke={colors.textSubtle} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                                <Circle cx={12} cy={12} r={10} />
+                                <Line x1={12} y1={16} x2={12} y2={12} />
+                                <Line x1={12} y1={8} x2={12} y2={8} />
+                              </Svg>
+                            </Pressable>
                           )}
                           {splitSettings.carteRestoEnabled && splitSettings.enabled && (() => {
                             const isHC = session.horsCarteIds.has(item.id);
@@ -2216,20 +2404,41 @@ export function ModeCourses() {
           memberHorsCarteTotals={memberHorsCarteTotals}
           confirmedTotal={confirmedTotal}
           onClose={() => setCheckoutOpen(false)}
-          onFinish={() => { setSession(EMPTY_SESSION); router.navigate("/(tabs)/shopping"); }}
+          onFinish={async () => {
+            if (list?.id) {
+              const itemPrices = Array.from(session.confirmedPrices.entries()).map(([itemId, pricePaid]) => ({ itemId, pricePaid }));
+              await completeShoppingList(list.id, { storeId: selectedStore?.id, total: confirmedTotal, itemPrices }).catch(() => null);
+              await AsyncStorage.removeItem(`mode_courses_session_${list.id}`);
+              checkAndUnlockBadges().then((newBadges) => {
+                if (newBadges.length > 0) {
+                  setPendingBadges(newBadges);
+                  router.push("/badge-unlock" as never);
+                }
+              }).catch(() => null);
+            }
+            setSession(EMPTY_SESSION);
+            router.navigate("/(tabs)/shopping");
+          }}
           onFinishWithPantry={async () => {
             try {
               if (list?.id) {
-                const payload = checked.map((i) => ({ name: i.customName, quantity: i.quantity, unit: i.unit, productId: i.productId }));
-                await transferCheckedToPantry(payload);
-                await clearCheckedItems(list.id);
+                const pantryPayload = checked.map((i) => ({ name: i.customName, quantity: i.quantity, unit: i.unit, productId: i.productId }));
+                const itemPrices = Array.from(session.confirmedPrices.entries()).map(([itemId, pricePaid]) => ({ itemId, pricePaid }));
+                await completeShoppingList(list.id, { storeId: selectedStore?.id, total: confirmedTotal, itemPrices }).catch(() => null);
+                await AsyncStorage.removeItem(`mode_courses_session_${list.id}`);
+                await transferCheckedToPantry(pantryPayload);
+                checkAndUnlockBadges().then((newBadges) => {
+                  if (newBadges.length > 0) {
+                    setPendingBadges(newBadges);
+                    router.push("/badge-unlock" as never);
+                  }
+                }).catch(() => null);
               }
             } catch {}
             setSession(EMPTY_SESSION);
             router.navigate("/(tabs)/shopping");
           }}
           onEditPrice={(item) => { setCheckoutOpen(false); openPricePrompt(item, null, true); }}
-          onRebalance={handleRebalance}
         />
       )}
 
@@ -2249,6 +2458,13 @@ export function ModeCourses() {
 
     </SafeAreaView>
 
+    <ItemDetailSheet
+      item={detailItem}
+      isOpen={detailItem !== null}
+      onClose={() => setDetailItem(null)}
+      onReload={silentReload}
+    />
+
     <StoreSelectorModal
       isOpen={storeSelectorOpen}
       onClose={() => setStoreSelectorOpen(false)}
@@ -2257,35 +2473,6 @@ export function ModeCourses() {
       canDismiss={!!selectedStore}
     />
 
-    <Modal visible={leaveDialogOpen} transparent animationType="fade" onRequestClose={() => setLeaveDialogOpen(false)}>
-      <Pressable
-        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center", padding: 32 }}
-        onPress={() => setLeaveDialogOpen(false)}
-      >
-        <Pressable
-          onPress={() => {}}
-          style={{ width: "100%", backgroundColor: colors.bgCard, borderRadius: 24, padding: 24, gap: 16,
-            shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 24, elevation: 12 }}
-        >
-          <Text style={{ fontSize: 17, fontWeight: "900", color: colors.text, letterSpacing: -0.3 }}>Quitter les courses ?</Text>
-          <Text style={{ fontSize: 14, color: colors.textMuted, lineHeight: 20 }}>Ta session en cours sera perdue.</Text>
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <Pressable
-              onPress={() => setLeaveDialogOpen(false)}
-              style={({ pressed }) => ({ flex: 1, borderRadius: 14, paddingVertical: 14, alignItems: "center", backgroundColor: pressed ? "#E8E4DF" : "#F0EDE8" })}
-            >
-              <Text style={{ fontSize: 15, fontWeight: "700", color: colors.textMuted }}>Annuler</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => { setLeaveDialogOpen(false); router.navigate("/(tabs)/shopping"); }}
-              style={({ pressed }) => ({ flex: 1, borderRadius: 14, paddingVertical: 14, alignItems: "center", backgroundColor: pressed ? "#C94415" : colors.accent })}
-            >
-              <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>Quitter</Text>
-            </Pressable>
-          </View>
-        </Pressable>
-      </Pressable>
-    </Modal>
 
     </>
   );

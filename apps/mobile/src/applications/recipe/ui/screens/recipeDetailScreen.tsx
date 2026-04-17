@@ -163,7 +163,7 @@ function IngredientGrid({ ingredients, multiplier, checkedIngredients, onToggle,
             }}
           >
             {emoji ? (
-              <Text style={{ fontSize: 30, lineHeight: 36 }}>{emoji}</Text>
+              <Text style={{ fontSize: 30, fontFamily: undefined }}>{emoji}</Text>
             ) : (
               <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: color + "22", alignItems: "center", justifyContent: "center" }}>
                 <Text style={{ fontSize: 16, fontWeight: "800", color }}>{displayName.trim().charAt(0).toUpperCase()}</Text>
@@ -902,9 +902,38 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
 
           {!hasStats && <View style={{ height: 24 }} />}
 
+          {/* Conservation band */}
+          {(recipe.fridgeDays != null || recipe.freezerMonths != null) && (
+            <View style={{ marginHorizontal: 20, marginTop: 16, marginBottom: 8, flexDirection: "row", gap: 8 }}>
+              {recipe.fridgeDays != null && recipe.fridgeDays > 0 && (
+                <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.bgSurface, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12 }}>
+                  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
+                    <Path d="M12 8v8M8 12h8" />
+                  </Svg>
+                  <View>
+                    <Text style={{ fontSize: 11, color: colors.textSubtle, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5 }}>Réfrigérateur</Text>
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>{recipe.fridgeDays} jour{recipe.fridgeDays > 1 ? "s" : ""}</Text>
+                  </View>
+                </View>
+              )}
+              {recipe.freezerMonths != null && recipe.freezerMonths > 0 && (
+                <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.bgSurface, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12 }}>
+                  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07" />
+                  </Svg>
+                  <View>
+                    <Text style={{ fontSize: 11, color: colors.textSubtle, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5 }}>Congélateur</Text>
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>{recipe.freezerMonths} mois</Text>
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
+
           {/* Cost estimate band */}
           {recipeCost && recipeCost.totalCount > 0 && (
-            <View style={{ marginHorizontal: 20, marginTop: 16, marginBottom: 8 }}>
+            <View style={{ marginHorizontal: 20, marginTop: 8, marginBottom: 8 }}>
               <View style={{
                 flexDirection: "row", alignItems: "center", justifyContent: "space-between",
                 backgroundColor: costPerServing != null ? colors.accentBg : colors.bgSurface,
@@ -950,7 +979,7 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
 
           {/* Description */}
           {recipe.description ? (
-            <View style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 20 }}>
+            <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16 }}>
               <Text style={{ fontSize: 15, color: colors.textMuted, lineHeight: 24 }}>{recipe.description}</Text>
               <View style={{ height: 1, backgroundColor: colors.border, marginTop: 20 }} />
             </View>

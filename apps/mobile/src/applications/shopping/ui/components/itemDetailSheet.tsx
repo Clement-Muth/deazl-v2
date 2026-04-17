@@ -18,6 +18,7 @@ import type { OFFProductResult } from "../../application/useCases/searchOffProdu
 import { getOffProductByBarcode, searchOffProducts } from "../../application/useCases/searchOffProducts";
 import type { ShoppingItem } from "../../domain/entities/shopping";
 import { PriceReportSheet } from "./priceReportSheet";
+import { PriceHistoryChart } from "./priceHistoryChart";
 
 const UNITS = ["pièce", "kg", "g", "L", "cL", "mL"];
 
@@ -86,7 +87,7 @@ interface ItemDetailSheetProps {
   onReload?: () => void;
 }
 
-type Tab = "details" | "prix" | "alternatives";
+type Tab = "details" | "prix" | "historique" | "alternatives";
 
 export function ItemDetailSheet({ item, isOpen, onClose, onReload }: ItemDetailSheetProps) {
   const [tab, setTab] = useState<Tab>("prix");
@@ -131,9 +132,11 @@ export function ItemDetailSheet({ item, isOpen, onClose, onReload }: ItemDetailS
 
   if (!item) return null;
 
-  const cheapest = item.allStorePrices.length > 0
-    ? item.allStorePrices.reduce((min, p) => p.estimatedCost < min.estimatedCost ? p : min)
-    : null;
+  const cheapest = item.price
+    ? (item.allStorePrices.find((p) => p.storeName === item.price!.storeName) ?? null)
+    : item.allStorePrices.length > 0
+      ? item.allStorePrices.reduce((min, p) => p.estimatedCost < min.estimatedCost ? p : min)
+      : null;
 
   const badNutriscore = product?.nutriscoreGrade && ["c", "d", "e"].includes(product.nutriscoreGrade.toLowerCase());
   const showAltsTab = !!item.productId && (loadingAlts || alternatives.length > 0 || !!badNutriscore);
@@ -141,6 +144,7 @@ export function ItemDetailSheet({ item, isOpen, onClose, onReload }: ItemDetailS
   const tabs: { key: Tab; label: string }[] = [
     { key: "details", label: "Détails" },
     { key: "prix", label: "Prix" },
+    ...(item.productId ? [{ key: "historique" as Tab, label: "Historique" }] : []),
     ...(showAltsTab ? [{ key: "alternatives" as Tab, label: "Alternatives" }] : []),
   ];
 
@@ -205,6 +209,9 @@ export function ItemDetailSheet({ item, isOpen, onClose, onReload }: ItemDetailS
             )}
             {tab === "prix" && (
               <PrixTab item={item} cheapest={cheapest} qty={qty} onAddPrice={() => setPriceReportOpen(true)} />
+            )}
+            {tab === "historique" && item.productId && (
+              <PriceHistoryChart productId={item.productId} />
             )}
             {tab === "alternatives" && (
               <AlternativesTab alternatives={alternatives} loadingAlts={loadingAlts} />

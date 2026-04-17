@@ -8,7 +8,9 @@ import Svg, { Circle, Line, Path, Polyline } from "react-native-svg";
 import { useAppTheme } from "../../../../shared/theme";
 import { BottomModal } from "../../../shopping/ui/components/bottomModal";
 import { useRecipes } from "../../api/useRecipes";
+import { useCuratedRecipes } from "../../api/useCuratedRecipes";
 import { bootstrapIngredientLinks } from "../../application/useCases/bootstrapIngredientLinks";
+import { toggleFavorite } from "../../application/useCases/toggleFavorite";
 import type { Recipe } from "../../domain/entities/recipe";
 import { GridCard } from "../components/gridCard";
 import { ListCard } from "../components/listCard";
@@ -22,6 +24,7 @@ function normalize(s: string) {
 const GRID_CARD_WIDTH = (Dimensions.get("window").width - 32 - 12) / 2;
 
 type SortOption = "recent" | "fast" | "slow";
+type Tab = "mine" | "catalogue";
 
 function SectionLabel({ label }: { label: string }) {
   const { colors } = useAppTheme();
@@ -35,7 +38,8 @@ function SectionLabel({ label }: { label: string }) {
 export function RecipesScreen() {
   const { colors } = useAppTheme();
   const router = useRouter();
-  const { recipes, loading, refetch } = useRecipes();
+  const { recipes, loading: loadingMine, refetch: refetchMine } = useRecipes();
+  const { recipes: curatedRecipes, setRecipes: setCuratedRecipes, loading: loadingCatalogue, refetch: refetchCatalogue } = useCuratedRecipes();
   const [search, setSearch] = useState("");
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [timeFilter, setTimeFilter] = useState("any");
@@ -45,25 +49,35 @@ export function RecipesScreen() {
     if (bootstrapped.current) return;
     bootstrapped.current = true;
     bootstrapIngredientLinks();
-  }, []);
+    refetchCatalogue();
+  }, [refetchCatalogue]);
+
   const [sort, setSort] = useState<SortOption>("recent");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [tab, setTab] = useState<Tab>("mine");
 
-  useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
+  useFocusEffect(useCallback(() => { refetchMine(); }, [refetchMine]));
+
+  useEffect(() => {
+    if (!loadingMine && recipes.length === 0) {
+      setTab("catalogue");
+    }
+  }, [loadingMine, recipes.length]);
 
   const allTags = useMemo(() => {
+    const source = tab === "mine" ? recipes : curatedRecipes;
     const tags = new Set<string>();
-    for (const r of recipes) r.dietaryTags.forEach((t) => tags.add(t));
+    for (const r of source) r.dietaryTags.forEach((t) => tags.add(t));
     return [...tags];
-  }, [recipes]);
+  }, [recipes, curatedRecipes, tab]);
 
   const activeFilterCount = activeTags.length + (timeFilter !== "any" ? 1 : 0) + (sort !== "recent" ? 1 : 0) + (favoritesOnly ? 1 : 0);
   const isSearching = search.trim() !== "";
   const isFiltering = isSearching || activeTags.length > 0 || timeFilter !== "any" || sort !== "recent" || favoritesOnly;
 
-  const filtered = useMemo(() => {
-    let result = recipes;
+  const applyFilters = useCallback((source: Recipe[]) => {
+    let result = source;
     if (search.trim()) {
       const q = normalize(search);
       result = result.filter((r) => normalize(r.name).includes(q) || normalize(r.description ?? "").includes(q));
@@ -85,7 +99,12 @@ export function RecipesScreen() {
       const tb = (b.prepTimeMinutes ?? 0) + (b.cookTimeMinutes ?? 0);
       return sort === "fast" ? ta - tb : tb - ta;
     });
-  }, [recipes, search, activeTags, timeFilter, sort, favoritesOnly]);
+  }, [search, activeTags, timeFilter, favoritesOnly, sort]);
+
+  const filteredMine = useMemo(() => applyFilters(recipes), [recipes, applyFilters]);
+  const filteredCatalogue = useMemo(() => applyFilters(curatedRecipes), [curatedRecipes, applyFilters]);
+
+  const filtered = tab === "mine" ? filteredMine : filteredCatalogue;
 
   const favorites = useMemo(() => recipes.filter((r) => r.isFavorite), [recipes]);
 
@@ -114,7 +133,16 @@ export function RecipesScreen() {
     router.push({ pathname: "/recipe/[id]", params: { id } });
   }
 
-  if (loading) {
+  async function handleCatalogueToggleFavorite(recipe: Recipe) {
+    const next = !recipe.isFavorite;
+    setCuratedRecipes((prev) => prev.map((r) => r.id === recipe.id ? { ...r, isFavorite: next } : r));
+    await toggleFavorite(recipe.id, next);
+    refetchMine();
+  }
+
+  const loading = tab === "mine" ? loadingMine : loadingCatalogue;
+
+  if (loadingMine && tab === "mine") {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator color={colors.accent} size="large" />
@@ -127,6 +155,28 @@ export function RecipesScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
         <View style={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 16 }}>
           <Text style={{ fontSize: 28, fontWeight: "900", color: colors.text, letterSpacing: -0.5, marginBottom: 16 }}>Recettes</Text>
+
+          <View style={{ flexDirection: "row", backgroundColor: colors.bgCard, borderRadius: 14, padding: 4, marginBottom: 16 }}>
+            {(["mine", "catalogue"] as Tab[]).map((t) => (
+              <Pressable
+                key={t}
+                onPress={() => { setTab(t); setSearch(""); setActiveTags([]); setTimeFilter("any"); setSort("recent"); setFavoritesOnly(false); }}
+                style={{
+                  flex: 1, paddingVertical: 9, borderRadius: 11, alignItems: "center",
+                  backgroundColor: tab === t ? colors.bg : "transparent",
+                  shadowColor: tab === t ? "#000" : "transparent",
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: tab === t ? 0.08 : 0,
+                  shadowRadius: tab === t ? 4 : 0,
+                  elevation: tab === t ? 2 : 0,
+                }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: "700", color: tab === t ? colors.text : colors.textMuted }}>
+                  {t === "mine" ? "Mes recettes" : "Catalogue"}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
 
           <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
             <View style={{ flex: 1 }}>
@@ -167,112 +217,103 @@ export function RecipesScreen() {
           </View>
         </View>
 
-        {isFiltering ? (
-          <View style={{ paddingHorizontal: 16, gap: 12 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-              <Text style={{ fontSize: 14, fontWeight: "600", color: colors.textMuted }}>
-                {filtered.length} recette{filtered.length !== 1 ? "s" : ""}
-              </Text>
-              <Pressable onPress={clearFilters}>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.accent }}>Effacer tout</Text>
-              </Pressable>
-            </View>
-            {filtered.length === 0 ? (
-              <View style={{ alignItems: "center", paddingVertical: 64 }}>
-                <View style={{ width: 56, height: 56, borderRadius: 20, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
-                  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                    <Circle cx={11} cy={11} r={8} />
-                    <Line x1={21} y1={21} x2={16.65} y2={16.65} />
-                  </Svg>
+        {tab === "mine" ? (
+          isFiltering ? (
+            <FilteredResults filtered={filteredMine} isSearching={isSearching} clearFilters={clearFilters} goToRecipe={goToRecipe} colors={colors} />
+          ) : (
+            <>
+              {recipes.length === 0 ? (
+                <View style={{ alignItems: "center", paddingTop: 64, paddingHorizontal: 32 }}>
+                  <Text style={{ fontSize: 40, marginBottom: 16 }}>🍽️</Text>
+                  <Text style={{ fontSize: 16, fontWeight: "700", color: colors.text, marginBottom: 8, textAlign: "center" }}>Aucune recette</Text>
+                  <Text style={{ fontSize: 14, color: colors.textMuted, textAlign: "center" }}>Ajoutez vos premières recettes en appuyant sur +.</Text>
                 </View>
-                <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text, marginBottom: 8 }}>Aucune recette trouvée</Text>
-                <Pressable onPress={clearFilters}>
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: colors.accent }}>Effacer les filtres</Text>
-                </Pressable>
-              </View>
-            ) : isSearching ? (
-              <View style={{ gap: 8 }}>
-                {filtered.map((recipe) => (
-                  <ListCard key={recipe.id} recipe={recipe} onPress={() => goToRecipe(recipe.id)} />
-                ))}
-              </View>
-            ) : (
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-                {filtered.map((recipe) => (
-                  <View key={recipe.id} style={{ width: GRID_CARD_WIDTH }}>
-                    <GridCard recipe={recipe} onPress={() => goToRecipe(recipe.id)} />
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-        ) : (
-          <>
-            {recipes.length === 0 ? (
-              <View style={{ alignItems: "center", paddingTop: 64, paddingHorizontal: 32 }}>
-                <Text style={{ fontSize: 40, marginBottom: 16 }}>🍽️</Text>
-                <Text style={{ fontSize: 16, fontWeight: "700", color: colors.text, marginBottom: 8, textAlign: "center" }}>Aucune recette</Text>
-                <Text style={{ fontSize: 14, color: colors.textMuted, textAlign: "center" }}>Ajoutez vos premières recettes en appuyant sur +.</Text>
-              </View>
-            ) : (
-              <>
-                {favorites.length > 0 && (
-                  <View style={{ marginBottom: 20 }}>
-                    <SectionLabel label="Mes favoris" />
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: -8 }} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 8, gap: 12 }}>
-                      {favorites.map((recipe) => (
-                        <ThumbCard key={recipe.id} recipe={recipe} onPress={() => goToRecipe(recipe.id)} />
-                      ))}
-                    </ScrollView>
-                  </View>
-                )}
-
-                {quickRecipes.length > 0 && (
-                  <View style={{ marginBottom: 20 }}>
-                    <SectionLabel label="Rapides · moins de 30 min" />
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: -8 }} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 8, gap: 12 }}>
-                      {quickRecipes.map((recipe) => (
-                        <ThumbCard key={recipe.id} recipe={recipe} onPress={() => goToRecipe(recipe.id)} />
-                      ))}
-                    </ScrollView>
-                  </View>
-                )}
-
-                {remainingRecipes.length > 0 && (
-                  <View style={{ marginBottom: 20 }}>
-                    <SectionLabel label="Toutes les recettes" />
-                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, paddingHorizontal: 16 }}>
-                      {remainingRecipes.map((recipe) => (
-                        <View key={recipe.id} style={{ width: GRID_CARD_WIDTH }}>
-                          <GridCard recipe={recipe} onPress={() => goToRecipe(recipe.id)} />
-                        </View>
-                      ))}
+              ) : (
+                <>
+                  {favorites.length > 0 && (
+                    <View style={{ marginBottom: 20 }}>
+                      <SectionLabel label="Mes favoris" />
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: -8 }} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 8, gap: 12 }}>
+                        {favorites.map((recipe) => (
+                          <ThumbCard key={recipe.id} recipe={recipe} onPress={() => goToRecipe(recipe.id)} />
+                        ))}
+                      </ScrollView>
                     </View>
-                  </View>
-                )}
-              </>
-            )}
-          </>
+                  )}
+
+                  {quickRecipes.length > 0 && (
+                    <View style={{ marginBottom: 20 }}>
+                      <SectionLabel label="Rapides · moins de 30 min" />
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: -8 }} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 8, gap: 12 }}>
+                        {quickRecipes.map((recipe) => (
+                          <ThumbCard key={recipe.id} recipe={recipe} onPress={() => goToRecipe(recipe.id)} />
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+
+                  {remainingRecipes.length > 0 && (
+                    <View style={{ marginBottom: 20 }}>
+                      <SectionLabel label="Toutes les recettes" />
+                      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, paddingHorizontal: 16 }}>
+                        {remainingRecipes.map((recipe) => (
+                          <View key={recipe.id} style={{ width: GRID_CARD_WIDTH }}>
+                            <GridCard recipe={recipe} onPress={() => goToRecipe(recipe.id)} />
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+                </>
+              )}
+            </>
+          )
+        ) : (
+          loadingCatalogue ? (
+            <View style={{ alignItems: "center", paddingTop: 64 }}>
+              <ActivityIndicator color={colors.accent} size="large" />
+            </View>
+          ) : isFiltering ? (
+            <CatalogueFilteredResults filtered={filteredCatalogue} isSearching={isSearching} clearFilters={clearFilters} goToRecipe={goToRecipe} onToggleFavorite={handleCatalogueToggleFavorite} colors={colors} />
+          ) : (
+            <View style={{ paddingHorizontal: 16 }}>
+              {curatedRecipes.length === 0 ? (
+                <View style={{ alignItems: "center", paddingTop: 64 }}>
+                  <Text style={{ fontSize: 14, color: colors.textMuted, textAlign: "center" }}>Aucune recette dans le catalogue.</Text>
+                </View>
+              ) : (
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+                  {curatedRecipes.map((recipe) => (
+                    <View key={recipe.id} style={{ width: GRID_CARD_WIDTH }}>
+                      <CatalogueGridCard recipe={recipe} onPress={() => goToRecipe(recipe.id)} onToggleFavorite={() => handleCatalogueToggleFavorite(recipe)} />
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          )
         )}
       </ScrollView>
 
-      <Pressable
-        onPress={() => router.push("/recipe/new" as never)}
-        style={({ pressed }) => ({
-          position: "absolute", bottom: 100, right: 20,
-          width: 56, height: 56, borderRadius: 28,
-          backgroundColor: colors.accent,
-          alignItems: "center", justifyContent: "center",
-          shadowColor: colors.accent, shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.35, shadowRadius: 12, elevation: 8,
-          transform: [{ scale: pressed ? 0.92 : 1 }],
-        })}
-      >
-        <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-          <Line x1={12} y1={5} x2={12} y2={19} />
-          <Line x1={5} y1={12} x2={19} y2={12} />
-        </Svg>
-      </Pressable>
+      {tab === "mine" && (
+        <Pressable
+          onPress={() => router.push("/recipe/new" as never)}
+          style={({ pressed }) => ({
+            position: "absolute", bottom: 100, right: 20,
+            width: 56, height: 56, borderRadius: 28,
+            backgroundColor: colors.accent,
+            alignItems: "center", justifyContent: "center",
+            shadowColor: colors.accent, shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.35, shadowRadius: 12, elevation: 8,
+            transform: [{ scale: pressed ? 0.92 : 1 }],
+          })}
+        >
+          <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <Line x1={12} y1={5} x2={12} y2={19} />
+            <Line x1={5} y1={12} x2={19} y2={12} />
+          </Svg>
+        </Pressable>
+      )}
 
       <BottomModal isOpen={filterOpen} onClose={() => setFilterOpen(false)} height="auto">
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 16 }}>
@@ -285,25 +326,27 @@ export function RecipesScreen() {
         </View>
 
         <View style={{ paddingBottom: 8 }}>
-          <View style={{ marginBottom: 20 }}>
-            <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textMuted + "99", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Favoris</Text>
-            <Pressable
-              onPress={() => setFavoritesOnly((v) => !v)}
-              style={{
-                flexDirection: "row", alignItems: "center", gap: 8,
-                borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10,
-                backgroundColor: favoritesOnly ? colors.accent : colors.bgSurface,
-                alignSelf: "flex-start",
-              }}
-            >
-              <Svg width={12} height={12} viewBox="0 0 24 24" fill={favoritesOnly ? "#fff" : "#78716C"} stroke="none">
-                <Path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-              </Svg>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: favoritesOnly ? "#fff" : colors.textMuted }}>
-                Favoris uniquement
-              </Text>
-            </Pressable>
-          </View>
+          {tab === "mine" && (
+            <View style={{ marginBottom: 20 }}>
+              <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textMuted + "99", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Favoris</Text>
+              <Pressable
+                onPress={() => setFavoritesOnly((v) => !v)}
+                style={{
+                  flexDirection: "row", alignItems: "center", gap: 8,
+                  borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10,
+                  backgroundColor: favoritesOnly ? colors.accent : colors.bgSurface,
+                  alignSelf: "flex-start",
+                }}
+              >
+                <Svg width={12} height={12} viewBox="0 0 24 24" fill={favoritesOnly ? "#fff" : "#78716C"} stroke="none">
+                  <Path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                </Svg>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: favoritesOnly ? "#fff" : colors.textMuted }}>
+                  Favoris uniquement
+                </Text>
+              </Pressable>
+            </View>
+          )}
 
           {allTags.length > 0 && (
             <View style={{ marginBottom: 20 }}>
@@ -371,5 +414,125 @@ export function RecipesScreen() {
         </View>
       </BottomModal>
     </SafeAreaView>
+  );
+}
+
+function FilteredResults({
+  filtered, isSearching, clearFilters, goToRecipe, colors,
+}: {
+  filtered: Recipe[];
+  isSearching: boolean;
+  clearFilters: () => void;
+  goToRecipe: (id: string) => void;
+  colors: ReturnType<typeof useAppTheme>["colors"];
+}) {
+  return (
+    <View style={{ paddingHorizontal: 16, gap: 12 }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+        <Text style={{ fontSize: 14, fontWeight: "600", color: colors.textMuted }}>
+          {filtered.length} recette{filtered.length !== 1 ? "s" : ""}
+        </Text>
+        <Pressable onPress={clearFilters}>
+          <Text style={{ fontSize: 12, fontWeight: "600", color: colors.accent }}>Effacer tout</Text>
+        </Pressable>
+      </View>
+      {filtered.length === 0 ? (
+        <View style={{ alignItems: "center", paddingVertical: 64 }}>
+          <View style={{ width: 56, height: 56, borderRadius: 20, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+            <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+              <Circle cx={11} cy={11} r={8} />
+              <Line x1={21} y1={21} x2={16.65} y2={16.65} />
+            </Svg>
+          </View>
+          <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text, marginBottom: 8 }}>Aucune recette trouvée</Text>
+          <Pressable onPress={clearFilters}>
+            <Text style={{ fontSize: 13, fontWeight: "600", color: colors.accent }}>Effacer les filtres</Text>
+          </Pressable>
+        </View>
+      ) : isSearching ? (
+        <View style={{ gap: 8 }}>
+          {filtered.map((recipe) => (
+            <ListCard key={recipe.id} recipe={recipe} onPress={() => goToRecipe(recipe.id)} />
+          ))}
+        </View>
+      ) : (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+          {filtered.map((recipe) => (
+            <View key={recipe.id} style={{ width: GRID_CARD_WIDTH }}>
+              <GridCard recipe={recipe} onPress={() => goToRecipe(recipe.id)} />
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function CatalogueFilteredResults({
+  filtered, isSearching, clearFilters, goToRecipe, onToggleFavorite, colors,
+}: {
+  filtered: Recipe[];
+  isSearching: boolean;
+  clearFilters: () => void;
+  goToRecipe: (id: string) => void;
+  onToggleFavorite: (recipe: Recipe) => void;
+  colors: ReturnType<typeof useAppTheme>["colors"];
+}) {
+  return (
+    <View style={{ paddingHorizontal: 16, gap: 12 }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+        <Text style={{ fontSize: 14, fontWeight: "600", color: colors.textMuted }}>
+          {filtered.length} recette{filtered.length !== 1 ? "s" : ""}
+        </Text>
+        <Pressable onPress={clearFilters}>
+          <Text style={{ fontSize: 12, fontWeight: "600", color: colors.accent }}>Effacer tout</Text>
+        </Pressable>
+      </View>
+      {filtered.length === 0 ? (
+        <View style={{ alignItems: "center", paddingVertical: 64 }}>
+          <View style={{ width: 56, height: 56, borderRadius: 20, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+            <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+              <Circle cx={11} cy={11} r={8} />
+              <Line x1={21} y1={21} x2={16.65} y2={16.65} />
+            </Svg>
+          </View>
+          <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text, marginBottom: 8 }}>Aucune recette trouvée</Text>
+          <Pressable onPress={clearFilters}>
+            <Text style={{ fontSize: 13, fontWeight: "600", color: colors.accent }}>Effacer les filtres</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+          {filtered.map((recipe) => (
+            <View key={recipe.id} style={{ width: GRID_CARD_WIDTH }}>
+              <CatalogueGridCard recipe={recipe} onPress={() => goToRecipe(recipe.id)} onToggleFavorite={() => onToggleFavorite(recipe)} />
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function CatalogueGridCard({ recipe, onPress, onToggleFavorite }: { recipe: Recipe; onPress: () => void; onToggleFavorite: () => void }) {
+  return (
+    <View style={{ position: "relative" }}>
+      <GridCard recipe={recipe} onPress={onPress} />
+      <Pressable
+        onPress={onToggleFavorite}
+        hitSlop={8}
+        style={({ pressed }) => ({
+          position: "absolute", top: 46, right: 10,
+          width: 32, height: 32, borderRadius: 16,
+          backgroundColor: recipe.isFavorite ? "#E8571C" : "rgba(0,0,0,0.35)",
+          alignItems: "center", justifyContent: "center",
+          opacity: pressed ? 0.8 : 1,
+        })}
+      >
+        <Svg width={14} height={14} viewBox="0 0 24 24" fill={recipe.isFavorite ? "#fff" : "none"} stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <Path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+        </Svg>
+      </Pressable>
+    </View>
   );
 }
