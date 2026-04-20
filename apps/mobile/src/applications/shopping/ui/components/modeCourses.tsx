@@ -1650,6 +1650,18 @@ export function ModeCourses() {
     return total;
   }, [session, checkedIds]);
 
+  const { globalCRTotal, globalHCTotal } = useMemo(() => {
+    let cr = 0, hc = 0;
+    session.confirmedPrices.forEach((p, id) => {
+      if (!checkedIds.has(id)) return;
+      if (session.horsCarteIds.has(id)) hc += p; else cr += p;
+    });
+    session.virtualItems.forEach((v) => {
+      if (session.horsCarteIds.has(v.id)) hc += v.price; else cr += v.price;
+    });
+    return { globalCRTotal: cr, globalHCTotal: hc };
+  }, [session, checkedIds]);
+
   const { memberTotals, memberCarteTotals, memberHorsCarteTotals } = useMemo(() => {
     const totals = new Array(splitSettings.members.length).fill(0) as number[];
     const carteTotals = new Array(splitSettings.members.length).fill(0) as number[];
@@ -2141,6 +2153,24 @@ export function ModeCourses() {
             {(list?.items.length ?? 0) > 0 && (
               <View style={{ marginTop: 14 }}>
                 <ShimmerProgressBar progress={(list?.items.length ?? 0) > 0 ? checked.length / (list?.items.length ?? 1) : 0} />
+              </View>
+            )}
+
+            {/* CR/HC global (carte resto on, split off) */}
+            {splitSettings.carteRestoEnabled && !splitSettings.enabled && confirmedTotal > 0 && (
+              <View style={{ flexDirection: "row", gap: 8, marginTop: 14 }}>
+                <View style={{ flex: 1, backgroundColor: "rgba(74,222,128,0.12)", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <View style={{ width: 16, height: 14, borderRadius: 3, backgroundColor: "#4ADE80", alignItems: "center", justifyContent: "center" }}>
+                    <Text style={{ fontSize: 8, fontWeight: "900", color: "#0D3F1E", letterSpacing: 0.4 }}>CR</Text>
+                  </View>
+                  <Text style={{ fontSize: 13, fontWeight: "900", color: "#4ADE80", letterSpacing: -0.3 }}>{globalCRTotal.toFixed(2).replace(".", ",")} €</Text>
+                </View>
+                <View style={{ flex: 1, backgroundColor: "rgba(249,168,212,0.12)", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <View style={{ width: 16, height: 14, borderRadius: 3, backgroundColor: "#F9A8D4", alignItems: "center", justifyContent: "center" }}>
+                    <Text style={{ fontSize: 8, fontWeight: "900", color: "#5A1636", letterSpacing: 0.4 }}>HC</Text>
+                  </View>
+                  <Text style={{ fontSize: 13, fontWeight: "900", color: "#F9A8D4", letterSpacing: -0.3 }}>{globalHCTotal.toFixed(2).replace(".", ",")} €</Text>
+                </View>
               </View>
             )}
 
