@@ -43,7 +43,7 @@ export function SplitEditSheet({
   }
 
   return (
-    <BottomModal isOpen={isOpen} onClose={() => { onSave(draft); onOpenChange(false); }} height="85%">
+    <BottomModal isOpen={isOpen} onClose={() => { onSave(draft); onOpenChange(false); }} height="auto">
       <BottomModalScrollView contentContainerStyle={{ gap: 12, paddingBottom: 32 }}>
         <Text style={{ fontSize: 17, fontWeight: "900", color: colors.text, paddingBottom: 4 }}>Configuration de session</Text>
 

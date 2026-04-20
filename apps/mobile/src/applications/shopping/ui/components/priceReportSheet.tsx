@@ -161,7 +161,7 @@ export function PriceReportSheet({ item, isOpen, onClose, onSuccess }: PriceRepo
   if (!item) return null;
 
   return (
-    <BottomModal isOpen={isOpen} onClose={onClose} height="95%">
+    <BottomModal isOpen={isOpen} onClose={onClose} height="auto">
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingBottom: 14 }}>
           <View style={{ flex: 1 }}>

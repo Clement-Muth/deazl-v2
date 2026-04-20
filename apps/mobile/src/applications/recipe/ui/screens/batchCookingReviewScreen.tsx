@@ -275,7 +275,7 @@ export function BatchCookingReviewScreen({ mealCount, persons, recipeCount }: {
       </View>
 
       {/* Catalogue swap */}
-      <BottomModal isOpen={catalogOpen} onClose={() => setCatalogOpen(false)} height="80%">
+      <BottomModal isOpen={catalogOpen} onClose={() => setCatalogOpen(false)} height="auto">
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 17, fontWeight: "800", color: colors.text, marginBottom: 4 }}>
             {isAdding ? "Ajouter un plat" : "Changer de recette"}

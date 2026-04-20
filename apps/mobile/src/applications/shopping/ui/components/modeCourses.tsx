@@ -586,7 +586,7 @@ function AddItemSheet({
   ) : null;
 
   return (
-    <BottomModal isOpen={isOpen} onClose={() => onOpenChange(false)} height="60%">
+    <BottomModal isOpen={isOpen} onClose={() => onOpenChange(false)} height="auto">
           <View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 16 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
               {step === "weight" && (

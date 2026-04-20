@@ -1254,7 +1254,7 @@ export function ProfileScreen() {
       <BottomModal
         isOpen={editSheet === "stores"}
         onClose={() => { setEditSheet(null); setStoreQuery(""); setStoreResults([]); setOsmResults([]); setStoreError(null); }}
-        height="85%"
+        height="auto"
         portalHostName="stores-sheet-dialog"
       >
         <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 12 }}>Mes magasins</Text>

@@ -1274,7 +1274,7 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
       </View>
 
       {/* Product linking BottomModal */}
-      <BottomModal isOpen={linkingIngredient !== null} onClose={closeLinkSheet} height="70%">
+      <BottomModal isOpen={linkingIngredient !== null} onClose={closeLinkSheet} height="auto">
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingBottom: 12 }}>
                 <View style={{ flex: 1 }}>
@@ -1369,7 +1369,7 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
       </BottomModal>
 
       {/* Cook Mode BottomModal */}
-      <BottomModal isOpen={cookModeOpen && recipe.steps.length > 0} onClose={() => setCookModeOpen(false)} height="88%">
+      <BottomModal isOpen={cookModeOpen && recipe.steps.length > 0} onClose={() => setCookModeOpen(false)} height="auto">
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }}>
                 <View style={{ flex: 1 }}>
@@ -1527,7 +1527,7 @@ export function RecipeDetailScreen({ id, onBack, onEdit, onDelete }: RecipeDetai
             </View>
       </BottomModal>
 
-      <BottomModal isOpen={notesOpen} onClose={() => setNotesOpen(false)} height="60%">
+      <BottomModal isOpen={notesOpen} onClose={() => setNotesOpen(false)} height="auto">
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingBottom: 16 }}>
                 <Text style={{ fontSize: 17, fontWeight: "800", color: colors.text }}>Notes personnelles</Text>
@@ -1614,7 +1614,7 @@ function ScheduleSheet({ recipeId, isOpen, onClose }: { recipeId: string; isOpen
   }
 
   return (
-    <BottomModal isOpen={isOpen} onClose={onClose} height="52%">
+    <BottomModal isOpen={isOpen} onClose={onClose} height="auto">
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingBottom: 16 }}>
             <Text style={{ fontSize: 17, fontWeight: "800", color: colors.text }}>Planifier cette recette</Text>
             <Pressable onPress={onClose} hitSlop={8} style={{ padding: 4 }}>
