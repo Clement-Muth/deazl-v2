@@ -91,7 +91,7 @@ export function SplitEditSheet({
           {draft.carteRestoEnabled && (
             <View style={{ paddingHorizontal: 16, paddingBottom: 16, gap: 10 }}>
               <View style={{ flexDirection: "row", gap: 8 }}>
-                {draft.members.map((m, i) => (
+                {draft.members.filter((_, i) => draft.enabled || i === 0).map((m, i) => (
                   <View key={i} style={{ flex: 1, backgroundColor: "#F0EDE8", borderRadius: 12, padding: 12, gap: 10 }}>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                       <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: m.color }} />
