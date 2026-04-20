@@ -5,7 +5,7 @@ import { Button, Dialog } from "heroui-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Animated, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Svg, { Line, Path, Polyline } from "react-native-svg";
+import Svg, { Circle, Line, Path, Polyline } from "react-native-svg";
 import { useAppTheme } from "../../../../shared/theme";
 import { useShoppingList } from "../../api/useShoppingList";
 import { addShoppingItem } from "../../application/useCases/addShoppingItem";
@@ -113,18 +113,30 @@ function ItemRow({
               </Text>
             </View>
           )}
-          <Text
-            style={{
-              flex: 1,
-              fontSize: 15,
-              fontWeight: item.isChecked ? "400" : "600",
-              color: item.isChecked ? colors.textSubtle : colors.text,
-              textDecorationLine: item.isChecked ? "line-through" : "none",
-            }}
-            numberOfLines={1}
-          >
-            {item.customName}
-          </Text>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text
+              style={{
+                fontSize: 15,
+                fontWeight: item.isChecked ? "400" : "600",
+                color: item.isChecked ? colors.textSubtle : colors.text,
+                textDecorationLine: item.isChecked ? "line-through" : "none",
+              }}
+              numberOfLines={1}
+            >
+              {item.customName}
+            </Text>
+            {item.recipeName && !item.isChecked && (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <Svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke={colors.textSubtle} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <Path d="M4 4h7a3 3 0 0 1 3 3v14a2 2 0 0 0-2-2H4V4z" />
+                  <Path d="M20 4h-7a3 3 0 0 0-3 3v14a2 2 0 0 1 2-2h8V4z" />
+                </Svg>
+                <Text style={{ fontSize: 10, fontWeight: "500", color: colors.textSubtle }} numberOfLines={1}>
+                  {item.recipeName}
+                </Text>
+              </View>
+            )}
+          </View>
           {item.price && (
             <View style={{ alignItems: "flex-end" }}>
               <Text style={{ fontSize: 12, fontWeight: "600", color: item.isChecked ? "#D1CCC5" : "#C4B8AF" }}>
@@ -280,6 +292,11 @@ export function ShoppingScreen() {
 
   const hasRecipeItems = unchecked.some((i) => i.recipeName);
 
+  const HC_CATS = new Set(["Hygiène & Beauté", "Entretien"]);
+  const estimatedTotal = list?.estimatedTotal ?? 0;
+  const crEstimate = items.reduce((s, i) => !HC_CATS.has(i.category ?? "") ? s + (i.price?.estimatedCost ?? 0) : s, 0);
+  const hcEstimate = items.reduce((s, i) => HC_CATS.has(i.category ?? "") ? s + (i.price?.estimatedCost ?? 0) : s, 0);
+
   const storeSummaries = list?.storeSummaries ?? [];
   const storeIds = storeSummaries.map((s) => s.storeId);
   const intersectionItems = storeIds.length >= 2
@@ -386,37 +403,129 @@ export function ShoppingScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top"]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 160 }}>
 
-        <View style={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 12 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <View>
-              <Text style={{ fontSize: 28, fontWeight: "900", color: colors.text, letterSpacing: -0.5 }}>Courses</Text>
-              {totalItems > 0 && (
-                <Text style={{ fontSize: 13, color: colors.textSubtle, fontWeight: "500", marginTop: 2 }}>
-                  {checkedCount}/{totalItems} articles
-                </Text>
-              )}
-            </View>
-            <Pressable
-              onPress={() => router.push("/shopping/mode-courses")}
-              style={({ pressed }) => ({
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 6,
-                paddingHorizontal: 14,
-                paddingVertical: 9,
-                borderRadius: 99,
-                backgroundColor: pressed ? colors.accentPress : colors.accent,
-              })}
-            >
-              <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <Path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                <Line x1={3} y1={6} x2={21} y2={6} />
-                <Path d="M16 10a4 4 0 0 1-8 0" />
-              </Svg>
-              <Text style={{ fontSize: 13, fontWeight: "700", color: "#fff" }}>Mode courses</Text>
-            </Pressable>
+        {items.length === 0 ? (
+          <View style={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 12 }}>
+            <Text style={{ fontSize: 28, fontWeight: "900", color: colors.text, letterSpacing: -0.5 }}>Courses</Text>
           </View>
-        </View>
+        ) : (
+          <View style={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 12 }}>
+            <View style={{
+              borderRadius: 22,
+              backgroundColor: colors.accent,
+              padding: 16,
+              shadowColor: "#E8571C",
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.3,
+              shadowRadius: 20,
+              elevation: 8,
+              overflow: "hidden",
+            }}>
+              <View style={{ position: "absolute", right: -40, top: -40, width: 180, height: 180, borderRadius: 90, backgroundColor: "rgba(255,255,255,0.07)" }} />
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                {storeSummariesSorted.length > 0 ? (
+                  <Pressable
+                    onPress={() => storeSummariesSorted.length >= 2 && router.push("/shopping/compare")}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 99, paddingHorizontal: 10, paddingVertical: 6 }}
+                  >
+                    <View style={{ width: 20, height: 20, borderRadius: 6, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" }}>
+                      <Text style={{ fontSize: 10, fontWeight: "900", color: colors.accent }}>
+                        {(storeSummariesSorted[0].storeName ?? "M")[0].toUpperCase()}
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: "#fff", letterSpacing: -0.2 }} numberOfLines={1}>
+                      {storeSummariesSorted[0].storeName}
+                    </Text>
+                    {storeSummariesSorted.length >= 2 && (
+                      <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                        <Path d="M6 9l6 6 6-6" />
+                      </Svg>
+                    )}
+                  </Pressable>
+                ) : (
+                  <View style={{ backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 99, paddingHorizontal: 12, paddingVertical: 6 }}>
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: "rgba(255,255,255,0.7)" }}>Aucun magasin</Text>
+                  </View>
+                )}
+                <Pressable
+                  onPress={() => router.push("/shopping/mode-courses")}
+                  style={({ pressed }) => ({
+                    flexDirection: "row", alignItems: "center", gap: 6,
+                    backgroundColor: "#fff", borderRadius: 99,
+                    paddingHorizontal: 12, paddingVertical: 7,
+                    opacity: pressed ? 0.85 : 1,
+                    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6,
+                  })}
+                >
+                  <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 12h10" />
+                  </Svg>
+                  <Text style={{ fontSize: 12, fontWeight: "800", color: colors.accent, letterSpacing: -0.2 }}>Démarrer</Text>
+                </Pressable>
+              </View>
+
+              <View style={{ flexDirection: "row", alignItems: "flex-end", marginTop: 18, gap: 12 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 10, fontWeight: "800", color: "rgba(255,255,255,0.7)", letterSpacing: 1.4, textTransform: "uppercase" }}>
+                    Estimation
+                  </Text>
+                  <View style={{ flexDirection: "row", alignItems: "baseline", marginTop: 2 }}>
+                    <Text style={{ fontSize: 46, fontWeight: "900", color: "#fff", letterSpacing: -1.5, lineHeight: 52 }}>
+                      {Math.floor(estimatedTotal)}
+                    </Text>
+                    <Text style={{ fontSize: 46, fontWeight: "900", color: "rgba(255,255,255,0.55)", letterSpacing: -1.5, lineHeight: 52 }}>
+                      ,{String(Math.round((estimatedTotal % 1) * 100)).padStart(2, "0")}
+                    </Text>
+                    <Text style={{ fontSize: 22, fontWeight: "700", color: "rgba(255,255,255,0.75)", marginLeft: 3, marginBottom: 2 }}>€</Text>
+                  </View>
+
+                  {(crEstimate > 0 || hcEstimate > 0) && (
+                    <View style={{ flexDirection: "row", gap: 10, marginTop: 6 }}>
+                      {crEstimate > 0 && (
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: "#4ADE80" }} />
+                          <Text style={{ fontSize: 11, fontWeight: "700", color: "rgba(255,255,255,0.9)" }}>
+                            CR ~{crEstimate.toFixed(0)} €
+                          </Text>
+                        </View>
+                      )}
+                      {hcEstimate > 0 && (
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: "#F9A8D4" }} />
+                          <Text style={{ fontSize: 11, fontWeight: "700", color: "rgba(255,255,255,0.9)" }}>
+                            HC ~{hcEstimate.toFixed(0)} €
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8, alignSelf: "flex-start", backgroundColor: "rgba(255,255,255,0.18)", borderRadius: 99, paddingHorizontal: 10, paddingVertical: 3 }}>
+                    <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: "#fff" }} />
+                    <Text style={{ fontSize: 11, fontWeight: "700", color: "rgba(255,255,255,0.92)" }}>
+                      {totalItems} article{totalItems > 1 ? "s" : ""}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={{ width: 56, height: 56, alignItems: "center", justifyContent: "center" }}>
+                  <Svg width={56} height={56} style={{ transform: [{ rotate: "-90deg" }], position: "absolute" }}>
+                    <Circle cx={28} cy={28} r={25.5} stroke="rgba(255,255,255,0.25)" strokeWidth={5} fill="none" />
+                    <Circle
+                      cx={28} cy={28} r={25.5}
+                      stroke="#fff" strokeWidth={5} fill="none"
+                      strokeLinecap="round"
+                      strokeDasharray={`${2 * Math.PI * 25.5}`}
+                      strokeDashoffset={`${(2 * Math.PI * 25.5) * (1 - (totalItems > 0 ? checkedCount / totalItems : 0))}`}
+                    />
+                  </Svg>
+                  <Text style={{ fontSize: 13, fontWeight: "900", color: "#fff", textAlign: "center" }}>
+                    {checkedCount}<Text style={{ fontSize: 9, color: "rgba(255,255,255,0.65)", fontWeight: "700" }}>/{totalItems}</Text>
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
 
         {hasRecipeItems && items.length > 0 && (
           <View style={{ flexDirection: "row", gap: 6, paddingHorizontal: 16, marginBottom: 8 }}>
@@ -439,59 +548,6 @@ export function ShoppingScreen() {
           </View>
         )}
 
-        {storeSummariesSorted.length > 0 && unchecked.length > 0 && (
-          <View style={{ marginBottom: 4 }}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 16, gap: 8, paddingBottom: 4 }}
-            >
-              {storeSummariesSorted.map((store) => {
-                const isBest = store.storeId === bestStoreId;
-                const displayCost = hasMeaningfulIntersection ? store.intersectionCost : store.totalCost;
-                const canCompare = storeSummariesSorted.length >= 2;
-                return (
-                  <Pressable
-                    key={store.storeId}
-                    onPress={() => {
-                      if (!canCompare) return;
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      router.push("/shopping/compare");
-                    }}
-                    style={({ pressed }) => ({
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 6,
-                      borderRadius: 99,
-                      paddingHorizontal: 12,
-                      paddingVertical: 7,
-                      backgroundColor: isBest ? colors.greenBg : colors.bgSurface,
-                      opacity: pressed ? 0.7 : 1,
-                    })}
-                  >
-                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: isBest ? "#22c55e" : "#D1CCC5" }} />
-                    <Text style={{ fontSize: 13, fontWeight: "600", color: isBest ? colors.green : "#44403C" }} numberOfLines={1}>
-                      {store.storeName}
-                    </Text>
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: isBest ? colors.green : colors.textMuted }}>
-                      ~{displayCost.toFixed(2)} €
-                    </Text>
-                    {canCompare && (
-                      <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke={isBest ? colors.green : colors.textSubtle} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                        <Polyline points="9 18 15 12 9 6" />
-                      </Svg>
-                    )}
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-            {storeSummariesSorted.length >= 2 && (
-              <Text style={{ fontSize: 11, color: colors.textSubtle, paddingHorizontal: 16, marginTop: 2 }}>
-                Appuie pour comparer les magasins
-              </Text>
-            )}
-          </View>
-        )}
 
 
         {items.length === 0 ? (
