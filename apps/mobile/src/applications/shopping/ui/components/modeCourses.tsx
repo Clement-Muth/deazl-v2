@@ -15,11 +15,12 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Line, Path, Polyline, Rect } from "react-native-svg";
 import ReanimatedSwipeable, { type SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
-import Animated, { useSharedValue, useAnimatedStyle, withSequence, withTiming, withSpring } from "react-native-reanimated";
+import Animated, { useSharedValue, useAnimatedStyle, withSequence, withTiming, withSpring, withRepeat } from "react-native-reanimated";
 import { BottomModal } from "./bottomModal";
 import { findOrCreateProduct } from "../../application/useCases/findOrCreateProduct";
 import { getOffProductByBarcode } from "../../application/useCases/searchOffProducts";
@@ -66,6 +67,34 @@ function budgetBarColor(total: number, cap: number, color: string): string {
   if (total > cap) return "#DC2626";
   if (total > cap - 5) return "#F59E0B";
   return color;
+}
+
+function PulsingDot({ color, size = 5 }: { color: string; size?: number }) {
+  const opacity = useSharedValue(1);
+  useEffect(() => {
+    opacity.value = withRepeat(
+      withSequence(withTiming(0.3, { duration: 700 }), withTiming(1, { duration: 700 })),
+      -1, false,
+    );
+  }, []);
+  const animStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  return <Animated.View style={[{ width: size, height: size, borderRadius: size / 2, backgroundColor: color }, animStyle]} />;
+}
+
+function ShimmerProgressBar({ progress }: { progress: number }) {
+  const { width: screenWidth } = useWindowDimensions();
+  const shimmerX = useSharedValue(-80);
+  useEffect(() => {
+    shimmerX.value = withRepeat(withTiming(screenWidth, { duration: 1800 }), -1, false);
+  }, [screenWidth]);
+  const shimStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shimmerX.value }] }));
+  return (
+    <View style={{ height: 4, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+      <View style={{ width: `${Math.min(progress, 1) * 100}%`, height: 4, borderRadius: 999, backgroundColor: "#E8571C", overflow: "hidden" }}>
+        <Animated.View style={[{ position: "absolute", top: 0, width: 60, height: 4, backgroundColor: "rgba(255,255,255,0.55)" }, shimStyle]} />
+      </View>
+    </View>
+  );
 }
 
 
@@ -1952,117 +1981,112 @@ export function ModeCourses() {
   return (
     <>
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top"]}>
-      <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, gap: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+      <View style={{ paddingHorizontal: 16, paddingVertical: 12, flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
+        <View style={{ flex: 1, gap: 2 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: "#FCE7DB", alignSelf: "flex-start" }}>
+            <PulsingDot color="#E8571C" size={6} />
+            <Text style={{ fontSize: 10, fontWeight: "800", letterSpacing: 1.4, textTransform: "uppercase", color: "#E8571C" }}>En rayon · Live</Text>
+          </View>
+          <Pressable
+            onPress={() => { if (stores.length > 1) { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setStoreSelectorOpen(true); } }}
+            hitSlop={8}
+            style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6 }}
+          >
+            <Text style={{ fontSize: 22, fontWeight: "800", color: colors.text, letterSpacing: -0.4 }}>
+              {selectedStore ? selectedStore.name : storesLoaded && stores.length === 0 ? "Aucun magasin" : "Chargement…"}
+            </Text>
+            {stores.length > 1 && (
+              <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={colors.textMuted} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <Polyline points="6 9 12 15 18 9" />
+              </Svg>
+            )}
+          </Pressable>
+          <Text style={{ fontSize: 12, fontWeight: "500", color: colors.textMuted, marginTop: 1 }}>Mode courses</Text>
+        </View>
         <Pressable
           onPress={confirmLeave}
           style={({ pressed }) => ({
-            width: 38, height: 38, borderRadius: 12,
-            backgroundColor: pressed ? "#EDEAE4" : "#F0EDE8",
+            width: 36, height: 36, borderRadius: 18, marginTop: 4,
+            backgroundColor: pressed ? "#E8E3DC" : "#F0EDE8",
             alignItems: "center", justifyContent: "center",
           })}
         >
-          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-            <Line x1={18} y1={6} x2={6} y2={18} /><Line x1={6} y1={6} x2={18} y2={18} />
+          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <Path d="M6 6l12 12M18 6L6 18" />
           </Svg>
         </Pressable>
-
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 17, fontWeight: "900", color: colors.text, letterSpacing: -0.3 }}>Mode courses</Text>
-          {selectedStore ? (
-            <Pressable
-              onPress={() => { if (stores.length > 1) { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setStoreSelectorOpen(true); } }}
-              hitSlop={8}
-              style={{ flexDirection: "row", alignItems: "center", gap: 3 }}
-            >
-              <Text style={{ fontSize: 12, color: colors.textSubtle, fontWeight: "500" }}>{selectedStore.name}</Text>
-              {stores.length > 1 && (
-                <Svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="#C4B8AF" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                  <Polyline points="6 9 12 15 18 9" />
-                </Svg>
-              )}
-            </Pressable>
-          ) : storesLoaded && stores.length === 0 ? (
-            <Text style={{ fontSize: 12, color: "#F59E0B", fontWeight: "600" }}>Aucun magasin configuré</Text>
-          ) : null}
-        </View>
       </View>
 
       <>
           <Pressable
             onPress={() => { if (hasCartItems) { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setCheckoutOpen(true); } }}
-            style={{ margin: 16, marginBottom: 8, borderRadius: 22, backgroundColor: "#1A1A1A", padding: 18, gap: 12 }}
+            style={{ marginHorizontal: 14, marginTop: 4, marginBottom: 8, borderRadius: 22, backgroundColor: "#1A1A1A", padding: 18, overflow: "hidden" }}
           >
-            <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
+            {/* Orange ambient glow */}
+            <View style={{ position: "absolute", right: -60, top: -60, width: 180, height: 180, borderRadius: 90, backgroundColor: "rgba(232,87,28,0.18)" }} pointerEvents="none" />
+
+            {/* Total + Progression row */}
+            <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
               <View>
-                <Animated.View style={totalAnimatedStyle}>
-                  <Text style={{ fontSize: 40, fontWeight: "900", color: "#fff", letterSpacing: -1.5 }}>
-                    {confirmedTotal > 0 ? `${confirmedTotal.toFixed(2)} €` : "0 €"}
-                  </Text>
+                <Text style={{ fontSize: 10, fontWeight: "800", letterSpacing: 1.4, textTransform: "uppercase", color: "rgba(255,255,255,0.5)", marginBottom: 2 }}>Total panier</Text>
+                <Animated.View style={[totalAnimatedStyle, { flexDirection: "row", alignItems: "flex-end" }]}>
+                  <Text style={{ fontSize: 42, fontWeight: "900", color: "#fff", letterSpacing: -1.2, lineHeight: 44 }}>{Math.floor(confirmedTotal)}</Text>
+                  <Text style={{ fontSize: 42, fontWeight: "900", color: "rgba(255,255,255,0.5)", letterSpacing: -1.2, lineHeight: 44 }}>,{(confirmedTotal % 1).toFixed(2).slice(2)}</Text>
+                  <Text style={{ fontSize: 22, fontWeight: "700", color: "rgba(255,255,255,0.7)", marginLeft: 4, marginBottom: 5 }}>€</Text>
                 </Animated.View>
-                {estimatedRemainingTotal > 0 && unchecked.length > 0 && (
-                  <Text style={{ fontSize: 12, color: "#6B6B6B", fontWeight: "500", marginTop: 1 }}>
-                    ~{(confirmedTotal + estimatedRemainingTotal).toFixed(2)} € estimé final
-                  </Text>
-                )}
               </View>
-              <Pressable
-                onPress={() => setSplitEditOpen(true)}
-                style={({ pressed }) => ({
-                  width: 40, height: 40, borderRadius: 12,
-                  backgroundColor: pressed ? "#2A2A2A" : "#242424",
-                  alignItems: "center", justifyContent: "center",
-                })}
-              >
-                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <Path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
-                  <Path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                </Svg>
-              </Pressable>
+              <View style={{ alignItems: "flex-end", gap: 2 }}>
+                <Text style={{ fontSize: 10, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase", color: "rgba(255,255,255,0.5)" }}>Progression</Text>
+                <Pressable onPress={() => setSplitEditOpen(true)} hitSlop={12} style={{ flexDirection: "row", alignItems: "baseline", gap: 1 }}>
+                  <Text style={{ fontSize: 18, fontWeight: "900", color: "#fff", letterSpacing: -0.4 }}>{checked.length}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: "rgba(255,255,255,0.4)" }}>/{list?.items.length ?? 0}</Text>
+                </Pressable>
+              </View>
             </View>
 
+            {/* Progress bar with shimmer */}
             {(list?.items.length ?? 0) > 0 && (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <View style={{ flex: 1, height: 3, borderRadius: 99, backgroundColor: "#2E2E2E" }}>
-                  <View style={{
-                    height: 3, borderRadius: 99, backgroundColor: "#E8571C",
-                    width: `${(list?.items.length ?? 0) > 0 ? (checked.length / (list?.items.length ?? 1)) * 100 : 0}%`,
-                  }} />
-                </View>
-                <Text style={{ fontSize: 11, fontWeight: "600", color: "#6B6B6B" }}>
-                  {checked.length}/{list?.items.length ?? 0}
-                </Text>
+              <View style={{ marginTop: 14 }}>
+                <ShimmerProgressBar progress={(list?.items.length ?? 0) > 0 ? checked.length / (list?.items.length ?? 1) : 0} />
               </View>
             )}
 
+            {/* Per-person CR/HC mini cards */}
             {splitSettings.enabled && splitSettings.members.length >= 2 && (
-              <View style={{ flexDirection: "row", gap: 8 }}>
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
                 {splitSettings.members.map((m, i) => {
                   const carteTotal = memberCarteTotals[i] ?? 0;
                   const horsCarteTotal = memberHorsCarteTotals[i] ?? 0;
                   const total = memberTotals[i] ?? 0;
-                  const capTotal = splitSettings.carteRestoEnabled ? carteTotal : total;
-                  const ratio = Math.min(m.budgetCap > 0 ? capTotal / m.budgetCap : 0, 1);
-                  const over = capTotal > m.budgetCap;
+                  const crPct = Math.min(m.budgetCap > 0 ? carteTotal / m.budgetCap : 0, 1);
+                  const hcPct = Math.min(m.budgetCap > 0 ? horsCarteTotal / m.budgetCap : 0, 1);
                   return (
-                    <View key={i} style={{ flex: 1, backgroundColor: "#242424", borderRadius: 12, padding: 10, gap: 6 }}>
-                      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: m.color }} />
-                          <Text style={{ fontSize: 11, fontWeight: "700", color: "#B0B0B0" }}>{m.name}</Text>
-                        </View>
-                        <Text style={{ fontSize: 13, fontWeight: "900", color: over ? "#F87171" : "#fff" }}>
-                          {(splitSettings.carteRestoEnabled ? carteTotal : total).toFixed(2)} €
-                        </Text>
+                    <View key={i} style={{ flex: 1, backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 14, padding: 11 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                        <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: m.color }} />
+                        <Text style={{ fontSize: 11, fontWeight: "700", color: "rgba(255,255,255,0.65)" }}>{m.name}</Text>
                       </View>
-                      <View style={{ height: 3, borderRadius: 99, backgroundColor: "#2E2E2E" }}>
-                        <View style={{ height: 3, borderRadius: 99, backgroundColor: over ? "#F87171" : (splitSettings.carteRestoEnabled ? "#4ADE80" : m.color), width: `${ratio * 100}%` }} />
-                      </View>
-                      {splitSettings.carteRestoEnabled && (
-                        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                          <Text style={{ fontSize: 9, color: "#4ADE80", fontWeight: "600" }}>CR {carteTotal.toFixed(2)}/{m.budgetCap}€</Text>
-                          {horsCarteTotal > 0 && <Text style={{ fontSize: 9, color: "#F9A8D4", fontWeight: "600" }}>HC {horsCarteTotal.toFixed(2)}€</Text>}
+                      <Text style={{ fontSize: 18, fontWeight: "900", color: "#fff", letterSpacing: -0.4, marginBottom: 8 }}>
+                        {total.toFixed(2).replace(".", ",")} €
+                      </Text>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 4 }}>
+                        <View style={{ width: 16, height: 14, borderRadius: 3, backgroundColor: "#4ADE80", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <Text style={{ fontSize: 8, fontWeight: "900", color: "#0D3F1E", letterSpacing: 0.4 }}>CR</Text>
                         </View>
-                      )}
+                        <View style={{ flex: 1, height: 4, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                          <View style={{ width: `${crPct * 100}%`, height: 4, borderRadius: 999, backgroundColor: "#4ADE80" }} />
+                        </View>
+                        <Text style={{ fontSize: 9, fontWeight: "700", color: "rgba(255,255,255,0.65)", flexShrink: 0 }}>{Math.round(carteTotal)}/{m.budgetCap}</Text>
+                      </View>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                        <View style={{ width: 16, height: 14, borderRadius: 3, backgroundColor: "#F9A8D4", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <Text style={{ fontSize: 8, fontWeight: "900", color: "#5A1636", letterSpacing: 0.4 }}>HC</Text>
+                        </View>
+                        <View style={{ flex: 1, height: 4, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                          <View style={{ width: `${hcPct * 100}%`, height: 4, borderRadius: 999, backgroundColor: "#F9A8D4" }} />
+                        </View>
+                        <Text style={{ fontSize: 9, fontWeight: "700", color: "rgba(255,255,255,0.65)", flexShrink: 0 }}>{Math.round(horsCarteTotal)}€</Text>
+                      </View>
                     </View>
                   );
                 })}
@@ -2070,7 +2094,7 @@ export function ModeCourses() {
             )}
 
             {hasCartItems && (
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, paddingTop: 2 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, marginTop: 10 }}>
                 <Text style={{ fontSize: 12, fontWeight: "700", color: "#E8571C" }}>Voir le récap</Text>
                 <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                   <Polyline points="9 18 15 12 9 6" />
@@ -2080,37 +2104,61 @@ export function ModeCourses() {
           </Pressable>
 
           {nextItem && (
-            <View style={{ marginHorizontal: 16, marginBottom: 8, borderRadius: 18, backgroundColor: colors.bgCard, padding: 16, gap: 10, shadowColor: "#1C1917", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}>
-              <Text style={{ fontSize: 10, fontWeight: "700", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1.5 }}>Prochain article</Text>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                {activeCategory && (
-                  <View style={{ borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, backgroundColor: `${CATEGORY_COLORS[activeCategory] ?? "#9ca3af"}20` }}>
-                    <Text style={{ fontSize: 10, fontWeight: "700", color: CATEGORY_COLORS[activeCategory] ?? "#9ca3af" }}>{activeCategory}</Text>
-                  </View>
-                )}
-                <Text style={{ flex: 1, fontSize: 16, fontWeight: "800", color: colors.text }} numberOfLines={1}>{nextItem.customName}</Text>
-                {getPrefillPrice(nextItem) ? (
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: colors.textSubtle }}>~{getPrefillPrice(nextItem)} €</Text>
-                ) : null}
+            <View style={{ marginHorizontal: 14, marginBottom: 8 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 8, paddingLeft: 4 }}>
+                <View style={{ width: 5, height: 5, borderRadius: 999, backgroundColor: "#E8571C" }} />
+                <Text style={{ fontSize: 10, fontWeight: "800", letterSpacing: 1.4, textTransform: "uppercase", color: "#E8571C" }}>Prochain article</Text>
               </View>
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                <Pressable
-                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); openScanForItem(nextItem); }}
-                  style={({ pressed }) => ({
-                    flex: 1, borderRadius: 12, paddingVertical: 11, alignItems: "center",
-                    backgroundColor: pressed ? "#D14A18" : colors.accent,
-                  })}
-                >
-                  <Text style={{ fontSize: 13, fontWeight: "800", color: "#fff" }}>Scanner / Saisir</Text>
-                </Pressable>
+              <Pressable
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); openScanForItem(nextItem); }}
+                style={({ pressed }) => ({
+                  backgroundColor: pressed ? "#F5F1ED" : "#fff",
+                  borderRadius: 20, padding: 14,
+                  flexDirection: "row", alignItems: "center", gap: 14,
+                  shadowColor: "#1A1A1A", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 3,
+                  borderWidth: 1, borderColor: "rgba(26,26,26,0.04)",
+                })}
+              >
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4, alignSelf: "flex-start", backgroundColor: "#F0EDE8", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
+                    <Svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                      <Path d="M12 21s-7-6-7-12a7 7 0 0 1 14 0c0 6-7 12-7 12z" /><Circle cx={12} cy={9} r={2.5} />
+                    </Svg>
+                    <Text style={{ fontSize: 10, fontWeight: "800", color: "#1A1A1A", letterSpacing: -0.1 }}>
+                      {activeCategory ?? "Autre"}
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 17, fontWeight: "800", color: "#1A1A1A", letterSpacing: -0.3, lineHeight: 20 }} numberOfLines={1}>
+                    {nextItem.customName}
+                  </Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
+                    {nextItem.quantity > 0 && (
+                      <Text style={{ fontSize: 11, fontWeight: "600", color: "#9B8E86" }}>
+                        {nextItem.quantity}{nextItem.unit ? ` ${nextItem.unit}` : ""}
+                      </Text>
+                    )}
+                    {nextItem.quantity > 0 && getPrefillPrice(nextItem) ? <Text style={{ fontSize: 10, color: "#9B8E86" }}>·</Text> : null}
+                    {getPrefillPrice(nextItem) ? (
+                      <Text style={{ fontSize: 12, fontWeight: "700", color: "#3A3330" }}>~{getPrefillPrice(nextItem)} €</Text>
+                    ) : null}
+                  </View>
+                </View>
+                <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#9B8E86" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                  <Path d="M9 6l6 6-6 6" />
+                </Svg>
+              </Pressable>
+              <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
                 <Pressable
                   onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); checkItemWithoutPrice(nextItem); }}
                   style={({ pressed }) => ({
-                    borderRadius: 12, paddingVertical: 11, paddingHorizontal: 16, alignItems: "center",
+                    flex: 1, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6,
                     backgroundColor: pressed ? "#E8E3DC" : "#F0EDE8",
                   })}
                 >
-                  <Text style={{ fontSize: 13, fontWeight: "700", color: colors.textSubtle }}>Introuvable</Text>
+                  <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M6 6l12 12M18 6L6 18" />
+                  </Svg>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: "#1A1A1A", letterSpacing: -0.1 }}>Introuvable</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => {
@@ -2119,11 +2167,14 @@ export function ModeCourses() {
                     setSkippedItemIds((prev) => new Set([...prev, nextItem.id]));
                   }}
                   style={({ pressed }) => ({
-                    borderRadius: 12, paddingVertical: 11, paddingHorizontal: 14, alignItems: "center",
+                    flex: 1, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6,
                     backgroundColor: pressed ? "#E8E3DC" : "#F0EDE8",
                   })}
                 >
-                  <Text style={{ fontSize: 13, fontWeight: "700", color: colors.textSubtle }}>Passer</Text>
+                  <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M9 6l6 6-6 6" />
+                  </Svg>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: "#1A1A1A", letterSpacing: -0.1 }}>Passer</Text>
                 </Pressable>
               </View>
             </View>
@@ -2167,7 +2218,7 @@ export function ModeCourses() {
               const label = groupBy === "category" ? key : (key === "__manual" ? "Hors recette" : key);
               const isActive = groupBy === "category" && key === activeCategory;
               return (
-                <View key={key} style={{ marginTop: groupIdx === 0 ? 4 : 20 }}>
+                <View key={key} style={{ marginTop: groupIdx === 0 ? 4 : 16, opacity: isActive ? 1 : 0.88 }}>
                   <Pressable
                     onPress={() => {
                       if (groupBy !== "category") return;
@@ -2175,65 +2226,67 @@ export function ModeCourses() {
                       if (isActive && pinnedCategory === key) setPinnedCategory(null);
                       else setPinnedCategory(key);
                     }}
-                    style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingBottom: 8 }}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8, paddingLeft: 4 }}
                   >
-                    {isActive ? (
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1, backgroundColor: colors.text, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5 }}>
-                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: color }} />
-                        <Text style={{ fontSize: 10, fontWeight: "800", color: colors.bg, textTransform: "uppercase", letterSpacing: 1.5, flex: 1 }}>{label}</Text>
-                        <Text style={{ fontSize: 9, fontWeight: "600", color: `${colors.bg}80` }}>Tu es ici · {groupItems.length}</Text>
+                    <View style={{
+                      flexDirection: "row", alignItems: "center", gap: 7,
+                      paddingHorizontal: 11, paddingVertical: 5, borderRadius: 999,
+                      backgroundColor: isActive ? colors.text : "#F0EDE8",
+                    }}>
+                      <Svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke={isActive ? "#fff" : colors.text} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                        <Path d="M12 21s-7-6-7-12a7 7 0 0 1 14 0c0 6-7 12-7 12z" /><Circle cx={12} cy={9} r={2.5} />
+                      </Svg>
+                      <Text style={{ fontSize: 11, fontWeight: "800", color: isActive ? "#fff" : colors.text, letterSpacing: -0.1 }}>{label}</Text>
+                      {groupBy === "recipe" && label !== key && (
+                        <Text style={{ fontSize: 10, fontWeight: "600", color: isActive ? "rgba(255,255,255,0.65)" : colors.textMuted }}>· {label}</Text>
+                      )}
+                    </View>
+                    {isActive && (
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                        <PulsingDot color="#E8571C" size={5} />
+                        <Text style={{ fontSize: 10, fontWeight: "800", color: "#E8571C", letterSpacing: 0.8, textTransform: "uppercase" }}>Tu es ici</Text>
                       </View>
-                    ) : (
-                      <>
-                        <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: color, marginLeft: 4 }} />
-                        <Text style={{ flex: 1, fontSize: 11, fontWeight: "700", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1.5 }}>{label}</Text>
-                        <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textSubtle }}>{groupItems.length}</Text>
-                      </>
                     )}
+                    <Text style={{ marginLeft: "auto", fontSize: 10, fontWeight: "600", color: colors.textMuted }}>{groupItems.length} art.</Text>
                   </Pressable>
-                  <View style={{ borderRadius: 14, backgroundColor: colors.bgCard, overflow: "hidden" }}>
+                  <View style={{
+                    borderRadius: 16, backgroundColor: "#fff", overflow: "hidden",
+                    borderWidth: isActive ? 1.5 : 1,
+                    borderColor: isActive ? colors.text : "rgba(26,26,26,0.08)",
+                  }}>
                     {groupItems.map((item, i) => {
                       return (
                         <View key={item.id}>
                           <Pressable
                             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); openScanForItem(item); }}
                             style={({ pressed }) => ({
-                              flexDirection: "row", alignItems: "center", gap: 14,
-                              paddingHorizontal: 16, paddingVertical: 16,
-                              backgroundColor: pressed ? "#FAFAF8" : "transparent", minHeight: 64,
+                              flexDirection: "row", alignItems: "center", gap: 12,
+                              paddingHorizontal: 14, paddingVertical: 11,
+                              backgroundColor: pressed ? "#F8F5F0" : "transparent",
                             })}
                           >
-                            <View style={{ width: 30, height: 30, borderRadius: 15, borderWidth: 2, borderColor: "#D1D5DB", flexShrink: 0 }} />
-                            <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8 }}>
-                              {item.quantity > 0 && (
-                                <View style={{ borderRadius: 6, backgroundColor: "#FEF3ED", paddingHorizontal: 7, paddingVertical: 3, flexShrink: 0 }}>
-                                  <Text style={{ fontSize: 12, fontWeight: "700", color: colors.accent }}>
-                                    {item.quantity}{item.unit ? ` ${item.unit}` : ""}
-                                  </Text>
-                                </View>
-                              )}
-                              <Text style={{ flex: 1, fontSize: 15, fontWeight: "600", color: colors.text }} numberOfLines={1}>
+                            <View style={{ width: 22, height: 22, borderRadius: 7, borderWidth: 1.5, borderColor: "rgba(26,26,26,0.22)", flexShrink: 0 }} />
+                            <View style={{ flex: 1, minWidth: 0 }}>
+                              <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text, letterSpacing: -0.1 }} numberOfLines={1}>
                                 {item.customName}
                               </Text>
+                              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
+                                {item.quantity > 0 && (
+                                  <Text style={{ fontSize: 10.5, fontWeight: "600", color: "#9B8E86" }}>
+                                    {item.quantity}{item.unit ? ` ${item.unit}` : ""}
+                                  </Text>
+                                )}
+                                {item.quantity > 0 && getPrefillPrice(item) ? <Text style={{ fontSize: 10, color: "#9B8E86" }}>·</Text> : null}
+                                {getPrefillPrice(item) ? (
+                                  <Text style={{ fontSize: 11, fontWeight: "700", color: "#3A3330" }}>~{getPrefillPrice(item)} €</Text>
+                                ) : null}
+                              </View>
                             </View>
-                            {getPrefillPrice(item) ? (
-                              <Text style={{ fontSize: 12, fontWeight: "600", color: "#C4B8AF" }}>~{getPrefillPrice(item)} €</Text>
-                            ) : null}
-                            {(item.productId || item.allStorePrices.length > 0) && (
-                              <Pressable
-                                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setDetailItem(item); }}
-                                hitSlop={8}
-                                style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center" }}
-                              >
-                                <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke={colors.textSubtle} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                                  <Circle cx={12} cy={12} r={10} />
-                                  <Line x1={12} y1={16} x2={12} y2={12} />
-                                  <Line x1={12} y1={8} x2={12} y2={8} />
-                                </Svg>
-                              </Pressable>
-                            )}
+                            <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#9B8E86" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                              <Path d="M9 6l6 6-6 6" />
+                            </Svg>
                           </Pressable>
-                          {i < groupItems.length - 1 && <View style={{ height: 1, backgroundColor: colors.bgSurface, marginLeft: 60 }} />}
+                          {i < groupItems.length - 1 && <View style={{ height: 0.5, backgroundColor: "rgba(26,26,26,0.08)", marginLeft: 48 }} />}
                         </View>
                       );
                     })}
@@ -2244,19 +2297,17 @@ export function ModeCourses() {
 
             {hasCartItems && (
               <View style={{ marginTop: 32 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 4, paddingBottom: 8 }}>
-                  <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.accent }} />
-                  <Text style={{ flex: 1, fontSize: 11, fontWeight: "700", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1.5 }}>
-                    Dans le panier
-                  </Text>
+                <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8, paddingHorizontal: 6, paddingBottom: 8 }}>
+                  <Text style={{ flex: 1, fontSize: 11, fontWeight: "800", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1.2 }}>Dans le panier</Text>
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: colors.textMuted, opacity: 0.6 }}>{checked.length + session.virtualItems.length}</Text>
                   <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowFullCart((v) => !v); }} hitSlop={8}>
-                    <Text style={{ fontSize: 11, fontWeight: "700", color: colors.accent }}>
-                      {showFullCart ? "Réduire" : `Voir tout (${checked.length + session.virtualItems.length})`}
+                    <Text style={{ fontSize: 11, fontWeight: "700", color: "#E8571C" }}>
+                      {showFullCart ? "Réduire" : "Voir tout"}
                     </Text>
                   </Pressable>
                 </View>
                 {!showFullCart && (
-                  <View style={{ borderRadius: 14, backgroundColor: colors.bgCard, overflow: "hidden" }}>
+                  <View style={{ borderRadius: 16, backgroundColor: "#fff", overflow: "hidden" }}>
                     {checked.slice(-3).map((item, i, sliced) => {
                       const price = session.confirmedPrices.get(item.id);
                       const memberIdx = session.assignments.get(item.id) ?? 0;
@@ -2264,26 +2315,30 @@ export function ModeCourses() {
                       const isHC = session.horsCarteIds.has(item.id);
                       return (
                         <View key={item.id}>
-                          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 12 }}>
-                            <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                              <Svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-                                <Polyline points="20 6 9 17 4 12" />
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 11 }}>
+                            <View style={{ width: 22, height: 22, borderRadius: 7, backgroundColor: colors.text, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+                                <Path d="M5 12.5l4.5 4.5L19 7.5" />
                               </Svg>
                             </View>
-                            <Text style={{ flex: 1, fontSize: 14, color: colors.textSubtle, textDecorationLine: "line-through" }} numberOfLines={1}>{item.customName}</Text>
-                            {splitSettings.carteRestoEnabled && splitSettings.enabled && (
-                              <View style={{ borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2, backgroundColor: isHC ? colors.dangerBg : "#F0FDF4" }}>
-                                <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? colors.danger : "#16A34A" }}>{isHC ? "HC" : "CR"}</Text>
+                            <View style={{ flex: 1, minWidth: 0 }}>
+                              <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text, letterSpacing: -0.1 }} numberOfLines={1}>{item.customName}</Text>
+                              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
+                                {splitSettings.enabled && (
+                                  <View style={{ borderRadius: 3, paddingHorizontal: 5, paddingVertical: 1, backgroundColor: isHC ? "rgba(249,168,212,0.28)" : "rgba(74,222,128,0.22)" }}>
+                                    <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? "#F9A8D4" : "#4ADE80", letterSpacing: 0.4 }}>{isHC ? "HC" : "CR"}</Text>
+                                  </View>
+                                )}
+                                {member && (
+                                  <View style={{ borderRadius: 3, paddingHorizontal: 5, paddingVertical: 1, backgroundColor: `${member.color}25` }}>
+                                    <Text style={{ fontSize: 9, fontWeight: "700", color: member.color }}>{member.name.slice(0, 3)}</Text>
+                                  </View>
+                                )}
                               </View>
-                            )}
-                            {member && (
-                              <View style={{ borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2, backgroundColor: `${member.color}20` }}>
-                                <Text style={{ fontSize: 9, fontWeight: "700", color: member.color }}>{member.name.slice(0, 3)}</Text>
-                              </View>
-                            )}
-                            {price !== undefined && <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text }}>{price.toFixed(2)} €</Text>}
+                            </View>
+                            {price !== undefined && <Text style={{ fontSize: 14, fontWeight: "800", color: colors.text }}>{price.toFixed(2).replace(".", ",")} €</Text>}
                           </View>
-                          {i < sliced.length - 1 && <View style={{ height: 1, backgroundColor: colors.bgSurface, marginLeft: 52 }} />}
+                          {i < sliced.length - 1 && <View style={{ height: 0.5, backgroundColor: "rgba(26,26,26,0.08)", marginLeft: 48 }} />}
                         </View>
                       );
                     })}
@@ -2515,43 +2570,42 @@ export function ModeCourses() {
 
           {scanToast && (
             <Animated.View style={[{
-              position: "absolute", bottom: insets.bottom + 86, left: 16, right: 16,
-              borderRadius: 16, backgroundColor: "#1A1A1A",
-              flexDirection: "row", alignItems: "center", gap: 10,
-              paddingHorizontal: 14, paddingVertical: 12,
-              shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 8,
+              position: "absolute", bottom: insets.bottom + 80, left: 14, right: 14,
+              borderRadius: 14, backgroundColor: "#1A1A1A",
+              flexDirection: "row", alignItems: "center", gap: 12,
+              paddingHorizontal: 14, paddingVertical: 11,
+              shadowColor: "#1A1A1A", shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.25, shadowRadius: 32, elevation: 8,
             }, toastAnimStyle]}>
-              <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: "#E8571C", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-                  <Polyline points="20 6 9 17 4 12" />
+              <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: "#4ADE80", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#0D3F1E" strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round">
+                  <Path d="M5 12.5l4.5 4.5L19 7.5" />
                 </Svg>
               </View>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={{ fontSize: 13, fontWeight: "700", color: "#fff" }} numberOfLines={1}>{scanToast.itemName}</Text>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={{ fontSize: 13, fontWeight: "800", color: "#fff", letterSpacing: -0.1 }} numberOfLines={1}>{scanToast.itemName} ajouté</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 1 }}>
                   {scanToast.price !== null && (
-                    <Text style={{ fontSize: 12, fontWeight: "600", color: "#A0A0A0" }}>{scanToast.price.toFixed(2)} €</Text>
+                    <Text style={{ fontSize: 12, fontWeight: "800", color: "#fff" }}>+{scanToast.price.toFixed(2).replace(".", ",")} €</Text>
                   )}
-                  {splitSettings.carteRestoEnabled && splitSettings.enabled && (
-                    <View style={{ borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1, backgroundColor: scanToast.isHC ? "#3B0E1E" : "#0D3F1E" }}>
-                      <Text style={{ fontSize: 9, fontWeight: "800", color: scanToast.isHC ? "#F9A8D4" : "#4ADE80" }}>{scanToast.isHC ? "HC" : "CR"}</Text>
+                  {scanToast.price !== null && <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>·</Text>}
+                  {splitSettings.enabled && (
+                    <View style={{ borderRadius: 3, paddingHorizontal: 5, paddingVertical: 1, backgroundColor: scanToast.isHC ? "rgba(249,168,212,0.28)" : "rgba(74,222,128,0.22)" }}>
+                      <Text style={{ fontSize: 9, fontWeight: "800", color: scanToast.isHC ? "#F9A8D4" : "#4ADE80", letterSpacing: 0.4 }}>{scanToast.isHC ? "HC" : "CR"}</Text>
                     </View>
                   )}
                   {scanToast.memberIdx !== null && splitSettings.enabled && splitSettings.members[scanToast.memberIdx] && (
-                    <View style={{ borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1, backgroundColor: `${splitSettings.members[scanToast.memberIdx].color}30` }}>
-                      <Text style={{ fontSize: 9, fontWeight: "700", color: splitSettings.members[scanToast.memberIdx].color }}>
-                        {splitSettings.members[scanToast.memberIdx].name.slice(0, 3)}
-                      </Text>
-                    </View>
+                    <Text style={{ fontSize: 11, fontWeight: "600", color: "rgba(255,255,255,0.6)" }}>
+                      · {splitSettings.members[scanToast.memberIdx].name}
+                    </Text>
                   )}
                 </View>
               </View>
               <Pressable
                 onPress={handleUndoLastScan}
                 hitSlop={8}
-                style={{ borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: "#2A2A2A" }}
+                style={{ borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: "rgba(255,255,255,0.14)" }}
               >
-                <Text style={{ fontSize: 12, fontWeight: "700", color: "#E8571C" }}>Annuler</Text>
+                <Text style={{ fontSize: 11, fontWeight: "800", color: "#fff", letterSpacing: -0.1 }}>Annuler</Text>
               </Pressable>
             </Animated.View>
           )}
