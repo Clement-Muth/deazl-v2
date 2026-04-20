@@ -154,7 +154,7 @@ export function ItemDetailSheet({ item, isOpen, onClose, onReload }: ItemDetailS
 
   return (
     <>
-      <BottomModal isOpen={isOpen} onClose={onClose} height="auto">
+      <BottomModal isOpen={isOpen} onClose={onClose} height="92%">
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: 12 }}>
             <View style={{ flex: 1, marginRight: 12 }}>
@@ -655,7 +655,7 @@ function LinkProductSheet({ item, isOpen, onClose, onSuccess }: {
   if (!item) return null;
 
   return (
-    <BottomModal isOpen={isOpen} onClose={onClose} height="auto">
+    <BottomModal isOpen={isOpen} onClose={onClose} height="92%">
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: 14 }}>
           <View style={{ flex: 1 }}>
@@ -890,7 +890,7 @@ function EditItemSheet({ item, isOpen, onClose, onSuccess }: {
   if (!item) return null;
 
   return (
-    <BottomModal isOpen={isOpen} onClose={onClose} height="auto">
+    <BottomModal isOpen={isOpen} onClose={onClose} height="48%">
       <View style={{ paddingBottom: 16 }}>
         <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text }}>Modifier l'article</Text>
       </View>

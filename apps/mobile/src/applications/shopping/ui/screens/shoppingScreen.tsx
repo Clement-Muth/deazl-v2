@@ -704,7 +704,7 @@ export function ShoppingScreen() {
         </Svg>
       </Pressable>
 
-      <BottomModal isOpen={addOpen} onClose={() => { resetAddForm(); setAddOpen(false); }} height="auto">
+      <BottomModal isOpen={addOpen} onClose={() => { resetAddForm(); setAddOpen(false); }} height="30%">
         <View style={{ paddingBottom: 16 }}>
           <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text }}>Ajouter un article</Text>
         </View>

@@ -350,7 +350,7 @@ export function ReceiptsScreen() {
         </ScrollView>
       )}
 
-      <BottomModal isOpen={selectedReceipt !== null} onClose={() => setSelectedReceipt(null)} height="auto">
+      <BottomModal isOpen={selectedReceipt !== null} onClose={() => setSelectedReceipt(null)} height="92%">
         {selectedReceipt && (
           <ReceiptDetail receipt={selectedReceipt} items={detailItems} loading={detailLoading} />
         )}

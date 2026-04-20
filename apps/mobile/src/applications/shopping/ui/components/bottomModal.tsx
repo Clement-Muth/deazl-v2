@@ -11,7 +11,6 @@ const SCREEN_HEIGHT = Dimensions.get("window").height;
 interface BottomModalContextValue {
   panGestureRef: React.RefObject<any>;
   scrollOffset: { value: number };
-  maxScrollHeight?: number;
 }
 
 const BottomModalContext = createContext<BottomModalContextValue | null>(null);
@@ -21,14 +20,12 @@ export function BottomModalScrollView({
   onScroll: externalOnScroll,
   scrollEventThrottle = 16,
   showsVerticalScrollIndicator = false,
-  style,
   ...rest
 }: React.ComponentProps<typeof GHScrollView>) {
   const ctx = useContext(BottomModalContext);
   return (
     <GHScrollView
       {...rest}
-      style={[ctx?.maxScrollHeight != null ? { maxHeight: ctx.maxScrollHeight } : { flex: 1 }, style]}
       simultaneousHandlers={ctx?.panGestureRef}
       onScroll={(e) => {
         if (ctx?.scrollOffset) {
@@ -52,10 +49,9 @@ interface BottomModalProps {
   portalHostName?: string;
 }
 
-export function BottomModal({ isOpen, onClose, height = "auto", children, portalHostName }: BottomModalProps) {
+export function BottomModal({ isOpen, onClose, height = "55%", children, portalHostName }: BottomModalProps) {
   const { colors } = useAppTheme();
   const [visible, setVisible] = useState(false);
-  const [maxScrollHeight, setMaxScrollHeight] = useState<number | undefined>(undefined);
   const translateY = useSharedValue(SCREEN_HEIGHT);
   const backdropOpacity = useSharedValue(0);
   const keyboardOffset = useSharedValue(0);
@@ -176,7 +172,7 @@ export function BottomModal({ isOpen, onClose, height = "auto", children, portal
   if (!visible) return null;
 
   return (
-    <BottomModalContext.Provider value={{ panGestureRef, scrollOffset, maxScrollHeight }}>
+    <BottomModalContext.Provider value={{ panGestureRef, scrollOffset }}>
       <Modal transparent visible statusBarTranslucent>
         <GestureHandlerRootView style={{ flex: 1 }}>
           <View style={{ flex: 1 }}>
@@ -186,11 +182,7 @@ export function BottomModal({ isOpen, onClose, height = "auto", children, portal
             />
             <Pressable style={{ flex: 1 }} onPress={onClose} />
             <Animated.View
-              onLayout={isAuto ? (e) => {
-                const h = e.nativeEvent.layout.height;
-                gestureModalHeight.value = h;
-                setMaxScrollHeight(h - 28 - 8 - insets.bottom - 16);
-              } : undefined}
+              onLayout={isAuto ? (e) => { gestureModalHeight.value = e.nativeEvent.layout.height; } : undefined}
               style={[
                 {
                   position: "absolute",
