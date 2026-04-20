@@ -2474,73 +2474,53 @@ export function ModeCourses() {
                           </View>
                         )}
                       >
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 16, paddingVertical: 14, backgroundColor: colors.bgCard }}>
-                          <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 11, backgroundColor: colors.bgCard }}>
+                          <View style={{ width: 22, height: 22, borderRadius: 7, backgroundColor: colors.text, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                             <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-                              <Polyline points="20 6 9 17 4 12" />
+                              <Path d="M5 12.5l4.5 4.5L19 7.5" />
                             </Svg>
                           </View>
-                          <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8 }}>
-                            {item.quantity > 0 && (
-                              <View style={{ borderRadius: 6, backgroundColor: colors.bgSurface, paddingHorizontal: 7, paddingVertical: 3, flexShrink: 0 }}>
-                                <Text style={{ fontSize: 12, fontWeight: "700", color: colors.textSubtle }}>
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text, letterSpacing: -0.1 }} numberOfLines={1}>{item.customName}</Text>
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
+                              {item.quantity > 0 && (
+                                <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: "600" }}>
                                   {item.quantity}{item.unit ? ` ${item.unit}` : ""}
                                 </Text>
-                              </View>
-                            )}
-                            <Text style={{ flex: 1, fontSize: 14, color: colors.textSubtle, textDecorationLine: "line-through" }} numberOfLines={1}>
-                              {item.customName}
-                            </Text>
+                              )}
+                              {splitSettings.carteRestoEnabled && (() => {
+                                const isHC = session.horsCarteIds.has(item.id);
+                                return (
+                                  <Pressable onPress={() => toggleHorsCarte(item.id)} hitSlop={8} style={{ borderRadius: 3, paddingHorizontal: 5, paddingVertical: 1, backgroundColor: isHC ? "rgba(249,168,212,0.28)" : "rgba(74,222,128,0.22)" }}>
+                                    <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? "#F9A8D4" : "#4ADE80", letterSpacing: 0.4 }}>{isHC ? "HC" : "CR"}</Text>
+                                  </Pressable>
+                                );
+                              })()}
+                              {member && (
+                                <Pressable
+                                  onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                    setSession((prev) => {
+                                      const members = splitRef.current.members;
+                                      const current = prev.assignments.get(item.id) ?? 0;
+                                      const next = (current + 1) % members.length;
+                                      return { ...prev, assignments: new Map(prev.assignments).set(item.id, next), lockedAssignments: new Set(prev.lockedAssignments).add(item.id) };
+                                    });
+                                  }}
+                                  hitSlop={8}
+                                  style={{ borderRadius: 3, paddingHorizontal: 5, paddingVertical: 1, backgroundColor: `${member.color}25` }}
+                                >
+                                  <Text style={{ fontSize: 9, fontWeight: "700", color: member.color }}>{member.name.slice(0, 3)}</Text>
+                                </Pressable>
+                              )}
+                            </View>
                           </View>
-                          {price !== undefined && (
-                            <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text }}>{price.toFixed(2)} €</Text>
-                          )}
+                          {price !== undefined && <Text style={{ fontSize: 14, fontWeight: "800", color: colors.text }}>{price.toFixed(2).replace(".", ",")} €</Text>}
                           {item.productId && (
-                            <Pressable
-                              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setDetailItem(item); }}
-                              hitSlop={8}
-                              style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center" }}
-                            >
+                            <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setDetailItem(item); }} hitSlop={8} style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center" }}>
                               <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke={colors.textSubtle} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                                <Circle cx={12} cy={12} r={10} />
-                                <Line x1={12} y1={16} x2={12} y2={12} />
-                                <Line x1={12} y1={8} x2={12} y2={8} />
+                                <Circle cx={12} cy={12} r={10} /><Line x1={12} y1={16} x2={12} y2={12} /><Line x1={12} y1={8} x2={12} y2={8} />
                               </Svg>
-                            </Pressable>
-                          )}
-                          {splitSettings.carteRestoEnabled && splitSettings.enabled && (() => {
-                            const isHC = session.horsCarteIds.has(item.id);
-                            return (
-                              <Pressable
-                                onPress={() => toggleHorsCarte(item.id)}
-                                hitSlop={8}
-                                style={{ borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, backgroundColor: isHC ? colors.dangerBg : "#F0FDF4" }}
-                              >
-                                <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? colors.danger : "#16A34A", letterSpacing: 0.5 }}>
-                                  {isHC ? "HC" : "CR"}
-                                </Text>
-                              </Pressable>
-                            );
-                          })()}
-                          {member && (
-                            <Pressable
-                              onPress={() => {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                setSession((prev) => {
-                                  const members = splitRef.current.members;
-                                  const current = prev.assignments.get(item.id) ?? 0;
-                                  const next = (current + 1) % members.length;
-                                  return {
-                                    ...prev,
-                                    assignments: new Map(prev.assignments).set(item.id, next),
-                                    lockedAssignments: new Set(prev.lockedAssignments).add(item.id),
-                                  };
-                                });
-                              }}
-                              hitSlop={8}
-                              style={{ borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, backgroundColor: `${member.color}20` }}
-                            >
-                              <Text style={{ fontSize: 10, fontWeight: "700", color: member.color }}>{member.name.slice(0, 3)}</Text>
                             </Pressable>
                           )}
                         </View>
@@ -2574,51 +2554,42 @@ export function ModeCourses() {
                           </View>
                         )}
                       >
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 16, paddingVertical: 14, backgroundColor: colors.bgCard }}>
-                          <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 11, backgroundColor: colors.bgCard }}>
+                          <View style={{ width: 22, height: 22, borderRadius: 7, backgroundColor: colors.text, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                             <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-                              <Polyline points="20 6 9 17 4 12" />
+                              <Path d="M5 12.5l4.5 4.5L19 7.5" />
                             </Svg>
                           </View>
-                          <Text style={{ flex: 1, fontSize: 14, color: colors.textSubtle, textDecorationLine: "line-through", fontStyle: "italic" }} numberOfLines={1}>
-                            {v.customName}
-                          </Text>
-                          <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text }}>{v.price.toFixed(2)} €</Text>
-                          {splitSettings.carteRestoEnabled && splitSettings.enabled && (() => {
-                            const isHC = session.horsCarteIds.has(v.id);
-                            return (
-                              <Pressable
-                                onPress={() => toggleHorsCarte(v.id)}
-                                hitSlop={8}
-                                style={{ borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, backgroundColor: isHC ? colors.dangerBg : "#F0FDF4" }}
-                              >
-                                <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? colors.danger : "#16A34A", letterSpacing: 0.5 }}>
-                                  {isHC ? "HC" : "CR"}
-                                </Text>
-                              </Pressable>
-                            );
-                          })()}
-                          {member && (
-                            <Pressable
-                              onPress={() => {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                setSession((prev) => {
-                                  const members = splitRef.current.members;
-                                  const next = (v.memberIdx + 1) % members.length;
-                                  return { ...prev, virtualItems: prev.virtualItems.map((vi) => vi.id === v.id ? { ...vi, memberIdx: next } : vi) };
-                                });
-                              }}
-                              hitSlop={8}
-                              style={{ borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, backgroundColor: `${member.color}20` }}
-                            >
-                              <Text style={{ fontSize: 10, fontWeight: "700", color: member.color }}>{member.name.slice(0, 3)}</Text>
-                            </Pressable>
-                          )}
-                          <Pressable onPress={() => handleRemoveVirtualItem(v.id)} hitSlop={12} style={{ padding: 4 }}>
-                            <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                              <Line x1={18} y1={6} x2={6} y2={18} /><Line x1={6} y1={6} x2={18} y2={18} />
-                            </Svg>
-                          </Pressable>
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text, letterSpacing: -0.1, fontStyle: "italic" }} numberOfLines={1}>{v.customName}</Text>
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
+                              {splitSettings.carteRestoEnabled && (() => {
+                                const isHC = session.horsCarteIds.has(v.id);
+                                return (
+                                  <Pressable onPress={() => toggleHorsCarte(v.id)} hitSlop={8} style={{ borderRadius: 3, paddingHorizontal: 5, paddingVertical: 1, backgroundColor: isHC ? "rgba(249,168,212,0.28)" : "rgba(74,222,128,0.22)" }}>
+                                    <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? "#F9A8D4" : "#4ADE80", letterSpacing: 0.4 }}>{isHC ? "HC" : "CR"}</Text>
+                                  </Pressable>
+                                );
+                              })()}
+                              {member && (
+                                <Pressable
+                                  onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                    setSession((prev) => {
+                                      const members = splitRef.current.members;
+                                      const next = (v.memberIdx + 1) % members.length;
+                                      return { ...prev, virtualItems: prev.virtualItems.map((vi) => vi.id === v.id ? { ...vi, memberIdx: next } : vi) };
+                                    });
+                                  }}
+                                  hitSlop={8}
+                                  style={{ borderRadius: 3, paddingHorizontal: 5, paddingVertical: 1, backgroundColor: `${member.color}25` }}
+                                >
+                                  <Text style={{ fontSize: 9, fontWeight: "700", color: member.color }}>{member.name.slice(0, 3)}</Text>
+                                </Pressable>
+                              )}
+                            </View>
+                          </View>
+                          <Text style={{ fontSize: 14, fontWeight: "800", color: colors.text }}>{v.price.toFixed(2).replace(".", ",")} €</Text>
                         </View>
                       </ReanimatedSwipeable>
                       {i < session.virtualItems.length - 1 && <View style={{ height: 1, backgroundColor: colors.bgSurface, marginLeft: 60 }} />}
