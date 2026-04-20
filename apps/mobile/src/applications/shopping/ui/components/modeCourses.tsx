@@ -18,7 +18,8 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg, { Circle, Line, Path, Polyline, Rect } from "react-native-svg";
+import Svg, { Circle, Defs, Ellipse, Line, Path, Polyline, RadialGradient, Rect, Stop } from "react-native-svg";
+import { LinearGradient } from "expo-linear-gradient";
 import ReanimatedSwipeable, { type SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
 import Animated, { useSharedValue, useAnimatedStyle, withSequence, withTiming, withSpring, withRepeat } from "react-native-reanimated";
 import { BottomModal } from "./bottomModal";
@@ -91,7 +92,9 @@ function ShimmerProgressBar({ progress }: { progress: number }) {
   return (
     <View style={{ height: 4, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
       <View style={{ width: `${Math.min(progress, 1) * 100}%`, height: 4, borderRadius: 999, backgroundColor: "#E8571C", overflow: "hidden" }}>
-        <Animated.View style={[{ position: "absolute", top: 0, width: 60, height: 4, backgroundColor: "rgba(255,255,255,0.55)" }, shimStyle]} />
+        <Animated.View style={[{ position: "absolute", top: 0, width: 80, height: 4 }, shimStyle]}>
+               <LinearGradient colors={["transparent", "rgba(255,255,255,0.6)", "transparent"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1 }} />
+             </Animated.View>
       </View>
     </View>
   );
@@ -2032,7 +2035,15 @@ export function ModeCourses() {
             style={{ marginHorizontal: 14, marginTop: 4, marginBottom: 8, borderRadius: 22, backgroundColor: "#1A1A1A", padding: 18, overflow: "hidden" }}
           >
             {/* Orange ambient glow */}
-            <View style={{ position: "absolute", right: -60, top: -60, width: 180, height: 180, borderRadius: 90, backgroundColor: "rgba(232,87,28,0.18)" }} pointerEvents="none" />
+            <Svg width={220} height={220} style={{ position: "absolute", right: -70, top: -70 }} pointerEvents="none">
+              <Defs>
+                <RadialGradient id="orangeGlow" cx="50%" cy="50%" r="50%">
+                  <Stop offset="0%" stopColor="#E8571C" stopOpacity={0.22} />
+                  <Stop offset="100%" stopColor="#E8571C" stopOpacity={0} />
+                </RadialGradient>
+              </Defs>
+              <Ellipse cx={110} cy={110} rx={110} ry={110} fill="url(#orangeGlow)" />
+            </Svg>
 
             {/* Total + Progression row */}
             <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
