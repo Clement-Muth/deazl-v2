@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { useAppTheme } from "../../../../shared/theme";
 import type { SplitMember, SplitSettings } from "../../application/useCases/getSplitSettings";
-import { BottomModal } from "./bottomModal";
+import { BottomModal, BottomModalScrollView } from "./bottomModal";
 
 export function Toggle({ value, onChange, color }: { value: boolean; onChange: () => void; color: string }) {
   return (
@@ -43,8 +43,8 @@ export function SplitEditSheet({
   }
 
   return (
-    <BottomModal isOpen={isOpen} onClose={() => { onSave(draft); onOpenChange(false); }}>
-      <View style={{ gap: 12 }}>
+    <BottomModal isOpen={isOpen} onClose={() => { onSave(draft); onOpenChange(false); }} height="85%">
+      <BottomModalScrollView contentContainerStyle={{ gap: 12, paddingBottom: 32 }}>
         <Text style={{ fontSize: 17, fontWeight: "900", color: colors.text, paddingBottom: 4 }}>Configuration de session</Text>
 
         {/* Split des dépenses */}
@@ -165,7 +165,7 @@ export function SplitEditSheet({
         >
           <Text style={{ fontSize: 15, fontWeight: "800", color: "#fff", letterSpacing: -0.3 }}>Confirmer</Text>
         </Pressable>
-      </View>
+      </BottomModalScrollView>
     </BottomModal>
   );
 }
