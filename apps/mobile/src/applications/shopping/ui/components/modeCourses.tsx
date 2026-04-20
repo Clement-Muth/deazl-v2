@@ -2157,22 +2157,39 @@ export function ModeCourses() {
             )}
 
             {/* CR/HC global (carte resto on, split off) */}
-            {splitSettings.carteRestoEnabled && !splitSettings.enabled && confirmedTotal > 0 && (
-              <View style={{ flexDirection: "row", gap: 8, marginTop: 14 }}>
-                <View style={{ flex: 1, backgroundColor: "rgba(74,222,128,0.12)", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <View style={{ width: 16, height: 14, borderRadius: 3, backgroundColor: "#4ADE80", alignItems: "center", justifyContent: "center" }}>
-                    <Text style={{ fontSize: 8, fontWeight: "900", color: "#0D3F1E", letterSpacing: 0.4 }}>CR</Text>
+            {splitSettings.carteRestoEnabled && !splitSettings.enabled && confirmedTotal > 0 && (() => {
+              const m0 = splitSettings.members[0];
+              const cap = m0?.budgetCap ?? 25;
+              const crPct = Math.min(cap > 0 ? globalCRTotal / cap : 0, 1);
+              const hcPct = Math.min(cap > 0 ? globalHCTotal / cap : 0, 1);
+              return (
+                <View style={{ marginTop: 14 }}>
+                  <View style={{ backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 14, padding: 11 }}>
+                    <Text style={{ fontSize: 18, fontWeight: "900", color: "#fff", letterSpacing: -0.4, marginBottom: 8 }}>
+                      {confirmedTotal.toFixed(2).replace(".", ",")} €
+                    </Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 4 }}>
+                      <View style={{ width: 16, height: 14, borderRadius: 3, backgroundColor: "#4ADE80", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <Text style={{ fontSize: 8, fontWeight: "900", color: "#0D3F1E", letterSpacing: 0.4 }}>CR</Text>
+                      </View>
+                      <View style={{ flex: 1, height: 4, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                        <View style={{ width: `${crPct * 100}%`, height: 4, borderRadius: 999, backgroundColor: "#4ADE80" }} />
+                      </View>
+                      <Text style={{ fontSize: 9, fontWeight: "700", color: "rgba(255,255,255,0.65)", flexShrink: 0 }}>{Math.round(globalCRTotal)}/{cap}</Text>
+                    </View>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                      <View style={{ width: 16, height: 14, borderRadius: 3, backgroundColor: "#F9A8D4", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <Text style={{ fontSize: 8, fontWeight: "900", color: "#5A1636", letterSpacing: 0.4 }}>HC</Text>
+                      </View>
+                      <View style={{ flex: 1, height: 4, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                        <View style={{ width: `${hcPct * 100}%`, height: 4, borderRadius: 999, backgroundColor: "#F9A8D4" }} />
+                      </View>
+                      <Text style={{ fontSize: 9, fontWeight: "700", color: "rgba(255,255,255,0.65)", flexShrink: 0 }}>{Math.round(globalHCTotal)} €</Text>
+                    </View>
                   </View>
-                  <Text style={{ fontSize: 13, fontWeight: "900", color: "#4ADE80", letterSpacing: -0.3 }}>{globalCRTotal.toFixed(2).replace(".", ",")} €</Text>
                 </View>
-                <View style={{ flex: 1, backgroundColor: "rgba(249,168,212,0.12)", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <View style={{ width: 16, height: 14, borderRadius: 3, backgroundColor: "#F9A8D4", alignItems: "center", justifyContent: "center" }}>
-                    <Text style={{ fontSize: 8, fontWeight: "900", color: "#5A1636", letterSpacing: 0.4 }}>HC</Text>
-                  </View>
-                  <Text style={{ fontSize: 13, fontWeight: "900", color: "#F9A8D4", letterSpacing: -0.3 }}>{globalHCTotal.toFixed(2).replace(".", ",")} €</Text>
-                </View>
-              </View>
-            )}
+              );
+            })()}
 
             {/* Per-person CR/HC mini cards */}
             {splitSettings.enabled && splitSettings.members.length >= 2 && (
