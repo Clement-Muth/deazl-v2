@@ -5,6 +5,7 @@ export interface SplitMember {
   name: string;
   budgetCap: number;
   color: string;
+  crMode: "CR" | "HC";
 }
 
 export interface SplitSettings {
@@ -16,8 +17,8 @@ export interface SplitSettings {
 export const DEFAULT_SPLIT: SplitSettings = {
   enabled: false,
   members: [
-    { name: "Moi", budgetCap: 25, color: "#E8571C" },
-    { name: "Nous·elle", budgetCap: 25, color: "#7C3AED" },
+    { name: "Moi", budgetCap: 25, color: "#4A6FB5", crMode: "CR" },
+    { name: "Léa", budgetCap: 25, color: "#B55A8F", crMode: "CR" },
   ],
   carteRestoEnabled: false,
 };
@@ -34,7 +35,15 @@ export async function getSplitSettings(): Promise<SplitSettings> {
     if (!key) return DEFAULT_SPLIT;
     const raw = await AsyncStorage.getItem(key);
     if (!raw) return DEFAULT_SPLIT;
-    return { ...DEFAULT_SPLIT, ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw) as Partial<SplitSettings>;
+    return {
+      ...DEFAULT_SPLIT,
+      ...parsed,
+      members: (parsed.members ?? DEFAULT_SPLIT.members).map((m) => ({
+        ...m,
+        crMode: (m as Partial<SplitMember>).crMode ?? "CR",
+      })),
+    };
   } catch {
     return DEFAULT_SPLIT;
   }

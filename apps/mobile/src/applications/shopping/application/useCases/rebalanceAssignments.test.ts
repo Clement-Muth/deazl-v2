@@ -3,7 +3,7 @@ import { describe, it, expect } from "bun:test";
 import { rebalanceAssignments } from "./rebalanceAssignments";
 import type { SplitMember } from "./getSplitSettings";
 
-const m = (budgetCap: number): SplitMember => ({ name: "", budgetCap, color: "" });
+const m = (budgetCap: number): SplitMember => ({ name: "", budgetCap, color: "", crMode: "CR" });
 const members25 = [m(25), m(25)];
 
 function prices(entries: [string, number][]): Map<string, number> {

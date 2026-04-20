@@ -178,6 +178,21 @@ function StoreSelectorModal({
   );
 }
 
+function Toggle({ value, onChange, color }: { value: boolean; onChange: () => void; color: string }) {
+  return (
+    <Pressable
+      onPress={onChange}
+      style={{ width: 50, height: 30, borderRadius: 999, backgroundColor: value ? color : "#D1CCC5", justifyContent: "center", padding: 3 }}
+    >
+      <View style={{
+        width: 24, height: 24, borderRadius: 12, backgroundColor: "#fff",
+        alignSelf: value ? "flex-end" : "flex-start",
+        shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: 2,
+      }} />
+    </Pressable>
+  );
+}
+
 function SplitEditSheet({
   isOpen,
   onOpenChange,
@@ -203,107 +218,131 @@ function SplitEditSheet({
 
   return (
     <BottomModal isOpen={isOpen} onClose={() => { onSave(draft); onOpenChange(false); }}>
-          <View style={{ gap: 20 }}>
-            <View style={{ paddingVertical: 4 }}>
-              <Text style={{ fontSize: 17, fontWeight: "900", color: colors.text }}>Partager les dépenses</Text>
-            </View>
+      <View style={{ gap: 12 }}>
+        <Text style={{ fontSize: 17, fontWeight: "900", color: colors.text, paddingBottom: 4 }}>Configuration de session</Text>
 
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#F9F8F6", borderRadius: 16, padding: 16 }}>
-              <View style={{ gap: 2, flex: 1, marginRight: 12 }}>
-                <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>Activer</Text>
-                <Text style={{ fontSize: 12, color: colors.textMuted }}>Les articles sont répartis selon les budgets</Text>
-              </View>
-              <Pressable
-                onPress={() => setDraft((prev) => ({ ...prev, enabled: !prev.enabled }))}
-                style={{
-                  width: 50, height: 28, borderRadius: 14,
-                  backgroundColor: draft.enabled ? colors.accent : "#D1CCC5",
-                  justifyContent: "center", padding: 2,
-                }}
-              >
-                <View style={{
-                  width: 24, height: 24, borderRadius: 12, backgroundColor: "#fff",
-                  alignSelf: draft.enabled ? "flex-end" : "flex-start",
-                  shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 3,
-                  shadowOffset: { width: 0, height: 1 }, elevation: 2,
-                }} />
-              </Pressable>
+        {/* Split des dépenses */}
+        <View style={{ backgroundColor: "#F9F8F6", borderRadius: 16, overflow: "hidden" }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 16 }}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>Split des dépenses</Text>
+              <Text style={{ fontSize: 12, color: colors.textMuted }}>
+                {draft.enabled ? "Actif · Totaux répartis entre les membres." : "Inactif · Un seul total commun affiché."}
+              </Text>
             </View>
-
-            {draft.enabled && (
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#F9F8F6", borderRadius: 16, padding: 16 }}>
-                <View style={{ gap: 2, flex: 1, marginRight: 12 }}>
-                  <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>Carte Ticket Restaurant</Text>
-                  <Text style={{ fontSize: 12, color: colors.textMuted }}>Le budget par personne s'applique uniquement aux articles alimentaires</Text>
+            <Toggle value={draft.enabled} onChange={() => setDraft((p) => ({ ...p, enabled: !p.enabled }))} color="#1A1A1A" />
+          </View>
+          {draft.enabled && (
+            <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingBottom: 14 }}>
+              {draft.members.map((m, i) => (
+                <View key={i} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: `${m.color}20` }}>
+                  <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: m.color }} />
+                  <TextInput
+                    value={m.name}
+                    onChangeText={(v) => updateMember(i, { name: v })}
+                    style={{ fontSize: 12, fontWeight: "700", color: m.color, flex: 1 }}
+                    maxLength={12}
+                    selectTextOnFocus
+                  />
                 </View>
-                <Pressable
-                  onPress={() => setDraft((prev) => ({ ...prev, carteRestoEnabled: !prev.carteRestoEnabled }))}
-                  style={{
-                    width: 50, height: 28, borderRadius: 14,
-                    backgroundColor: draft.carteRestoEnabled ? colors.accent : "#D1CCC5",
-                    justifyContent: "center", padding: 2,
-                  }}
-                >
-                  <View style={{
-                    width: 24, height: 24, borderRadius: 12, backgroundColor: "#fff",
-                    alignSelf: draft.carteRestoEnabled ? "flex-end" : "flex-start",
-                    shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 3,
-                    shadowOffset: { width: 0, height: 1 }, elevation: 2,
-                  }} />
-                </Pressable>
-              </View>
-            )}
+              ))}
+            </View>
+          )}
+        </View>
 
-            {draft.enabled && (
-              <View style={{ flexDirection: "row", gap: 12 }}>
+        {/* Suivi Carte Restaurant */}
+        <View style={{ backgroundColor: "#F9F8F6", borderRadius: 16, overflow: "hidden" }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 16 }}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>Suivi Carte Restaurant</Text>
+              <Text style={{ fontSize: 12, color: colors.textMuted }}>
+                {draft.carteRestoEnabled ? "Actif · Plafonds CR suivis par personne." : "Inactif · Aucune distinction CR / HC."}
+              </Text>
+            </View>
+            <Toggle value={draft.carteRestoEnabled} onChange={() => setDraft((p) => ({ ...p, carteRestoEnabled: !p.carteRestoEnabled }))} color="#E8571C" />
+          </View>
+
+          {draft.carteRestoEnabled && (
+            <View style={{ paddingHorizontal: 16, paddingBottom: 16, gap: 10 }}>
+              <View style={{ flexDirection: "row", gap: 8 }}>
                 {draft.members.map((m, i) => (
-                  <View key={i} style={{ flex: 1, borderRadius: 20, backgroundColor: "#F9F8F6", padding: 16, gap: 14, alignItems: "center" }}>
-                    <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: m.color, alignItems: "center", justifyContent: "center" }}>
-                      <Text style={{ fontSize: 20, fontWeight: "900", color: "#fff" }}>
-                        {m.name.charAt(0).toUpperCase() || "?"}
-                      </Text>
+                  <View key={i} style={{ flex: 1, backgroundColor: "#F0EDE8", borderRadius: 12, padding: 12, gap: 10 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                      <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: m.color }} />
+                      <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textMuted }}>{m.name}</Text>
                     </View>
-                    <TextInput
-                      value={m.name}
-                      onChangeText={(v) => updateMember(i, { name: v })}
-                      style={{ fontSize: 15, fontWeight: "700", color: colors.text, textAlign: "center", width: "100%" }}
-                      maxLength={20}
-                      selectTextOnFocus
-                    />
-                    <View style={{ width: "100%", height: 1, backgroundColor: "#EDEAE4" }} />
-                    <View style={{ gap: 6, alignItems: "center", width: "100%" }}>
-                      <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 0.8 }}>Budget</Text>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    {/* CR / HC segmented */}
+                    <View style={{ flexDirection: "row", backgroundColor: "rgba(26,26,26,0.07)", borderRadius: 8, padding: 2 }}>
+                      {(["CR", "HC"] as const).map((mode) => (
                         <Pressable
-                          onPress={() => updateMember(i, { budgetCap: Math.max(5, m.budgetCap - 5) })}
+                          key={mode}
+                          onPress={() => updateMember(i, { crMode: mode })}
                           style={({ pressed }) => ({
-                            width: 32, height: 32, borderRadius: 8,
-                            backgroundColor: pressed ? "#E0DDD7" : "#EDEAE4",
-                            alignItems: "center", justifyContent: "center",
+                            flex: 1, height: 26, borderRadius: 6, alignItems: "center", justifyContent: "center",
+                            backgroundColor: m.crMode === mode ? "#fff" : pressed ? "rgba(26,26,26,0.05)" : "transparent",
+                            shadowColor: m.crMode === mode ? "#000" : "transparent",
+                            shadowOpacity: 0.1, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: m.crMode === mode ? 1 : 0,
                           })}
                         >
-                          <Text style={{ fontSize: 18, fontWeight: "600", color: "#44403C", lineHeight: 22 }}>−</Text>
+                          <Text style={{
+                            fontSize: 11, fontWeight: "800", letterSpacing: 0.4,
+                            color: m.crMode === mode ? (mode === "CR" ? "#2E7D5B" : "#D14B7A") : colors.textMuted,
+                          }}>{mode}</Text>
                         </Pressable>
-                        <Text style={{ fontSize: 20, fontWeight: "900", color: colors.text, minWidth: 52, textAlign: "center" }}>
-                          {m.budgetCap}€
-                        </Text>
-                        <Pressable
-                          onPress={() => updateMember(i, { budgetCap: Math.min(500, m.budgetCap + 5) })}
-                          style={({ pressed }) => ({
-                            width: 32, height: 32, borderRadius: 8,
-                            backgroundColor: pressed ? "#E0DDD7" : "#EDEAE4",
-                            alignItems: "center", justifyContent: "center",
-                          })}
-                        >
-                          <Text style={{ fontSize: 18, fontWeight: "600", color: "#44403C", lineHeight: 22 }}>+</Text>
-                        </Pressable>
+                      ))}
+                    </View>
+                    {m.crMode === "CR" ? (
+                      <View style={{ flexDirection: "row", alignItems: "baseline", gap: 3 }}>
+                        <TextInput
+                          value={String(m.budgetCap)}
+                          onChangeText={(v) => {
+                            const n = parseInt(v.replace(/\D/g, ""), 10);
+                            if (!isNaN(n)) updateMember(i, { budgetCap: Math.max(1, Math.min(999, n)) });
+                          }}
+                          keyboardType="numeric"
+                          selectTextOnFocus
+                          style={{ fontSize: 28, fontWeight: "900", color: colors.text, letterSpacing: -0.5, minWidth: 40 }}
+                        />
+                        <Text style={{ fontSize: 16, fontWeight: "700", color: colors.textMuted }}>€</Text>
                       </View>
-                    </View>
+                    ) : (
+                      <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textMuted, lineHeight: 16 }}>
+                        Pas de carte resto — tout en HC
+                      </Text>
+                    )}
                   </View>
                 ))}
               </View>
-            )}
-          </View>
+              {/* CR / HC legend */}
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10, backgroundColor: "#D6EDE1" }}>
+                  <View style={{ width: 16, height: 14, borderRadius: 3, backgroundColor: "#4ADE80", alignItems: "center", justifyContent: "center" }}>
+                    <Text style={{ fontSize: 7, fontWeight: "900", color: "#0D3F1E", letterSpacing: 0.4 }}>CR</Text>
+                  </View>
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: "#2E7D5B" }}>Carte Restaurant</Text>
+                </View>
+                <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10, backgroundColor: "#F7DDE5" }}>
+                  <View style={{ width: 16, height: 14, borderRadius: 3, backgroundColor: "#F9A8D4", alignItems: "center", justifyContent: "center" }}>
+                    <Text style={{ fontSize: 7, fontWeight: "900", color: "#5A1636", letterSpacing: 0.4 }}>HC</Text>
+                  </View>
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: "#D14B7A" }}>Hors Carte</Text>
+                </View>
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* CTA */}
+        <Pressable
+          onPress={() => { onSave(draft); onOpenChange(false); }}
+          style={({ pressed }) => ({
+            height: 52, borderRadius: 14, backgroundColor: pressed ? "#333" : "#1A1A1A",
+            alignItems: "center", justifyContent: "center", marginTop: 4,
+          })}
+        >
+          <Text style={{ fontSize: 15, fontWeight: "800", color: "#fff", letterSpacing: -0.3 }}>Confirmer</Text>
+        </Pressable>
+      </View>
     </BottomModal>
   );
 }
@@ -1603,14 +1642,16 @@ export function ModeCourses() {
       const p = session.confirmedPrices.get(itemId);
       if (p !== undefined) {
         totals[mIdx] += p;
-        if (session.horsCarteIds.has(itemId)) horsCarteTotals[mIdx] += p;
+        const isHC = session.horsCarteIds.has(itemId) || (splitSettings.members[mIdx]?.crMode === "HC");
+        if (isHC) horsCarteTotals[mIdx] += p;
         else carteTotals[mIdx] += p;
       }
     });
     session.virtualItems.forEach((v) => {
       if (v.memberIdx < totals.length) {
         totals[v.memberIdx] += v.price;
-        if (session.horsCarteIds.has(v.id)) horsCarteTotals[v.memberIdx] += v.price;
+        const isHC = session.horsCarteIds.has(v.id) || (splitSettings.members[v.memberIdx]?.crMode === "HC");
+        if (isHC) horsCarteTotals[v.memberIdx] += v.price;
         else carteTotals[v.memberIdx] += v.price;
       }
     });
@@ -2078,35 +2119,41 @@ export function ModeCourses() {
                   const carteTotal = memberCarteTotals[i] ?? 0;
                   const horsCarteTotal = memberHorsCarteTotals[i] ?? 0;
                   const total = memberTotals[i] ?? 0;
-                  const crPct = Math.min(m.budgetCap > 0 ? carteTotal / m.budgetCap : 0, 1);
-                  const hcPct = Math.min(m.budgetCap > 0 ? horsCarteTotal / m.budgetCap : 0, 1);
+                  const crPct = Math.min(m.crMode === "CR" && m.budgetCap > 0 ? carteTotal / m.budgetCap : 0, 1);
+                  const hcPct = m.crMode === "HC"
+                    ? Math.min(total > 0 ? horsCarteTotal / total : 1, 1)
+                    : Math.min(m.budgetCap > 0 ? horsCarteTotal / m.budgetCap : 0, 1);
                   return (
                     <View key={i} style={{ flex: 1, backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 14, padding: 11 }}>
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
                         <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: m.color }} />
                         <Text style={{ fontSize: 11, fontWeight: "700", color: "rgba(255,255,255,0.65)" }}>{m.name}</Text>
                       </View>
-                      <Text style={{ fontSize: 18, fontWeight: "900", color: "#fff", letterSpacing: -0.4, marginBottom: 8 }}>
+                      <Text style={{ fontSize: 18, fontWeight: "900", color: "#fff", letterSpacing: -0.4, marginBottom: splitSettings.carteRestoEnabled ? 8 : 0 }}>
                         {total.toFixed(2).replace(".", ",")} €
                       </Text>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 4 }}>
-                        <View style={{ width: 16, height: 14, borderRadius: 3, backgroundColor: "#4ADE80", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                          <Text style={{ fontSize: 8, fontWeight: "900", color: "#0D3F1E", letterSpacing: 0.4 }}>CR</Text>
+                      {splitSettings.carteRestoEnabled && m.crMode === "CR" && (
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 4 }}>
+                          <View style={{ width: 16, height: 14, borderRadius: 3, backgroundColor: "#4ADE80", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <Text style={{ fontSize: 8, fontWeight: "900", color: "#0D3F1E", letterSpacing: 0.4 }}>CR</Text>
+                          </View>
+                          <View style={{ flex: 1, height: 4, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                            <View style={{ width: `${crPct * 100}%`, height: 4, borderRadius: 999, backgroundColor: "#4ADE80" }} />
+                          </View>
+                          <Text style={{ fontSize: 9, fontWeight: "700", color: "rgba(255,255,255,0.65)", flexShrink: 0 }}>{Math.round(carteTotal)}/{m.budgetCap}</Text>
                         </View>
-                        <View style={{ flex: 1, height: 4, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
-                          <View style={{ width: `${crPct * 100}%`, height: 4, borderRadius: 999, backgroundColor: "#4ADE80" }} />
+                      )}
+                      {splitSettings.carteRestoEnabled && (
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                          <View style={{ width: 16, height: 14, borderRadius: 3, backgroundColor: "#F9A8D4", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <Text style={{ fontSize: 8, fontWeight: "900", color: "#5A1636", letterSpacing: 0.4 }}>HC</Text>
+                          </View>
+                          <View style={{ flex: 1, height: 4, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                            <View style={{ width: `${hcPct * 100}%`, height: 4, borderRadius: 999, backgroundColor: "#F9A8D4" }} />
+                          </View>
+                          <Text style={{ fontSize: 9, fontWeight: "700", color: "rgba(255,255,255,0.65)", flexShrink: 0 }}>{Math.round(horsCarteTotal)}€</Text>
                         </View>
-                        <Text style={{ fontSize: 9, fontWeight: "700", color: "rgba(255,255,255,0.65)", flexShrink: 0 }}>{Math.round(carteTotal)}/{m.budgetCap}</Text>
-                      </View>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                        <View style={{ width: 16, height: 14, borderRadius: 3, backgroundColor: "#F9A8D4", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                          <Text style={{ fontSize: 8, fontWeight: "900", color: "#5A1636", letterSpacing: 0.4 }}>HC</Text>
-                        </View>
-                        <View style={{ flex: 1, height: 4, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
-                          <View style={{ width: `${hcPct * 100}%`, height: 4, borderRadius: 999, backgroundColor: "#F9A8D4" }} />
-                        </View>
-                        <Text style={{ fontSize: 9, fontWeight: "700", color: "rgba(255,255,255,0.65)", flexShrink: 0 }}>{Math.round(horsCarteTotal)}€</Text>
-                      </View>
+                      )}
                     </View>
                   );
                 })}
