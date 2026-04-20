@@ -16,6 +16,9 @@ import { getItemSuggestions } from "../../application/useCases/getItemSuggestion
 import { toggleShoppingItem } from "../../application/useCases/toggleShoppingItem";
 import type { ShoppingItem } from "../../domain/entities/shopping";
 import { ItemDetailSheet } from "../components/itemDetailSheet";
+import { SplitEditSheet } from "../components/splitSettingsSheet";
+import { DEFAULT_SPLIT, getSplitSettings, updateSplitSettings } from "../../application/useCases/getSplitSettings";
+import type { SplitSettings } from "../../application/useCases/getSplitSettings";
 
 const UNITS = ["pièce", "kg", "g", "L", "cL", "mL"];
 
@@ -247,12 +250,18 @@ export function ShoppingScreen() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [groupBy, setGroupBy] = useState<"category" | "recipe">("category");
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [splitSettings, setSplitSettings] = useState<SplitSettings>(DEFAULT_SPLIT);
+  const [splitEditOpen, setSplitEditOpen] = useState(false);
   const router = useRouter();
 
   useFocusEffect(useCallback(() => { silentReload(); }, []));
 
   useEffect(() => {
     getItemSuggestions().then(setSuggestions);
+  }, []);
+
+  useEffect(() => {
+    getSplitSettings().then(setSplitSettings);
   }, []);
 
   useEffect(() => {
@@ -446,21 +455,36 @@ export function ShoppingScreen() {
                     <Text style={{ fontSize: 13, fontWeight: "700", color: "rgba(255,255,255,0.7)" }}>Aucun magasin</Text>
                   </View>
                 )}
-                <Pressable
-                  onPress={() => router.push("/shopping/mode-courses")}
-                  style={({ pressed }) => ({
-                    flexDirection: "row", alignItems: "center", gap: 6,
-                    backgroundColor: "#fff", borderRadius: 99,
-                    paddingHorizontal: 12, paddingVertical: 7,
-                    opacity: pressed ? 0.85 : 1,
-                    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6,
-                  })}
-                >
-                  <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                    <Path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 12h10" />
-                  </Svg>
-                  <Text style={{ fontSize: 12, fontWeight: "800", color: colors.accent, letterSpacing: -0.2 }}>Démarrer</Text>
-                </Pressable>
+                <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                  <Pressable
+                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSplitEditOpen(true); }}
+                    style={({ pressed }) => ({
+                      width: 34, height: 34, borderRadius: 999,
+                      backgroundColor: pressed ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.18)",
+                      alignItems: "center", justifyContent: "center",
+                    })}
+                  >
+                    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <Path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+                      <Circle cx={12} cy={12} r={3} />
+                    </Svg>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => router.push("/shopping/mode-courses")}
+                    style={({ pressed }) => ({
+                      flexDirection: "row", alignItems: "center", gap: 6,
+                      backgroundColor: "#fff", borderRadius: 99,
+                      paddingHorizontal: 12, paddingVertical: 7,
+                      opacity: pressed ? 0.85 : 1,
+                      shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6,
+                    })}
+                  >
+                    <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                      <Path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 12h10" />
+                    </Svg>
+                    <Text style={{ fontSize: 12, fontWeight: "800", color: colors.accent, letterSpacing: -0.2 }}>Démarrer</Text>
+                  </Pressable>
+                </View>
               </View>
 
               <View style={{ flexDirection: "row", alignItems: "flex-end", marginTop: 18, gap: 12 }}>
@@ -760,6 +784,13 @@ export function ShoppingScreen() {
         isOpen={detailOpen}
         onClose={() => setDetailOpen(false)}
         onReload={silentReload}
+      />
+
+      <SplitEditSheet
+        isOpen={splitEditOpen}
+        onOpenChange={(v) => !v && setSplitEditOpen(false)}
+        settings={splitSettings}
+        onSave={(s) => { setSplitSettings(s); updateSplitSettings(s); }}
       />
 
       <Dialog isOpen={clearDialogOpen} onOpenChange={(open) => { if (!open) setClearDialogOpen(false); }}>
