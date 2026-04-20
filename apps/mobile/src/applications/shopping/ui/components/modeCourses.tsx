@@ -985,6 +985,22 @@ function EditVirtualPricePanel({ name, currentPrice, isOpen, onConfirm, onClose 
   );
 }
 
+function CRBadge() {
+  return (
+    <View style={{ borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2, backgroundColor: "#D6EDE1" }}>
+      <Text style={{ fontSize: 9, fontWeight: "800", color: "#2E7D5B", letterSpacing: 0.5 }}>CR</Text>
+    </View>
+  );
+}
+
+function HCBadge() {
+  return (
+    <View style={{ borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2, backgroundColor: "#F7DDE5" }}>
+      <Text style={{ fontSize: 9, fontWeight: "800", color: "#D14B7A", letterSpacing: 0.5 }}>HC</Text>
+    </View>
+  );
+}
+
 function CheckoutSummary({
   checkedItems,
   virtualItems,
@@ -994,6 +1010,8 @@ function CheckoutSummary({
   memberCarteTotals,
   memberHorsCarteTotals,
   confirmedTotal,
+  sessionMinutes,
+  selectedStore,
   onClose,
   onFinish,
   onFinishWithPantry,
@@ -1007,136 +1025,263 @@ function CheckoutSummary({
   memberCarteTotals: number[];
   memberHorsCarteTotals: number[];
   confirmedTotal: number;
+  sessionMinutes: number;
+  selectedStore: { name: string; brand?: string | null } | null;
   onClose: () => void;
   onFinish: () => void;
   onFinishWithPantry: () => void;
   onEditPrice: (item: ShoppingItem) => void;
 }) {
   const { colors } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const hasSplit = splitSettings.enabled && splitSettings.members.length >= 2;
-  const hasCarteCap = hasSplit && splitSettings.carteRestoEnabled;
+  const hasCR = splitSettings.carteRestoEnabled;
+
+  const allItemCount = checkedItems.length + virtualItems.length;
+
+  const totalSavings = Array.from(session.confirmedContexts.entries()).reduce((sum, [id, ctx]) => {
+    if (!ctx.isPromo || !session.confirmedPrices.has(id)) return sum;
+    const paid = session.confirmedPrices.get(id)!;
+    const normal = ctx.shelfUnitPrice * ctx.confirmedQty;
+    return sum + Math.max(0, normal - paid);
+  }, 0);
+
+  const globalCRTotal = memberCarteTotals.reduce((s, v) => s + v, 0);
+  const globalHCTotal = memberHorsCarteTotals.reduce((s, v) => s + v, 0);
+
+  const storeLabel = selectedStore
+    ? [selectedStore.brand, selectedStore.name].filter(Boolean).join(" ")
+    : null;
+
+  const now = new Date();
+  const dateLabel = `${now.getDate()} ${["janv", "févr", "mars", "avr", "mai", "juin", "juil", "août", "sept", "oct", "nov", "déc"][now.getMonth()]} · ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+  type Segment = { label: string; value: number; color: string; opacity: number };
+  let segments: Segment[] = [];
+  if (hasSplit && hasCR) {
+    segments = splitSettings.members.flatMap((m, i) => {
+      const cr = memberCarteTotals[i] ?? 0;
+      const hc = memberHorsCarteTotals[i] ?? 0;
+      return [
+        ...(cr > 0 ? [{ label: `${m.name} CR`, value: cr, color: m.color, opacity: 1 }] : []),
+        ...(hc > 0 ? [{ label: `${m.name} HC`, value: hc, color: m.color, opacity: 0.35 }] : []),
+      ];
+    });
+  } else if (hasSplit) {
+    segments = splitSettings.members.map((m, i) => ({ label: m.name, value: memberTotals[i] ?? 0, color: m.color, opacity: 1 })).filter(s => s.value > 0);
+  } else if (hasCR) {
+    segments = [
+      ...(globalCRTotal > 0 ? [{ label: "CR", value: globalCRTotal, color: "#2E7D5B", opacity: 1 }] : []),
+      ...(globalHCTotal > 0 ? [{ label: "HC", value: globalHCTotal, color: "#D14B7A", opacity: 1 }] : []),
+    ];
+  }
 
   return (
     <View style={{ position: "absolute", inset: 0, backgroundColor: colors.bg, zIndex: 30 }}>
       <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
-        <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, gap: 12 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4, gap: 12 }}>
           <Pressable
             onPress={onClose}
             style={({ pressed }) => ({
-              width: 38, height: 38, borderRadius: 12,
+              width: 36, height: 36, borderRadius: 11,
               backgroundColor: pressed ? "#EDEAE4" : "#F0EDE8",
               alignItems: "center", justifyContent: "center",
             })}
           >
-            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
               <Line x1={18} y1={6} x2={6} y2={18} /><Line x1={6} y1={6} x2={18} y2={18} />
             </Svg>
           </Pressable>
-          <Text style={{ flex: 1, fontSize: 17, fontWeight: "900", color: colors.text, letterSpacing: -0.3 }}>Récapitulatif</Text>
+          <View style={{ flex: 1 }}>
+            {storeLabel && (
+              <Text style={{ fontSize: 10, fontWeight: "700", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 1 }}>
+                {storeLabel} · {dateLabel}
+              </Text>
+            )}
+            <Text style={{ fontSize: 22, fontWeight: "900", color: colors.text, letterSpacing: -0.5 }}>Récapitulatif</Text>
+          </View>
         </View>
 
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48, gap: 12 }} showsVerticalScrollIndicator={false}>
-          <View style={{ borderRadius: 20, backgroundColor: colors.text, padding: 22, gap: 4 }}>
-            <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1.5 }}>Total panier</Text>
-            <Text style={{ fontSize: 44, fontWeight: "900", color: "#fff", letterSpacing: -1.5 }}>
-              {confirmedTotal.toFixed(2)} €
-            </Text>
-            <Text style={{ fontSize: 13, color: "#57534E" }}>
-              {checkedItems.length + virtualItems.length} article{checkedItems.length + virtualItems.length > 1 ? "s" : ""}
-            </Text>
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 12, paddingBottom: 120, gap: 12 }} showsVerticalScrollIndicator={false}>
+
+          {/* Hero sombre */}
+          <View style={{ borderRadius: 22, backgroundColor: "#1A1A1A", padding: 20, overflow: "hidden" }}>
+            <View style={{ position: "absolute", right: -50, top: -50, width: 160, height: 160, borderRadius: 999, backgroundColor: "rgba(232,87,28,0.15)" }} />
+
+            <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.1)" }}>
+                <Svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <Circle cx={12} cy={12} r={10} /><Path d="M12 6v6l4 2" />
+                </Svg>
+                <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(255,255,255,0.7)" }}>
+                  {sessionMinutes < 1 ? "< 1 min" : `${sessionMinutes} min`}
+                </Text>
+              </View>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.1)" }}>
+                <Svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <Path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" /><Line x1={3} y1={6} x2={21} y2={6} />
+                </Svg>
+                <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(255,255,255,0.7)" }}>
+                  {allItemCount} article{allItemCount > 1 ? "s" : ""}
+                </Text>
+              </View>
+              {totalSavings > 0.01 && (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999, backgroundColor: "rgba(74,222,128,0.2)" }}>
+                  <Svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="#4ADE80" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" /><Line x1={7} y1={7} x2={7.01} y2={7} />
+                  </Svg>
+                  <Text style={{ fontSize: 10, fontWeight: "800", color: "#4ADE80" }}>-{totalSavings.toFixed(2).replace(".", ",")} € économisés</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={{ marginBottom: 4 }}>
+              <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 1.4, marginBottom: 4 }}>Total</Text>
+              <Text style={{ fontSize: 52, fontWeight: "900", color: "#fff", letterSpacing: -1.5, lineHeight: 56 }}>
+                {confirmedTotal.toFixed(2).replace(".", ",")}
+                <Text style={{ fontSize: 28, fontWeight: "700", opacity: 0.65 }}> €</Text>
+              </Text>
+            </View>
+
+            {segments.length > 0 && (
+              <View style={{ marginTop: 16 }}>
+                <View style={{ height: 6, borderRadius: 999, overflow: "hidden", flexDirection: "row", gap: 1 }}>
+                  {segments.map((s, i) => (
+                    <View key={i} style={{ flex: s.value, height: "100%", backgroundColor: s.color, opacity: s.opacity, borderRadius: 2 }} />
+                  ))}
+                </View>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 10 }}>
+                  {segments.map((s, i) => (
+                    <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                      <View style={{ width: 7, height: 7, borderRadius: 999, backgroundColor: s.color, opacity: s.opacity }} />
+                      <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(255,255,255,0.6)" }}>
+                        {s.label} {s.value.toFixed(2).replace(".", ",")} €
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
           </View>
 
+          {/* Tuiles CR / HC globales (pas de split, mais CR activé) */}
+          {hasCR && !hasSplit && (
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <View style={{ flex: 1, padding: 14, backgroundColor: "#D6EDE1", borderRadius: 14 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                  <CRBadge />
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: "#2E7D5B", textTransform: "uppercase", letterSpacing: 0.5 }}>Carte</Text>
+                </View>
+                <Text style={{ fontSize: 22, fontWeight: "900", color: "#2E7D5B", letterSpacing: -0.5 }}>{globalCRTotal.toFixed(2).replace(".", ",")} €</Text>
+              </View>
+              <View style={{ flex: 1, padding: 14, backgroundColor: "#F7DDE5", borderRadius: 14 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                  <HCBadge />
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: "#D14B7A", textTransform: "uppercase", letterSpacing: 0.5 }}>Hors carte</Text>
+                </View>
+                <Text style={{ fontSize: 22, fontWeight: "900", color: "#D14B7A", letterSpacing: -0.5 }}>{globalHCTotal.toFixed(2).replace(".", ",")} €</Text>
+              </View>
+            </View>
+          )}
 
+          {/* PersonCards (split activé) */}
           {hasSplit && splitSettings.members.map((m, i) => {
             const total = memberTotals[i] ?? 0;
             const carteTotal = memberCarteTotals[i] ?? 0;
             const horsCarteTotal = memberHorsCarteTotals[i] ?? 0;
-            const displayTotal = hasCarteCap ? carteTotal : total;
-            const over = displayTotal > m.budgetCap;
-            const ratio = Math.min(displayTotal / m.budgetCap, 1);
-            const barColor = budgetBarColor(displayTotal, m.budgetCap, m.color);
+            const isCRMember = m.crMode === "CR";
+            const over = hasCR && isCRMember && carteTotal > m.budgetCap;
+            const crRatio = Math.min(carteTotal / m.budgetCap, 1);
             const memberChecked = checkedItems.filter((it) => session.assignments.get(it.id) === i);
             const memberVirtual = virtualItems.filter((v) => v.memberIdx === i);
-            const allItems = [...memberChecked, ...memberVirtual];
+            const allMemberItems = [...memberChecked, ...memberVirtual];
 
             return (
-              <View key={i} style={{ borderRadius: 18, backgroundColor: colors.bgCard, overflow: "hidden", shadowColor: "#1C1917", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 }}>
-                <View style={{ padding: 18, gap: 10 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <View key={i} style={{
+                borderRadius: 18, backgroundColor: colors.bgCard,
+                borderWidth: over ? 1.5 : 1, borderColor: over ? "#D14B7A" : "rgba(26,26,26,0.07)",
+                overflow: "hidden",
+              }}>
+                <View style={{ padding: 16, gap: 0 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                       <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: m.color }} />
-                      <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text }}>{m.name}</Text>
-                    </View>
-                    <View style={{ alignItems: "flex-end" }}>
-                      <Text style={{ fontSize: 22, fontWeight: "900", color: over ? colors.danger : colors.text, letterSpacing: -0.5 }}>
-                        {total.toFixed(2)} €
-                      </Text>
+                      <Text style={{ fontSize: 16, fontWeight: "800", color: colors.text }}>{m.name}</Text>
+                      <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textMuted }}>· {allMemberItems.length} art.</Text>
                       {over && (
-                        <Text style={{ fontSize: 11, color: colors.danger, fontWeight: "600" }}>
-                          +{(displayTotal - m.budgetCap).toFixed(2)} € dépassement carte
+                        <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 999, backgroundColor: "#F7DDE5" }}>
+                          <Text style={{ fontSize: 9, fontWeight: "800", color: "#D14B7A", letterSpacing: 0.4 }}>Plafond CR atteint</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={{ fontSize: 20, fontWeight: "900", color: colors.text, letterSpacing: -0.5 }}>
+                      {total.toFixed(2).replace(".", ",")} €
+                    </Text>
+                  </View>
+
+                  {hasCR && isCRMember && (
+                    <View style={{ marginBottom: 12 }}>
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                        <Text style={{ fontSize: 10, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.8, color: colors.textMuted }}>Carte Restaurant</Text>
+                        <Text style={{ fontSize: 12, fontWeight: "700", color: colors.text }}>
+                          {carteTotal.toFixed(2).replace(".", ",")} <Text style={{ color: colors.textMuted, fontWeight: "500" }}>/ {m.budgetCap} €</Text>
                         </Text>
-                      )}
+                      </View>
+                      <View style={{ height: 7, borderRadius: 999, backgroundColor: "rgba(26,26,26,0.06)" }}>
+                        <View style={{ height: 7, borderRadius: 999, width: `${crRatio * 100}%`, backgroundColor: over ? "#D14B7A" : m.color }} />
+                      </View>
                     </View>
-                  </View>
-                  <View style={{ height: 6, borderRadius: 99, backgroundColor: "#F0EDE8" }}>
-                    <View style={{ height: 6, borderRadius: 99, backgroundColor: barColor, width: `${ratio * 100}%` }} />
-                  </View>
-                  {hasCarteCap ? (
-                    <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                      <Text style={{ fontSize: 11, color: colors.textSubtle }}>Carte : {carteTotal.toFixed(2)} € / {m.budgetCap} €</Text>
-                      {horsCarteTotal > 0 && (
-                        <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: "600" }}>Hors carte : {horsCarteTotal.toFixed(2)} €</Text>
-                      )}
+                  )}
+
+                  {hasCR && (!isCRMember || horsCarteTotal > 0) && (
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "#F0EDE8", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7, marginBottom: 12 }}>
+                      <Text style={{ fontSize: 10, fontWeight: "800", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 0.4 }}>Hors carte</Text>
+                      <Text style={{ fontSize: 12, fontWeight: "800", color: "#D14B7A" }}>{horsCarteTotal.toFixed(2).replace(".", ",")} €</Text>
                     </View>
-                  ) : (
-                    <Text style={{ fontSize: 11, color: colors.textSubtle }}>{total.toFixed(2)} € / {m.budgetCap} €</Text>
                   )}
                 </View>
 
-                {allItems.length > 0 && (
-                  <View style={{ borderTopWidth: 1, borderTopColor: colors.bgSurface }}>
+                {allMemberItems.length > 0 && (
+                  <View style={{ borderTopWidth: 1, borderTopColor: "rgba(26,26,26,0.06)" }}>
                     {memberChecked.map((item, idx) => {
                       const price = session.confirmedPrices.get(item.id);
-                      const isHC = session.horsCarteIds.has(item.id);
+                      const ctx = session.confirmedContexts.get(item.id);
+                      const isHC = session.horsCarteIds.has(item.id) || m.crMode === "HC";
+                      const saving = ctx?.isPromo && price !== undefined
+                        ? Math.max(0, ctx.shelfUnitPrice * ctx.confirmedQty - price)
+                        : 0;
                       return (
                         <View key={item.id} style={{
                           flexDirection: "row", alignItems: "center", gap: 8,
-                          paddingHorizontal: 18, paddingVertical: 12,
-                          borderBottomWidth: idx < allItems.length - 1 ? 1 : 0, borderBottomColor: colors.bgSurface,
+                          paddingHorizontal: 16, paddingVertical: 11,
+                          borderBottomWidth: idx < allMemberItems.length - 1 ? 0.5 : 0, borderBottomColor: "rgba(26,26,26,0.06)",
                         }}>
-                          {hasCarteCap && (
-                            <View style={{ borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2, backgroundColor: isHC ? colors.dangerBg : "#F0FDF4" }}>
-                              <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? colors.danger : "#16A34A", letterSpacing: 0.5 }}>
-                                {isHC ? "HC" : "CR"}
-                              </Text>
+                          {hasCR && (isHC ? <HCBadge /> : <CRBadge />)}
+                          <Text style={{ flex: 1, fontSize: 13, fontWeight: "600", color: "#44403C" }} numberOfLines={1}>{item.customName}</Text>
+                          {saving > 0.01 && (
+                            <View style={{ paddingHorizontal: 6, paddingVertical: 1, borderRadius: 999, backgroundColor: "#FFF0E8" }}>
+                              <Text style={{ fontSize: 9, fontWeight: "800", color: "#E8571C" }}>-{saving.toFixed(2).replace(".", ",")} €</Text>
                             </View>
                           )}
-                          <Text style={{ flex: 1, fontSize: 14, color: "#44403C" }} numberOfLines={1}>{item.customName}</Text>
                           {price !== undefined
-                            ? <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>{price.toFixed(2)} €</Text>
+                            ? <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text }}>{price.toFixed(2).replace(".", ",")} €</Text>
                             : <Pressable onPress={() => onEditPrice(item)} hitSlop={8}>
-                                <Text style={{ fontSize: 12, color: colors.accent, fontWeight: "600" }}>+ Saisir le prix</Text>
+                                <Text style={{ fontSize: 12, color: colors.accent, fontWeight: "600" }}>+ Saisir</Text>
                               </Pressable>}
                         </View>
                       );
                     })}
                     {memberVirtual.map((v, idx) => {
-                      const isHC = session.horsCarteIds.has(v.id);
+                      const isHC = session.horsCarteIds.has(v.id) || m.crMode === "HC";
                       return (
                         <View key={v.id} style={{
                           flexDirection: "row", alignItems: "center", gap: 8,
-                          paddingHorizontal: 18, paddingVertical: 12,
-                          borderBottomWidth: idx < memberVirtual.length - 1 ? 1 : 0, borderBottomColor: colors.bgSurface,
+                          paddingHorizontal: 16, paddingVertical: 11,
+                          borderBottomWidth: idx < memberVirtual.length - 1 ? 0.5 : 0, borderBottomColor: "rgba(26,26,26,0.06)",
                         }}>
-                          {hasCarteCap && (
-                            <View style={{ borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2, backgroundColor: isHC ? colors.dangerBg : "#F0FDF4" }}>
-                              <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? colors.danger : "#16A34A", letterSpacing: 0.5 }}>
-                                {isHC ? "HC" : "CR"}
-                              </Text>
-                            </View>
-                          )}
-                          <Text style={{ flex: 1, fontSize: 14, color: "#44403C", fontStyle: "italic" }} numberOfLines={1}>{v.customName}</Text>
-                          <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>{v.price.toFixed(2)} €</Text>
+                          {hasCR && (isHC ? <HCBadge /> : <CRBadge />)}
+                          <Text style={{ flex: 1, fontSize: 13, fontWeight: "600", color: "#44403C", fontStyle: "italic" }} numberOfLines={1}>{v.customName}</Text>
+                          <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text }}>{v.price.toFixed(2).replace(".", ",")} €</Text>
                         </View>
                       );
                     })}
@@ -1146,24 +1291,39 @@ function CheckoutSummary({
             );
           })}
 
+          {/* Liste globale (pas de split) */}
           {!hasSplit && (
-            <View style={{ borderRadius: 18, backgroundColor: colors.bgCard, overflow: "hidden" }}>
+            <View style={{ borderRadius: 18, backgroundColor: colors.bgCard, overflow: "hidden", borderWidth: 1, borderColor: "rgba(26,26,26,0.07)" }}>
+              <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10 }}>
+                Articles · {allItemCount}
+              </Text>
               {[...checkedItems, ...virtualItems.map((v) => ({ ...v, isVirtual: true }))].map((item, idx, arr) => {
                 const isVirtual = "isVirtual" in item;
                 const price = isVirtual ? (item as VirtualItem).price : session.confirmedPrices.get(item.id);
+                const ctx = !isVirtual ? session.confirmedContexts.get(item.id) : undefined;
                 const name = isVirtual ? (item as VirtualItem).customName : (item as ShoppingItem).customName;
+                const isHC = !isVirtual && session.horsCarteIds.has(item.id);
+                const saving = ctx?.isPromo && price !== undefined
+                  ? Math.max(0, ctx.shelfUnitPrice * ctx.confirmedQty - price)
+                  : 0;
                 return (
                   <View key={item.id} style={{
-                    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-                    paddingHorizontal: 18, paddingVertical: 14,
-                    borderBottomWidth: idx < arr.length - 1 ? 1 : 0, borderBottomColor: colors.bgSurface,
+                    flexDirection: "row", alignItems: "center", gap: 8,
+                    paddingHorizontal: 16, paddingVertical: 11,
+                    borderTopWidth: idx === 0 ? 0.5 : 0.5, borderTopColor: "rgba(26,26,26,0.06)",
                   }}>
-                    <Text style={{ flex: 1, fontSize: 14, color: "#44403C", fontStyle: isVirtual ? "italic" : "normal" }} numberOfLines={1}>{name}</Text>
+                    {hasCR && (isHC ? <HCBadge /> : <CRBadge />)}
+                    <Text style={{ flex: 1, fontSize: 13, fontWeight: "600", color: "#44403C", fontStyle: isVirtual ? "italic" : "normal" }} numberOfLines={1}>{name}</Text>
+                    {saving > 0.01 && (
+                      <View style={{ paddingHorizontal: 6, paddingVertical: 1, borderRadius: 999, backgroundColor: "#FFF0E8" }}>
+                        <Text style={{ fontSize: 9, fontWeight: "800", color: "#E8571C" }}>-{saving.toFixed(2).replace(".", ",")} €</Text>
+                      </View>
+                    )}
                     {price !== undefined
-                      ? <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>{price.toFixed(2)} €</Text>
+                      ? <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text }}>{price.toFixed(2).replace(".", ",")} €</Text>
                       : !isVirtual
                         ? <Pressable onPress={() => onEditPrice(item as ShoppingItem)} hitSlop={8}>
-                            <Text style={{ fontSize: 12, color: colors.accent, fontWeight: "600" }}>+ Saisir le prix</Text>
+                            <Text style={{ fontSize: 12, color: colors.accent, fontWeight: "600" }}>+ Saisir</Text>
                           </Pressable>
                         : null}
                   </View>
@@ -1171,30 +1331,36 @@ function CheckoutSummary({
               })}
             </View>
           )}
+        </ScrollView>
 
-          <View style={{ gap: 10 }}>
+        {/* CTAs fixes avec dégradé */}
+        <View style={{ position: "absolute", bottom: 0, left: 0, right: 0 }}>
+          <LinearGradient
+            colors={["rgba(250,249,247,0)", "rgba(250,249,247,0.97)", "rgba(250,249,247,1)"]}
+            style={{ paddingTop: 24, paddingHorizontal: 14, paddingBottom: insets.bottom + 12 }}
+          >
             <Pressable
               onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); onFinishWithPantry(); }}
               style={({ pressed }) => ({
-                borderRadius: 18, paddingVertical: 18, alignItems: "center",
-                backgroundColor: pressed ? "#C94415" : colors.accent,
-                transform: [{ scale: pressed ? 0.97 : 1 }],
+                height: 54, borderRadius: 16, backgroundColor: pressed ? "#333" : "#1A1A1A",
+                alignItems: "center", justifyContent: "center", marginBottom: 8,
+                shadowColor: "#1A1A1A", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 12,
               })}
             >
-              <Text style={{ fontSize: 17, fontWeight: "900", color: "#fff", letterSpacing: -0.3 }}>
-                Ajouter au stock + Terminer
+              <Text style={{ fontSize: 15, fontWeight: "800", color: "#fff", letterSpacing: -0.3 }}>
+                + Ajouter au stock + Terminer
               </Text>
             </Pressable>
             <Pressable
               onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); onFinish(); }}
-              style={{ paddingVertical: 12, alignItems: "center" }}
+              style={{ paddingVertical: 8, alignItems: "center" }}
             >
-              <Text style={{ fontSize: 15, fontWeight: "600", color: colors.textSubtle }}>
+              <Text style={{ fontSize: 13, fontWeight: "600", color: colors.textMuted }}>
                 Terminer sans mettre au stock
               </Text>
             </Pressable>
-          </View>
-        </ScrollView>
+          </LinearGradient>
+        </View>
       </SafeAreaView>
     </View>
   );
@@ -2579,6 +2745,8 @@ export function ModeCourses() {
           memberCarteTotals={memberCarteTotals}
           memberHorsCarteTotals={memberHorsCarteTotals}
           confirmedTotal={confirmedTotal}
+          sessionMinutes={sessionMinutes}
+          selectedStore={selectedStore}
           onClose={() => setCheckoutOpen(false)}
           onFinish={async () => {
             if (list?.id) {
