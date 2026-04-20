@@ -1410,6 +1410,13 @@ export function ModeCourses() {
   const [detailItem, setDetailItem] = useState<ShoppingItem | null>(null);
   const swipeableRefs = useRef<Map<string, { close: () => void }>>(new Map());
 
+  const sessionStartRef = useRef(Date.now());
+  const [sessionMinutes, setSessionMinutes] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(() => setSessionMinutes(Math.floor((Date.now() - sessionStartRef.current) / 60000)), 60000);
+    return () => clearInterval(iv);
+  }, []);
+
   const [pinnedCategory, setPinnedCategory] = useState<string | null>(null);
   const [lastCheckedCategory, setLastCheckedCategory] = useState<string | null>(null);
   const [showFullCart, setShowFullCart] = useState(false);
@@ -2001,7 +2008,9 @@ export function ModeCourses() {
               </Svg>
             )}
           </Pressable>
-          <Text style={{ fontSize: 12, fontWeight: "500", color: colors.textMuted, marginTop: 1 }}>Mode courses</Text>
+          <Text style={{ fontSize: 12, fontWeight: "500", color: colors.textMuted, marginTop: 1 }}>
+            {`Session démarrée ${sessionMinutes === 0 ? "à l'instant" : `il y a ${sessionMinutes} min`}`}
+          </Text>
         </View>
         <Pressable
           onPress={confirmLeave}
@@ -2324,7 +2333,7 @@ export function ModeCourses() {
                             <View style={{ flex: 1, minWidth: 0 }}>
                               <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text, letterSpacing: -0.1 }} numberOfLines={1}>{item.customName}</Text>
                               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
-                                {splitSettings.enabled && (
+                                {splitSettings.carteRestoEnabled && (
                                   <View style={{ borderRadius: 3, paddingHorizontal: 5, paddingVertical: 1, backgroundColor: isHC ? "rgba(249,168,212,0.28)" : "rgba(74,222,128,0.22)" }}>
                                     <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? "#F9A8D4" : "#4ADE80", letterSpacing: 0.4 }}>{isHC ? "HC" : "CR"}</Text>
                                   </View>
