@@ -1046,8 +1046,18 @@ function CheckoutSummary({
     return sum + Math.max(0, normal - paid);
   }, 0);
 
-  const globalCRTotal = memberCarteTotals.reduce((s, v) => s + v, 0);
-  const globalHCTotal = memberHorsCarteTotals.reduce((s, v) => s + v, 0);
+  const globalCRTotal = hasSplit
+    ? memberCarteTotals.reduce((s, v) => s + v, 0)
+    : checkedItems.reduce((s, it) => {
+        const p = session.confirmedPrices.get(it.id);
+        return s + (p !== undefined && !session.horsCarteIds.has(it.id) ? p : 0);
+      }, 0) + virtualItems.reduce((s, v) => s + (!session.horsCarteIds.has(v.id) ? v.price : 0), 0);
+  const globalHCTotal = hasSplit
+    ? memberHorsCarteTotals.reduce((s, v) => s + v, 0)
+    : checkedItems.reduce((s, it) => {
+        const p = session.confirmedPrices.get(it.id);
+        return s + (p !== undefined && session.horsCarteIds.has(it.id) ? p : 0);
+      }, 0) + virtualItems.reduce((s, v) => s + (session.horsCarteIds.has(v.id) ? v.price : 0), 0);
 
   const storeLabel = selectedStore
     ? [selectedStore.brand, selectedStore.name].filter(Boolean).join(" ")
@@ -1106,7 +1116,15 @@ function CheckoutSummary({
 
           {/* Hero sombre */}
           <View style={{ borderRadius: 22, backgroundColor: "#1A1A1A", padding: 20, overflow: "hidden" }}>
-            <View style={{ position: "absolute", right: -50, top: -50, width: 160, height: 160, borderRadius: 999, backgroundColor: "rgba(232,87,28,0.15)" }} />
+            <Svg style={{ position: "absolute", right: -30, top: -30 }} width={160} height={160} viewBox="0 0 160 160">
+              <Defs>
+                <RadialGradient id="recapGlow" cx="50%" cy="50%" r="50%">
+                  <Stop offset="0%" stopColor="#E8571C" stopOpacity={0.35} />
+                  <Stop offset="100%" stopColor="#E8571C" stopOpacity={0} />
+                </RadialGradient>
+              </Defs>
+              <Ellipse cx={80} cy={80} rx={80} ry={80} fill="url(#recapGlow)" />
+            </Svg>
 
             <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.1)" }}>
