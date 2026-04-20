@@ -15,12 +15,15 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg, { Circle, Line, Path, Polyline, Rect } from "react-native-svg";
+import Svg, { Circle, Defs, Ellipse, Line, Path, Polyline, RadialGradient, Rect, Stop } from "react-native-svg";
+import { LinearGradient } from "expo-linear-gradient";
 import ReanimatedSwipeable, { type SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
-import Animated, { useSharedValue, useAnimatedStyle, withSequence, withTiming, withSpring } from "react-native-reanimated";
+import Animated, { useSharedValue, useAnimatedStyle, withSequence, withTiming, withSpring, withRepeat } from "react-native-reanimated";
 import { BottomModal } from "./bottomModal";
+import { SplitEditSheet } from "./splitSettingsSheet";
 import { findOrCreateProduct } from "../../application/useCases/findOrCreateProduct";
 import { getOffProductByBarcode } from "../../application/useCases/searchOffProducts";
 import type { OFFProductResult } from "../../application/useCases/searchOffProducts";
@@ -66,6 +69,36 @@ function budgetBarColor(total: number, cap: number, color: string): string {
   if (total > cap) return "#DC2626";
   if (total > cap - 5) return "#F59E0B";
   return color;
+}
+
+function PulsingDot({ color, size = 5 }: { color: string; size?: number }) {
+  const opacity = useSharedValue(1);
+  useEffect(() => {
+    opacity.value = withRepeat(
+      withSequence(withTiming(0.3, { duration: 700 }), withTiming(1, { duration: 700 })),
+      -1, false,
+    );
+  }, []);
+  const animStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  return <Animated.View style={[{ width: size, height: size, borderRadius: size / 2, backgroundColor: color }, animStyle]} />;
+}
+
+function ShimmerProgressBar({ progress }: { progress: number }) {
+  const { width: screenWidth } = useWindowDimensions();
+  const shimmerX = useSharedValue(-80);
+  useEffect(() => {
+    shimmerX.value = withRepeat(withTiming(screenWidth, { duration: 1800 }), -1, false);
+  }, [screenWidth]);
+  const shimStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shimmerX.value }] }));
+  return (
+    <View style={{ height: 4, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+      <View style={{ width: `${Math.min(progress, 1) * 100}%`, height: 4, borderRadius: 999, backgroundColor: "#E8571C", overflow: "hidden" }}>
+        <Animated.View style={[{ position: "absolute", top: 0, width: 80, height: 4 }, shimStyle]}>
+               <LinearGradient colors={["transparent", "rgba(255,255,255,0.6)", "transparent"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1 }} />
+             </Animated.View>
+      </View>
+    </View>
+  );
 }
 
 
@@ -146,135 +179,6 @@ function StoreSelectorModal({
   );
 }
 
-function SplitEditSheet({
-  isOpen,
-  onOpenChange,
-  settings,
-  onSave,
-}: {
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  settings: SplitSettings;
-  onSave: (s: SplitSettings) => void;
-}) {
-  const { colors } = useAppTheme();
-  const [draft, setDraft] = useState(settings);
-
-  useEffect(() => { if (isOpen) setDraft(settings); }, [isOpen]);
-
-  function updateMember(idx: number, patch: Partial<SplitMember>) {
-    setDraft((prev) => ({
-      ...prev,
-      members: prev.members.map((m, i) => (i === idx ? { ...m, ...patch } : m)),
-    }));
-  }
-
-  return (
-    <BottomModal isOpen={isOpen} onClose={() => { onSave(draft); onOpenChange(false); }}>
-          <View style={{ gap: 20 }}>
-            <View style={{ paddingVertical: 4 }}>
-              <Text style={{ fontSize: 17, fontWeight: "900", color: colors.text }}>Partager les dépenses</Text>
-            </View>
-
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#F9F8F6", borderRadius: 16, padding: 16 }}>
-              <View style={{ gap: 2, flex: 1, marginRight: 12 }}>
-                <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>Activer</Text>
-                <Text style={{ fontSize: 12, color: colors.textMuted }}>Les articles sont répartis selon les budgets</Text>
-              </View>
-              <Pressable
-                onPress={() => setDraft((prev) => ({ ...prev, enabled: !prev.enabled }))}
-                style={{
-                  width: 50, height: 28, borderRadius: 14,
-                  backgroundColor: draft.enabled ? colors.accent : "#D1CCC5",
-                  justifyContent: "center", padding: 2,
-                }}
-              >
-                <View style={{
-                  width: 24, height: 24, borderRadius: 12, backgroundColor: "#fff",
-                  alignSelf: draft.enabled ? "flex-end" : "flex-start",
-                  shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 3,
-                  shadowOffset: { width: 0, height: 1 }, elevation: 2,
-                }} />
-              </Pressable>
-            </View>
-
-            {draft.enabled && (
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#F9F8F6", borderRadius: 16, padding: 16 }}>
-                <View style={{ gap: 2, flex: 1, marginRight: 12 }}>
-                  <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>Carte Ticket Restaurant</Text>
-                  <Text style={{ fontSize: 12, color: colors.textMuted }}>Le budget par personne s'applique uniquement aux articles alimentaires</Text>
-                </View>
-                <Pressable
-                  onPress={() => setDraft((prev) => ({ ...prev, carteRestoEnabled: !prev.carteRestoEnabled }))}
-                  style={{
-                    width: 50, height: 28, borderRadius: 14,
-                    backgroundColor: draft.carteRestoEnabled ? colors.accent : "#D1CCC5",
-                    justifyContent: "center", padding: 2,
-                  }}
-                >
-                  <View style={{
-                    width: 24, height: 24, borderRadius: 12, backgroundColor: "#fff",
-                    alignSelf: draft.carteRestoEnabled ? "flex-end" : "flex-start",
-                    shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 3,
-                    shadowOffset: { width: 0, height: 1 }, elevation: 2,
-                  }} />
-                </Pressable>
-              </View>
-            )}
-
-            {draft.enabled && (
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                {draft.members.map((m, i) => (
-                  <View key={i} style={{ flex: 1, borderRadius: 20, backgroundColor: "#F9F8F6", padding: 16, gap: 14, alignItems: "center" }}>
-                    <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: m.color, alignItems: "center", justifyContent: "center" }}>
-                      <Text style={{ fontSize: 20, fontWeight: "900", color: "#fff" }}>
-                        {m.name.charAt(0).toUpperCase() || "?"}
-                      </Text>
-                    </View>
-                    <TextInput
-                      value={m.name}
-                      onChangeText={(v) => updateMember(i, { name: v })}
-                      style={{ fontSize: 15, fontWeight: "700", color: colors.text, textAlign: "center", width: "100%" }}
-                      maxLength={20}
-                      selectTextOnFocus
-                    />
-                    <View style={{ width: "100%", height: 1, backgroundColor: "#EDEAE4" }} />
-                    <View style={{ gap: 6, alignItems: "center", width: "100%" }}>
-                      <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textSubtle, textTransform: "uppercase", letterSpacing: 0.8 }}>Budget</Text>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                        <Pressable
-                          onPress={() => updateMember(i, { budgetCap: Math.max(5, m.budgetCap - 5) })}
-                          style={({ pressed }) => ({
-                            width: 32, height: 32, borderRadius: 8,
-                            backgroundColor: pressed ? "#E0DDD7" : "#EDEAE4",
-                            alignItems: "center", justifyContent: "center",
-                          })}
-                        >
-                          <Text style={{ fontSize: 18, fontWeight: "600", color: "#44403C", lineHeight: 22 }}>−</Text>
-                        </Pressable>
-                        <Text style={{ fontSize: 20, fontWeight: "900", color: colors.text, minWidth: 52, textAlign: "center" }}>
-                          {m.budgetCap}€
-                        </Text>
-                        <Pressable
-                          onPress={() => updateMember(i, { budgetCap: Math.min(500, m.budgetCap + 5) })}
-                          style={({ pressed }) => ({
-                            width: 32, height: 32, borderRadius: 8,
-                            backgroundColor: pressed ? "#E0DDD7" : "#EDEAE4",
-                            alignItems: "center", justifyContent: "center",
-                          })}
-                        >
-                          <Text style={{ fontSize: 18, fontWeight: "600", color: "#44403C", lineHeight: 22 }}>+</Text>
-                        </Pressable>
-                      </View>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-    </BottomModal>
-  );
-}
 
 
 interface PricePromptProps {
@@ -322,11 +226,11 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, prefillContext,
     }
   }, [prefillPrice, item?.id]);
   useEffect(() => {
-    if (isOpen) {
-      const t = setTimeout(() => priceInputRef.current?.focus(), 200);
-      return () => clearTimeout(t);
-    }
-  }, [isOpen, kgStep]);
+    if (!isOpen) return;
+    if (kgStep === "price" && prefillPrice) return;
+    const t = setTimeout(() => priceInputRef.current?.focus(), 200);
+    return () => clearTimeout(t);
+  }, [isOpen, kgStep, prefillPrice]);
   function handlePriceChange(text: string) {
     const cleaned = text.replace(",", ".");
     if (cleaned === "" || /^\d{0,5}(\.\d{0,2})?$/.test(cleaned)) setValue(cleaned);
@@ -380,7 +284,7 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, prefillContext,
         <View style={{ gap: 14 }}>
 
           {/* Header : nom produit + Passer */}
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
             {isWeightStep ? (
               <Pressable
                 onPress={() => { setKgStep("price"); setValue(kgPriceValue); setKgPriceValue(""); }}
@@ -393,13 +297,10 @@ function PricePrompt({ isOpen, onOpenChange, item, prefillPrice, prefillContext,
                 <Text style={{ fontSize: 13, color: colors.accent, fontWeight: "600" }}>{kgPriceValue} €/kg</Text>
               </Pressable>
             ) : (
-              <Text style={{ fontSize: 17, fontWeight: "800", color: colors.text, flex: 1, marginRight: 12 }} numberOfLines={1}>
+              <Text style={{ fontSize: 17, fontWeight: "800", color: colors.text, flex: 1 }} numberOfLines={1}>
                 {item.customName}
               </Text>
             )}
-            <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onSkip(); }} hitSlop={16}>
-              <Text style={{ fontSize: 14, color: "#C4B8AF", fontWeight: "500" }}>Ignorer</Text>
-            </Pressable>
           </View>
 
           {/* Mode toggle (sans produit scanné) */}
@@ -616,7 +517,7 @@ function AddItemSheet({
   const [name, setName] = useState("");
   const [priceValue, setPriceValue] = useState("");
   const [memberIdx, setMemberIdx] = useState(0);
-  const [step, setStep] = useState<"name" | "price" | "weight">("name");
+  const [step, setStep] = useState<"main" | "weight">("main");
   const [priceMode, setPriceMode] = useState<"total" | "kg">("total");
   const [kgPriceValue, setKgPriceValue] = useState("");
   const [isPromo, setIsPromo] = useState(false);
@@ -628,7 +529,7 @@ function AddItemSheet({
 
   useEffect(() => {
     if (!isOpen) {
-      setName(""); setPriceValue(""); setStep("name"); setMemberIdx(0); setPriceMode("total"); setKgPriceValue(""); setIsPromo(false); setPromoMode("discount"); setDiscountValue(""); setLotQty("2");
+      setName(""); setPriceValue(""); setStep("main"); setMemberIdx(0); setPriceMode("total"); setKgPriceValue(""); setIsPromo(false); setPromoMode("discount"); setDiscountValue(""); setLotQty("2");
     } else {
       const t = setTimeout(() => nameInputRef.current?.focus(), 200);
       return () => clearTimeout(t);
@@ -636,11 +537,11 @@ function AddItemSheet({
   }, [isOpen]);
 
   useEffect(() => {
-    if (isOpen && step === "name") {
+    if (isOpen && step === "main") {
       const t = setTimeout(() => nameInputRef.current?.focus(), 50);
       return () => clearTimeout(t);
     }
-    if (isOpen && (step === "price" || step === "weight")) {
+    if (isOpen && step === "weight") {
       const t = setTimeout(() => priceInputRef.current?.focus(), 100);
       return () => clearTimeout(t);
     }
@@ -662,12 +563,6 @@ function AddItemSheet({
   const hasDiscount = !Number.isNaN(discountNum) && discountNum > 0 && discountNum <= 100;
   const promoTotal = isPromo && hasDiscount ? parsed * (1 - discountNum / 100) : parsed;
   const valid = name.trim().length > 0 && priceValid;
-
-  function goToPrice() {
-    if (!name.trim()) return;
-    Keyboard.dismiss();
-    setStep("price");
-  }
 
   const MemberSelector = () => splitSettings.enabled && splitSettings.members.length >= 2 ? (
     <View style={{ flexDirection: "row", gap: 8 }}>
@@ -694,12 +589,9 @@ function AddItemSheet({
     <BottomModal isOpen={isOpen} onClose={() => onOpenChange(false)} height="60%">
           <View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 16 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-              {step !== "name" && (
+              {step === "weight" && (
                 <Pressable
-                  onPress={() => {
-                    if (step === "weight") { setStep("price"); setPriceValue(kgPriceValue); setKgPriceValue(""); }
-                    else { setStep("name"); }
-                  }}
+                  onPress={() => { setStep("main"); setPriceValue(kgPriceValue); setKgPriceValue(""); }}
                   hitSlop={8}
                 >
                   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
@@ -708,13 +600,13 @@ function AddItemSheet({
                 </Pressable>
               )}
               <Text style={{ fontSize: 17, fontWeight: "900", color: colors.text }}>
-                {step === "name" ? "Ajouter un article" : name}
+                {step === "weight" ? name : "Ajouter un article"}
               </Text>
             </View>
           </View>
 
           <View style={{ gap: 14 }}>
-            {step === "name" ? (
+            {step === "main" ? (
               <>
                 <TextInput
                   ref={nameInputRef}
@@ -723,28 +615,13 @@ function AddItemSheet({
                   placeholder="Nom de l'article"
                   placeholderTextColor="#C4B8AF"
                   returnKeyType="next"
-                  onSubmitEditing={goToPrice}
+                  onSubmitEditing={() => priceInputRef.current?.focus()}
                   style={{
                     fontSize: 16, fontWeight: "600", color: colors.text,
                     borderRadius: 14, backgroundColor: colors.bg,
                     paddingHorizontal: 16, paddingVertical: 14,
                   }}
                 />
-                <MemberSelector />
-                <Pressable
-                  onPress={goToPrice}
-                  style={({ pressed }) => ({
-                    borderRadius: 16, paddingVertical: 16, alignItems: "center",
-                    backgroundColor: name.trim() ? (pressed ? "#C94415" : colors.accent) : "#F0EDE8",
-                  })}
-                >
-                  <Text style={{ fontSize: 16, fontWeight: "900", color: name.trim() ? "#fff" : colors.textSubtle }}>
-                    Suivant →
-                  </Text>
-                </Pressable>
-              </>
-            ) : step === "price" ? (
-              <>
                 <MemberSelector />
                 <View style={{ flexDirection: "row", gap: 8 }}>
                   {(["total", "kg"] as const).map((mode) => (
@@ -841,13 +718,13 @@ function AddItemSheet({
                 )}
                 <Pressable
                   onPress={() => {
-                    if (!priceValid) return;
+                    if (!valid) return;
                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                     if (priceMode === "kg") {
                       setKgPriceValue(priceValue);
                       setPriceValue("");
                       setStep("weight");
-                    } else {
+                    } else if (name.trim()) {
                       let promo: { normalUnitPrice: number; promoTriggerQty: number } | undefined;
                       if (isPromo) {
                         if (promoMode === "discount" && hasDiscount) {
@@ -864,10 +741,10 @@ function AddItemSheet({
                   }}
                   style={({ pressed }) => ({
                     borderRadius: 16, paddingVertical: 16, alignItems: "center",
-                    backgroundColor: priceValid ? (pressed ? "#C94415" : colors.accent) : "#F0EDE8",
+                    backgroundColor: valid ? (pressed ? "#C94415" : colors.accent) : "#F0EDE8",
                   })}
                 >
-                  <Text style={{ fontSize: 16, fontWeight: "900", color: priceValid ? "#fff" : colors.textSubtle }}>
+                  <Text style={{ fontSize: 16, fontWeight: "900", color: valid ? "#fff" : colors.textSubtle }}>
                     {priceMode === "kg" ? "Suivant →" : "+ Ajouter au panier"}
                   </Text>
                 </Pressable>
@@ -1108,6 +985,22 @@ function EditVirtualPricePanel({ name, currentPrice, isOpen, onConfirm, onClose 
   );
 }
 
+function CRBadge() {
+  return (
+    <View style={{ borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2, backgroundColor: "#D6EDE1" }}>
+      <Text style={{ fontSize: 9, fontWeight: "800", color: "#2E7D5B", letterSpacing: 0.5 }}>CR</Text>
+    </View>
+  );
+}
+
+function HCBadge() {
+  return (
+    <View style={{ borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2, backgroundColor: "#F7DDE5" }}>
+      <Text style={{ fontSize: 9, fontWeight: "800", color: "#D14B7A", letterSpacing: 0.5 }}>HC</Text>
+    </View>
+  );
+}
+
 function CheckoutSummary({
   checkedItems,
   virtualItems,
@@ -1117,6 +1010,8 @@ function CheckoutSummary({
   memberCarteTotals,
   memberHorsCarteTotals,
   confirmedTotal,
+  sessionMinutes,
+  selectedStore,
   onClose,
   onFinish,
   onFinishWithPantry,
@@ -1130,136 +1025,281 @@ function CheckoutSummary({
   memberCarteTotals: number[];
   memberHorsCarteTotals: number[];
   confirmedTotal: number;
+  sessionMinutes: number;
+  selectedStore: { name: string; brand?: string | null } | null;
   onClose: () => void;
   onFinish: () => void;
   onFinishWithPantry: () => void;
   onEditPrice: (item: ShoppingItem) => void;
 }) {
   const { colors } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const hasSplit = splitSettings.enabled && splitSettings.members.length >= 2;
-  const hasCarteCap = hasSplit && splitSettings.carteRestoEnabled;
+  const hasCR = splitSettings.carteRestoEnabled;
+
+  const allItemCount = checkedItems.length + virtualItems.length;
+
+  const totalSavings = Array.from(session.confirmedContexts.entries()).reduce((sum, [id, ctx]) => {
+    if (!ctx.isPromo || !session.confirmedPrices.has(id)) return sum;
+    const paid = session.confirmedPrices.get(id)!;
+    const normal = ctx.shelfUnitPrice * ctx.confirmedQty;
+    return sum + Math.max(0, normal - paid);
+  }, 0);
+
+  const globalCRTotal = hasSplit
+    ? memberCarteTotals.reduce((s, v) => s + v, 0)
+    : checkedItems.reduce((s, it) => {
+        const p = session.confirmedPrices.get(it.id);
+        return s + (p !== undefined && !session.horsCarteIds.has(it.id) ? p : 0);
+      }, 0) + virtualItems.reduce((s, v) => s + (!session.horsCarteIds.has(v.id) ? v.price : 0), 0);
+  const globalHCTotal = hasSplit
+    ? memberHorsCarteTotals.reduce((s, v) => s + v, 0)
+    : checkedItems.reduce((s, it) => {
+        const p = session.confirmedPrices.get(it.id);
+        return s + (p !== undefined && session.horsCarteIds.has(it.id) ? p : 0);
+      }, 0) + virtualItems.reduce((s, v) => s + (session.horsCarteIds.has(v.id) ? v.price : 0), 0);
+
+  const storeLabel = selectedStore
+    ? [selectedStore.brand, selectedStore.name].filter(Boolean).join(" ")
+    : null;
+
+  const now = new Date();
+  const dateLabel = `${now.getDate()} ${["janv", "févr", "mars", "avr", "mai", "juin", "juil", "août", "sept", "oct", "nov", "déc"][now.getMonth()]} · ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+  type Segment = { label: string; value: number; color: string; opacity: number };
+  let segments: Segment[] = [];
+  if (hasSplit && hasCR) {
+    segments = splitSettings.members.flatMap((m, i) => {
+      const cr = memberCarteTotals[i] ?? 0;
+      const hc = memberHorsCarteTotals[i] ?? 0;
+      return [
+        ...(cr > 0 ? [{ label: `${m.name} CR`, value: cr, color: m.color, opacity: 1 }] : []),
+        ...(hc > 0 ? [{ label: `${m.name} HC`, value: hc, color: m.color, opacity: 0.35 }] : []),
+      ];
+    });
+  } else if (hasSplit) {
+    segments = splitSettings.members.map((m, i) => ({ label: m.name, value: memberTotals[i] ?? 0, color: m.color, opacity: 1 })).filter(s => s.value > 0);
+  } else if (hasCR) {
+    segments = [
+      ...(globalCRTotal > 0 ? [{ label: "CR", value: globalCRTotal, color: "#2E7D5B", opacity: 1 }] : []),
+      ...(globalHCTotal > 0 ? [{ label: "HC", value: globalHCTotal, color: "#D14B7A", opacity: 1 }] : []),
+    ];
+  }
 
   return (
     <View style={{ position: "absolute", inset: 0, backgroundColor: colors.bg, zIndex: 30 }}>
       <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
-        <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, gap: 12 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4, gap: 12 }}>
           <Pressable
             onPress={onClose}
             style={({ pressed }) => ({
-              width: 38, height: 38, borderRadius: 12,
+              width: 36, height: 36, borderRadius: 11,
               backgroundColor: pressed ? "#EDEAE4" : "#F0EDE8",
               alignItems: "center", justifyContent: "center",
             })}
           >
-            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
               <Line x1={18} y1={6} x2={6} y2={18} /><Line x1={6} y1={6} x2={18} y2={18} />
             </Svg>
           </Pressable>
-          <Text style={{ flex: 1, fontSize: 17, fontWeight: "900", color: colors.text, letterSpacing: -0.3 }}>Récapitulatif</Text>
+          <View style={{ flex: 1 }}>
+            {storeLabel && (
+              <Text style={{ fontSize: 10, fontWeight: "700", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 1 }}>
+                {storeLabel} · {dateLabel}
+              </Text>
+            )}
+            <Text style={{ fontSize: 22, fontWeight: "900", color: colors.text, letterSpacing: -0.5 }}>Récapitulatif</Text>
+          </View>
         </View>
 
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48, gap: 12 }} showsVerticalScrollIndicator={false}>
-          <View style={{ borderRadius: 20, backgroundColor: colors.text, padding: 22, gap: 4 }}>
-            <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1.5 }}>Total panier</Text>
-            <Text style={{ fontSize: 44, fontWeight: "900", color: "#fff", letterSpacing: -1.5 }}>
-              {confirmedTotal.toFixed(2)} €
-            </Text>
-            <Text style={{ fontSize: 13, color: "#57534E" }}>
-              {checkedItems.length + virtualItems.length} article{checkedItems.length + virtualItems.length > 1 ? "s" : ""}
-            </Text>
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 12, paddingBottom: 120, gap: 12 }} showsVerticalScrollIndicator={false}>
+
+          {/* Hero sombre */}
+          <View style={{ borderRadius: 22, backgroundColor: "#1A1A1A", padding: 20, overflow: "hidden" }}>
+            <Svg style={{ position: "absolute", right: -30, top: -30 }} width={160} height={160} viewBox="0 0 160 160">
+              <Defs>
+                <RadialGradient id="recapGlow" cx="50%" cy="50%" r="50%">
+                  <Stop offset="0%" stopColor="#E8571C" stopOpacity={0.35} />
+                  <Stop offset="100%" stopColor="#E8571C" stopOpacity={0} />
+                </RadialGradient>
+              </Defs>
+              <Ellipse cx={80} cy={80} rx={80} ry={80} fill="url(#recapGlow)" />
+            </Svg>
+
+            <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.1)" }}>
+                <Svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <Circle cx={12} cy={12} r={10} /><Path d="M12 6v6l4 2" />
+                </Svg>
+                <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(255,255,255,0.7)" }}>
+                  {sessionMinutes < 1 ? "< 1 min" : `${sessionMinutes} min`}
+                </Text>
+              </View>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.1)" }}>
+                <Svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <Path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" /><Line x1={3} y1={6} x2={21} y2={6} />
+                </Svg>
+                <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(255,255,255,0.7)" }}>
+                  {allItemCount} article{allItemCount > 1 ? "s" : ""}
+                </Text>
+              </View>
+              {totalSavings > 0.01 && (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999, backgroundColor: "rgba(74,222,128,0.2)" }}>
+                  <Svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="#4ADE80" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" /><Line x1={7} y1={7} x2={7.01} y2={7} />
+                  </Svg>
+                  <Text style={{ fontSize: 10, fontWeight: "800", color: "#4ADE80" }}>-{totalSavings.toFixed(2).replace(".", ",")} € économisés</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={{ marginBottom: 4 }}>
+              <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 1.4, marginBottom: 4 }}>Total</Text>
+              <Text style={{ fontSize: 52, fontWeight: "900", color: "#fff", letterSpacing: -1.5, lineHeight: 56 }}>
+                {confirmedTotal.toFixed(2).replace(".", ",")}
+                <Text style={{ fontSize: 28, fontWeight: "700", opacity: 0.65 }}> €</Text>
+              </Text>
+            </View>
+
+            {segments.length > 0 && (
+              <View style={{ marginTop: 16 }}>
+                <View style={{ height: 6, borderRadius: 999, overflow: "hidden", flexDirection: "row", gap: 1 }}>
+                  {segments.map((s, i) => (
+                    <View key={i} style={{ flex: s.value, height: "100%", backgroundColor: s.color, opacity: s.opacity, borderRadius: 2 }} />
+                  ))}
+                </View>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 10 }}>
+                  {segments.map((s, i) => (
+                    <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                      <View style={{ width: 7, height: 7, borderRadius: 999, backgroundColor: s.color, opacity: s.opacity }} />
+                      <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(255,255,255,0.6)" }}>
+                        {s.label} {s.value.toFixed(2).replace(".", ",")} €
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
           </View>
 
+          {/* Tuiles CR / HC globales (pas de split, mais CR activé) */}
+          {hasCR && !hasSplit && (
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <View style={{ flex: 1, padding: 14, backgroundColor: "#D6EDE1", borderRadius: 14 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                  <CRBadge />
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: "#2E7D5B", textTransform: "uppercase", letterSpacing: 0.5 }}>Carte</Text>
+                </View>
+                <Text style={{ fontSize: 22, fontWeight: "900", color: "#2E7D5B", letterSpacing: -0.5 }}>{globalCRTotal.toFixed(2).replace(".", ",")} €</Text>
+              </View>
+              <View style={{ flex: 1, padding: 14, backgroundColor: "#F7DDE5", borderRadius: 14 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                  <HCBadge />
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: "#D14B7A", textTransform: "uppercase", letterSpacing: 0.5 }}>Hors carte</Text>
+                </View>
+                <Text style={{ fontSize: 22, fontWeight: "900", color: "#D14B7A", letterSpacing: -0.5 }}>{globalHCTotal.toFixed(2).replace(".", ",")} €</Text>
+              </View>
+            </View>
+          )}
 
+          {/* PersonCards (split activé) */}
           {hasSplit && splitSettings.members.map((m, i) => {
             const total = memberTotals[i] ?? 0;
             const carteTotal = memberCarteTotals[i] ?? 0;
             const horsCarteTotal = memberHorsCarteTotals[i] ?? 0;
-            const displayTotal = hasCarteCap ? carteTotal : total;
-            const over = displayTotal > m.budgetCap;
-            const ratio = Math.min(displayTotal / m.budgetCap, 1);
-            const barColor = budgetBarColor(displayTotal, m.budgetCap, m.color);
+            const isCRMember = m.crMode === "CR";
+            const over = hasCR && isCRMember && carteTotal > m.budgetCap;
+            const crRatio = Math.min(carteTotal / m.budgetCap, 1);
             const memberChecked = checkedItems.filter((it) => session.assignments.get(it.id) === i);
             const memberVirtual = virtualItems.filter((v) => v.memberIdx === i);
-            const allItems = [...memberChecked, ...memberVirtual];
+            const allMemberItems = [...memberChecked, ...memberVirtual];
 
             return (
-              <View key={i} style={{ borderRadius: 18, backgroundColor: colors.bgCard, overflow: "hidden", shadowColor: "#1C1917", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 }}>
-                <View style={{ padding: 18, gap: 10 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <View key={i} style={{
+                borderRadius: 18, backgroundColor: colors.bgCard,
+                borderWidth: over ? 1.5 : 1, borderColor: over ? "#D14B7A" : "rgba(26,26,26,0.07)",
+                overflow: "hidden",
+              }}>
+                <View style={{ padding: 16, gap: 0 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                       <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: m.color }} />
-                      <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text }}>{m.name}</Text>
-                    </View>
-                    <View style={{ alignItems: "flex-end" }}>
-                      <Text style={{ fontSize: 22, fontWeight: "900", color: over ? colors.danger : colors.text, letterSpacing: -0.5 }}>
-                        {total.toFixed(2)} €
-                      </Text>
+                      <Text style={{ fontSize: 16, fontWeight: "800", color: colors.text }}>{m.name}</Text>
+                      <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textMuted }}>· {allMemberItems.length} art.</Text>
                       {over && (
-                        <Text style={{ fontSize: 11, color: colors.danger, fontWeight: "600" }}>
-                          +{(displayTotal - m.budgetCap).toFixed(2)} € dépassement carte
+                        <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 999, backgroundColor: "#F7DDE5" }}>
+                          <Text style={{ fontSize: 9, fontWeight: "800", color: "#D14B7A", letterSpacing: 0.4 }}>Plafond CR atteint</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={{ fontSize: 20, fontWeight: "900", color: colors.text, letterSpacing: -0.5 }}>
+                      {total.toFixed(2).replace(".", ",")} €
+                    </Text>
+                  </View>
+
+                  {hasCR && isCRMember && (
+                    <View style={{ marginBottom: 12 }}>
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                        <Text style={{ fontSize: 10, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.8, color: colors.textMuted }}>Carte Restaurant</Text>
+                        <Text style={{ fontSize: 12, fontWeight: "700", color: colors.text }}>
+                          {carteTotal.toFixed(2).replace(".", ",")} <Text style={{ color: colors.textMuted, fontWeight: "500" }}>/ {m.budgetCap} €</Text>
                         </Text>
-                      )}
+                      </View>
+                      <View style={{ height: 7, borderRadius: 999, backgroundColor: "rgba(26,26,26,0.06)" }}>
+                        <View style={{ height: 7, borderRadius: 999, width: `${crRatio * 100}%`, backgroundColor: over ? "#D14B7A" : m.color }} />
+                      </View>
                     </View>
-                  </View>
-                  <View style={{ height: 6, borderRadius: 99, backgroundColor: "#F0EDE8" }}>
-                    <View style={{ height: 6, borderRadius: 99, backgroundColor: barColor, width: `${ratio * 100}%` }} />
-                  </View>
-                  {hasCarteCap ? (
-                    <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                      <Text style={{ fontSize: 11, color: colors.textSubtle }}>Carte : {carteTotal.toFixed(2)} € / {m.budgetCap} €</Text>
-                      {horsCarteTotal > 0 && (
-                        <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: "600" }}>Hors carte : {horsCarteTotal.toFixed(2)} €</Text>
-                      )}
+                  )}
+
+                  {hasCR && (!isCRMember || horsCarteTotal > 0) && (
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "#F0EDE8", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7, marginBottom: 12 }}>
+                      <Text style={{ fontSize: 10, fontWeight: "800", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 0.4 }}>Hors carte</Text>
+                      <Text style={{ fontSize: 12, fontWeight: "800", color: "#D14B7A" }}>{horsCarteTotal.toFixed(2).replace(".", ",")} €</Text>
                     </View>
-                  ) : (
-                    <Text style={{ fontSize: 11, color: colors.textSubtle }}>{total.toFixed(2)} € / {m.budgetCap} €</Text>
                   )}
                 </View>
 
-                {allItems.length > 0 && (
-                  <View style={{ borderTopWidth: 1, borderTopColor: colors.bgSurface }}>
+                {allMemberItems.length > 0 && (
+                  <View style={{ borderTopWidth: 1, borderTopColor: "rgba(26,26,26,0.06)" }}>
                     {memberChecked.map((item, idx) => {
                       const price = session.confirmedPrices.get(item.id);
-                      const isHC = session.horsCarteIds.has(item.id);
+                      const ctx = session.confirmedContexts.get(item.id);
+                      const isHC = session.horsCarteIds.has(item.id) || m.crMode === "HC";
+                      const saving = ctx?.isPromo && price !== undefined
+                        ? Math.max(0, ctx.shelfUnitPrice * ctx.confirmedQty - price)
+                        : 0;
                       return (
                         <View key={item.id} style={{
                           flexDirection: "row", alignItems: "center", gap: 8,
-                          paddingHorizontal: 18, paddingVertical: 12,
-                          borderBottomWidth: idx < allItems.length - 1 ? 1 : 0, borderBottomColor: colors.bgSurface,
+                          paddingHorizontal: 16, paddingVertical: 11,
+                          borderBottomWidth: idx < allMemberItems.length - 1 ? 0.5 : 0, borderBottomColor: "rgba(26,26,26,0.06)",
                         }}>
-                          {hasCarteCap && (
-                            <View style={{ borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2, backgroundColor: isHC ? colors.dangerBg : "#F0FDF4" }}>
-                              <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? colors.danger : "#16A34A", letterSpacing: 0.5 }}>
-                                {isHC ? "HC" : "CR"}
-                              </Text>
+                          {hasCR && (isHC ? <HCBadge /> : <CRBadge />)}
+                          <Text style={{ flex: 1, fontSize: 13, fontWeight: "600", color: "#44403C" }} numberOfLines={1}>{item.customName}</Text>
+                          {saving > 0.01 && (
+                            <View style={{ paddingHorizontal: 6, paddingVertical: 1, borderRadius: 999, backgroundColor: "#FFF0E8" }}>
+                              <Text style={{ fontSize: 9, fontWeight: "800", color: "#E8571C" }}>-{saving.toFixed(2).replace(".", ",")} €</Text>
                             </View>
                           )}
-                          <Text style={{ flex: 1, fontSize: 14, color: "#44403C" }} numberOfLines={1}>{item.customName}</Text>
                           {price !== undefined
-                            ? <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>{price.toFixed(2)} €</Text>
+                            ? <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text }}>{price.toFixed(2).replace(".", ",")} €</Text>
                             : <Pressable onPress={() => onEditPrice(item)} hitSlop={8}>
-                                <Text style={{ fontSize: 12, color: colors.accent, fontWeight: "600" }}>+ Saisir le prix</Text>
+                                <Text style={{ fontSize: 12, color: colors.accent, fontWeight: "600" }}>+ Saisir</Text>
                               </Pressable>}
                         </View>
                       );
                     })}
                     {memberVirtual.map((v, idx) => {
-                      const isHC = session.horsCarteIds.has(v.id);
+                      const isHC = session.horsCarteIds.has(v.id) || m.crMode === "HC";
                       return (
                         <View key={v.id} style={{
                           flexDirection: "row", alignItems: "center", gap: 8,
-                          paddingHorizontal: 18, paddingVertical: 12,
-                          borderBottomWidth: idx < memberVirtual.length - 1 ? 1 : 0, borderBottomColor: colors.bgSurface,
+                          paddingHorizontal: 16, paddingVertical: 11,
+                          borderBottomWidth: idx < memberVirtual.length - 1 ? 0.5 : 0, borderBottomColor: "rgba(26,26,26,0.06)",
                         }}>
-                          {hasCarteCap && (
-                            <View style={{ borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2, backgroundColor: isHC ? colors.dangerBg : "#F0FDF4" }}>
-                              <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? colors.danger : "#16A34A", letterSpacing: 0.5 }}>
-                                {isHC ? "HC" : "CR"}
-                              </Text>
-                            </View>
-                          )}
-                          <Text style={{ flex: 1, fontSize: 14, color: "#44403C", fontStyle: "italic" }} numberOfLines={1}>{v.customName}</Text>
-                          <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>{v.price.toFixed(2)} €</Text>
+                          {hasCR && (isHC ? <HCBadge /> : <CRBadge />)}
+                          <Text style={{ flex: 1, fontSize: 13, fontWeight: "600", color: "#44403C", fontStyle: "italic" }} numberOfLines={1}>{v.customName}</Text>
+                          <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text }}>{v.price.toFixed(2).replace(".", ",")} €</Text>
                         </View>
                       );
                     })}
@@ -1269,24 +1309,39 @@ function CheckoutSummary({
             );
           })}
 
+          {/* Liste globale (pas de split) */}
           {!hasSplit && (
-            <View style={{ borderRadius: 18, backgroundColor: colors.bgCard, overflow: "hidden" }}>
+            <View style={{ borderRadius: 18, backgroundColor: colors.bgCard, overflow: "hidden", borderWidth: 1, borderColor: "rgba(26,26,26,0.07)" }}>
+              <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10 }}>
+                Articles · {allItemCount}
+              </Text>
               {[...checkedItems, ...virtualItems.map((v) => ({ ...v, isVirtual: true }))].map((item, idx, arr) => {
                 const isVirtual = "isVirtual" in item;
                 const price = isVirtual ? (item as VirtualItem).price : session.confirmedPrices.get(item.id);
+                const ctx = !isVirtual ? session.confirmedContexts.get(item.id) : undefined;
                 const name = isVirtual ? (item as VirtualItem).customName : (item as ShoppingItem).customName;
+                const isHC = !isVirtual && session.horsCarteIds.has(item.id);
+                const saving = ctx?.isPromo && price !== undefined
+                  ? Math.max(0, ctx.shelfUnitPrice * ctx.confirmedQty - price)
+                  : 0;
                 return (
                   <View key={item.id} style={{
-                    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-                    paddingHorizontal: 18, paddingVertical: 14,
-                    borderBottomWidth: idx < arr.length - 1 ? 1 : 0, borderBottomColor: colors.bgSurface,
+                    flexDirection: "row", alignItems: "center", gap: 8,
+                    paddingHorizontal: 16, paddingVertical: 11,
+                    borderTopWidth: idx === 0 ? 0.5 : 0.5, borderTopColor: "rgba(26,26,26,0.06)",
                   }}>
-                    <Text style={{ flex: 1, fontSize: 14, color: "#44403C", fontStyle: isVirtual ? "italic" : "normal" }} numberOfLines={1}>{name}</Text>
+                    {hasCR && (isHC ? <HCBadge /> : <CRBadge />)}
+                    <Text style={{ flex: 1, fontSize: 13, fontWeight: "600", color: "#44403C", fontStyle: isVirtual ? "italic" : "normal" }} numberOfLines={1}>{name}</Text>
+                    {saving > 0.01 && (
+                      <View style={{ paddingHorizontal: 6, paddingVertical: 1, borderRadius: 999, backgroundColor: "#FFF0E8" }}>
+                        <Text style={{ fontSize: 9, fontWeight: "800", color: "#E8571C" }}>-{saving.toFixed(2).replace(".", ",")} €</Text>
+                      </View>
+                    )}
                     {price !== undefined
-                      ? <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>{price.toFixed(2)} €</Text>
+                      ? <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text }}>{price.toFixed(2).replace(".", ",")} €</Text>
                       : !isVirtual
                         ? <Pressable onPress={() => onEditPrice(item as ShoppingItem)} hitSlop={8}>
-                            <Text style={{ fontSize: 12, color: colors.accent, fontWeight: "600" }}>+ Saisir le prix</Text>
+                            <Text style={{ fontSize: 12, color: colors.accent, fontWeight: "600" }}>+ Saisir</Text>
                           </Pressable>
                         : null}
                   </View>
@@ -1294,30 +1349,36 @@ function CheckoutSummary({
               })}
             </View>
           )}
+        </ScrollView>
 
-          <View style={{ gap: 10 }}>
+        {/* CTAs fixes avec dégradé */}
+        <View style={{ position: "absolute", bottom: 0, left: 0, right: 0 }}>
+          <LinearGradient
+            colors={["rgba(250,249,247,0)", "rgba(250,249,247,0.97)", "rgba(250,249,247,1)"]}
+            style={{ paddingTop: 24, paddingHorizontal: 14, paddingBottom: insets.bottom + 12 }}
+          >
             <Pressable
               onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); onFinishWithPantry(); }}
               style={({ pressed }) => ({
-                borderRadius: 18, paddingVertical: 18, alignItems: "center",
-                backgroundColor: pressed ? "#C94415" : colors.accent,
-                transform: [{ scale: pressed ? 0.97 : 1 }],
+                height: 54, borderRadius: 16, backgroundColor: pressed ? "#333" : "#1A1A1A",
+                alignItems: "center", justifyContent: "center", marginBottom: 8,
+                shadowColor: "#1A1A1A", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 12,
               })}
             >
-              <Text style={{ fontSize: 17, fontWeight: "900", color: "#fff", letterSpacing: -0.3 }}>
-                Ajouter au stock + Terminer
+              <Text style={{ fontSize: 15, fontWeight: "800", color: "#fff", letterSpacing: -0.3 }}>
+                + Ajouter au stock + Terminer
               </Text>
             </Pressable>
             <Pressable
               onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); onFinish(); }}
-              style={{ paddingVertical: 12, alignItems: "center" }}
+              style={{ paddingVertical: 8, alignItems: "center" }}
             >
-              <Text style={{ fontSize: 15, fontWeight: "600", color: colors.textSubtle }}>
+              <Text style={{ fontSize: 13, fontWeight: "600", color: colors.textMuted }}>
                 Terminer sans mettre au stock
               </Text>
             </Pressable>
-          </View>
-        </ScrollView>
+          </LinearGradient>
+        </View>
       </SafeAreaView>
     </View>
   );
@@ -1407,6 +1468,26 @@ export function ModeCourses() {
   const [groupBy, setGroupBy] = useState<"category" | "recipe">("category");
   const [detailItem, setDetailItem] = useState<ShoppingItem | null>(null);
   const swipeableRefs = useRef<Map<string, { close: () => void }>>(new Map());
+
+  const sessionStartRef = useRef(Date.now());
+  const [sessionMinutes, setSessionMinutes] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(() => setSessionMinutes(Math.floor((Date.now() - sessionStartRef.current) / 60000)), 60000);
+    return () => clearInterval(iv);
+  }, []);
+
+  const [pinnedCategory, setPinnedCategory] = useState<string | null>(null);
+  const [lastCheckedCategory, setLastCheckedCategory] = useState<string | null>(null);
+  const [showFullCart, setShowFullCart] = useState(false);
+  const [skippedItemIds, setSkippedItemIds] = useState<Set<string>>(new Set());
+  const [scanToast, setScanToast] = useState<{ itemId: string; itemName: string; price: number | null; memberIdx: number | null; isHC: boolean } | null>(null);
+  const scanToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toastTranslateY = useSharedValue(80);
+  const toastOpacityVal = useSharedValue(0);
+  const toastAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: toastTranslateY.value }],
+    opacity: toastOpacityVal.value,
+  }));
 
   useFocusEffect(useCallback(() => {
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
@@ -1544,6 +1625,22 @@ export function ModeCourses() {
 
   const hasRecipeItems = useMemo(() => unchecked.some((i) => i.recipeName), [unchecked]);
 
+  const activeCategory = useMemo(() => {
+    if (pinnedCategory && grouped[pinnedCategory]) return pinnedCategory;
+    if (lastCheckedCategory && grouped[lastCheckedCategory]) return lastCheckedCategory;
+    return sortedCategories[0] ?? null;
+  }, [pinnedCategory, lastCheckedCategory, grouped, sortedCategories]);
+
+  const nextItem = useMemo(() => {
+    if (!activeCategory) return null;
+    const items = grouped[activeCategory] ?? [];
+    return items.find((i) => !skippedItemIds.has(i.id)) ?? items[0] ?? null;
+  }, [activeCategory, grouped, skippedItemIds]);
+
+  useEffect(() => {
+    if (pinnedCategory && !grouped[pinnedCategory]) setPinnedCategory(null);
+  }, [pinnedCategory, grouped]);
+
   const checkedIds = useMemo(() => new Set((list?.items ?? []).filter((i) => i.isChecked).map((i) => i.id)), [list]);
 
   const confirmedTotal = useMemo(() => {
@@ -1551,6 +1648,18 @@ export function ModeCourses() {
     session.confirmedPrices.forEach((p, id) => { if (checkedIds.has(id)) total += p; });
     session.virtualItems.forEach((v) => { total += v.price; });
     return total;
+  }, [session, checkedIds]);
+
+  const { globalCRTotal, globalHCTotal } = useMemo(() => {
+    let cr = 0, hc = 0;
+    session.confirmedPrices.forEach((p, id) => {
+      if (!checkedIds.has(id)) return;
+      if (session.horsCarteIds.has(id)) hc += p; else cr += p;
+    });
+    session.virtualItems.forEach((v) => {
+      if (session.horsCarteIds.has(v.id)) hc += v.price; else cr += v.price;
+    });
+    return { globalCRTotal: cr, globalHCTotal: hc };
   }, [session, checkedIds]);
 
   const { memberTotals, memberCarteTotals, memberHorsCarteTotals } = useMemo(() => {
@@ -1562,14 +1671,16 @@ export function ModeCourses() {
       const p = session.confirmedPrices.get(itemId);
       if (p !== undefined) {
         totals[mIdx] += p;
-        if (session.horsCarteIds.has(itemId)) horsCarteTotals[mIdx] += p;
+        const isHC = session.horsCarteIds.has(itemId) || (splitSettings.members[mIdx]?.crMode === "HC");
+        if (isHC) horsCarteTotals[mIdx] += p;
         else carteTotals[mIdx] += p;
       }
     });
     session.virtualItems.forEach((v) => {
       if (v.memberIdx < totals.length) {
         totals[v.memberIdx] += v.price;
-        if (session.horsCarteIds.has(v.id)) horsCarteTotals[v.memberIdx] += v.price;
+        const isHC = session.horsCarteIds.has(v.id) || (splitSettings.members[v.memberIdx]?.crMode === "HC");
+        if (isHC) horsCarteTotals[v.memberIdx] += v.price;
         else carteTotals[v.memberIdx] += v.price;
       }
     });
@@ -1645,6 +1756,11 @@ export function ModeCourses() {
     });
 
     handleToggle(item.id, true);
+    setSkippedItemIds((prev) => { const s = new Set(prev); s.delete(item.id); return s; });
+    const cat = item.category ?? null;
+    if (cat) setLastCheckedCategory(cat);
+    const prevAssignment = session.assignments.get(item.id) ?? 0;
+    showScanToast(item.id, item.customName, actualPaid, splitSettings.enabled && splitSettings.members.length >= 2 ? prevAssignment : null, session.horsCarteIds.has(item.id));
 
     if (selectedStore) {
       const unitPrice = qty > 1 ? actualPaid / qty : actualPaid;
@@ -1671,19 +1787,7 @@ export function ModeCourses() {
 
   function handleCheckWithoutPrice() {
     if (!pricePrompt) return;
-    const { item } = pricePrompt;
-    setSession((prev) => {
-      let newAssignments = new Map(prev.assignments);
-      if (!newAssignments.has(item.id)) newAssignments.set(item.id, 0);
-      const split = splitRef.current;
-      if (split.enabled && split.members.length >= 2) {
-        newAssignments = rebalanceAssignments(prev.confirmedPrices, newAssignments, prev.lockedAssignments, split.members, prev.horsCarteIds);
-      } else {
-        newAssignments.set(item.id, 0);
-      }
-      return { ...prev, assignments: newAssignments };
-    });
-    handleToggle(item.id, true);
+    checkItemWithoutPrice(pricePrompt.item);
     closePricePrompt();
   }
 
@@ -1837,6 +1941,56 @@ export function ModeCourses() {
     router.navigate("/(tabs)/shopping");
   }
 
+  function showScanToast(itemId: string, itemName: string, price: number | null, memberIdx: number | null, isHC: boolean) {
+    if (scanToastTimerRef.current) clearTimeout(scanToastTimerRef.current);
+    setScanToast({ itemId, itemName, price, memberIdx, isHC });
+    toastTranslateY.value = 80;
+    toastOpacityVal.value = 0;
+    toastTranslateY.value = withSpring(0, { damping: 16, stiffness: 200 });
+    toastOpacityVal.value = withTiming(1, { duration: 150 });
+    scanToastTimerRef.current = setTimeout(dismissScanToast, 3000);
+  }
+
+  function dismissScanToast() {
+    if (scanToastTimerRef.current) { clearTimeout(scanToastTimerRef.current); scanToastTimerRef.current = null; }
+    toastTranslateY.value = withTiming(80, { duration: 200 });
+    toastOpacityVal.value = withTiming(0, { duration: 200 });
+    setTimeout(() => setScanToast(null), 220);
+  }
+
+  function handleUndoLastScan() {
+    if (!scanToast) return;
+    const { itemId } = scanToast;
+    handleToggle(itemId, false);
+    setSession((prev) => {
+      const p = new Map(prev.confirmedPrices); p.delete(itemId);
+      const a = new Map(prev.assignments); a.delete(itemId);
+      return { ...prev, confirmedPrices: p, assignments: a };
+    });
+    setSkippedItemIds((prev) => { const s = new Set(prev); s.delete(itemId); return s; });
+    dismissScanToast();
+  }
+
+  function checkItemWithoutPrice(item: ShoppingItem) {
+    setSession((prev) => {
+      let newAssignments = new Map(prev.assignments);
+      if (!newAssignments.has(item.id)) newAssignments.set(item.id, 0);
+      const split = splitRef.current;
+      if (split.enabled && split.members.length >= 2) {
+        newAssignments = rebalanceAssignments(prev.confirmedPrices, newAssignments, prev.lockedAssignments, split.members, prev.horsCarteIds);
+      } else {
+        newAssignments.set(item.id, 0);
+      }
+      return { ...prev, assignments: newAssignments };
+    });
+    handleToggle(item.id, true);
+    setSkippedItemIds((prev) => { const s = new Set(prev); s.delete(item.id); return s; });
+    const cat = item.category ?? null;
+    if (cat) setLastCheckedCategory(cat);
+    const prevAssignment = session.assignments.get(item.id) ?? 0;
+    showScanToast(item.id, item.customName, null, splitSettings.enabled && splitSettings.members.length >= 2 ? prevAssignment : null, session.horsCarteIds.has(item.id));
+  }
+
   const totalScale = useSharedValue(1);
   const totalAnimatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: totalScale.value }] }));
   useEffect(() => {
@@ -1907,103 +2061,177 @@ export function ModeCourses() {
   return (
     <>
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top"]}>
-      <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, gap: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-        <Pressable
-          onPress={confirmLeave}
-          style={({ pressed }) => ({
-            width: 38, height: 38, borderRadius: 12,
-            backgroundColor: pressed ? "#EDEAE4" : "#F0EDE8",
-            alignItems: "center", justifyContent: "center",
-          })}
-        >
-          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-            <Line x1={18} y1={6} x2={6} y2={18} /><Line x1={6} y1={6} x2={18} y2={18} />
-          </Svg>
-        </Pressable>
-
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 17, fontWeight: "900", color: colors.text, letterSpacing: -0.3 }}>Mode courses</Text>
-          {selectedStore ? (
-            <Pressable
-              onPress={() => { if (stores.length > 1) { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setStoreSelectorOpen(true); } }}
-              hitSlop={8}
-              style={{ flexDirection: "row", alignItems: "center", gap: 3 }}
-            >
-              <Text style={{ fontSize: 12, color: colors.textSubtle, fontWeight: "500" }}>{selectedStore.name}</Text>
-              {stores.length > 1 && (
-                <Svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="#C4B8AF" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                  <Polyline points="6 9 12 15 18 9" />
-                </Svg>
-              )}
-            </Pressable>
-          ) : storesLoaded && stores.length === 0 ? (
-            <Text style={{ fontSize: 12, color: "#F59E0B", fontWeight: "600" }}>Aucun magasin configuré</Text>
-          ) : null}
+      <View style={{ paddingHorizontal: 16, paddingVertical: 12, flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
+        <View style={{ flex: 1, gap: 2 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: "#FCE7DB", alignSelf: "flex-start" }}>
+            <PulsingDot color="#E8571C" size={6} />
+            <Text style={{ fontSize: 10, fontWeight: "800", letterSpacing: 1.4, textTransform: "uppercase", color: "#E8571C" }}>En rayon · Live</Text>
+          </View>
+          <Pressable
+            onPress={() => { if (stores.length > 1) { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setStoreSelectorOpen(true); } }}
+            hitSlop={8}
+            style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6 }}
+          >
+            <Text style={{ fontSize: 22, fontWeight: "800", color: colors.text, letterSpacing: -0.4 }}>
+              {selectedStore ? selectedStore.name : storesLoaded && stores.length === 0 ? "Aucun magasin" : "Chargement…"}
+            </Text>
+            {stores.length > 1 && (
+              <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={colors.textMuted} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <Polyline points="6 9 12 15 18 9" />
+              </Svg>
+            )}
+          </Pressable>
+          <Text style={{ fontSize: 12, fontWeight: "500", color: colors.textMuted, marginTop: 1 }}>
+            {`Session démarrée ${sessionMinutes === 0 ? "à l'instant" : `il y a ${sessionMinutes} min`}`}
+          </Text>
+        </View>
+        <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
+          <Pressable
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSplitEditOpen(true); }}
+            style={({ pressed }) => ({
+              width: 36, height: 36, borderRadius: 18,
+              backgroundColor: pressed ? "#E8E3DC" : "#F0EDE8",
+              alignItems: "center", justifyContent: "center",
+            })}
+          >
+            <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke={colors.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <Path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+              <Circle cx={12} cy={12} r={3} />
+            </Svg>
+          </Pressable>
+          <Pressable
+            onPress={confirmLeave}
+            style={({ pressed }) => ({
+              width: 36, height: 36, borderRadius: 18,
+              backgroundColor: pressed ? "#E8E3DC" : "#F0EDE8",
+              alignItems: "center", justifyContent: "center",
+            })}
+          >
+            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <Path d="M6 6l12 12M18 6L6 18" />
+            </Svg>
+          </Pressable>
         </View>
       </View>
 
       <>
           <Pressable
             onPress={() => { if (hasCartItems) { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setCheckoutOpen(true); } }}
-            style={{ margin: 16, borderRadius: 22, backgroundColor: colors.bgCard, padding: 18, gap: 12, shadowColor: "#1C1917", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 10, elevation: 4 }}
+            style={{ marginHorizontal: 14, marginTop: 4, marginBottom: 8, borderRadius: 22, backgroundColor: "#1A1A1A", padding: 18, overflow: "hidden" }}
           >
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            {/* Orange ambient glow */}
+            <Svg width={220} height={220} style={{ position: "absolute", right: -70, top: -70 }} pointerEvents="none">
+              <Defs>
+                <RadialGradient id="orangeGlow" cx="50%" cy="50%" r="50%">
+                  <Stop offset="0%" stopColor="#E8571C" stopOpacity={0.22} />
+                  <Stop offset="100%" stopColor="#E8571C" stopOpacity={0} />
+                </RadialGradient>
+              </Defs>
+              <Ellipse cx={110} cy={110} rx={110} ry={110} fill="url(#orangeGlow)" />
+            </Svg>
+
+            {/* Total + Progression row */}
+            <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
               <View>
-                <Animated.View style={totalAnimatedStyle}>
-                  <Text style={{ fontSize: 40, fontWeight: "900", color: colors.text, letterSpacing: -1.5 }}>
-                    {confirmedTotal > 0 ? `${confirmedTotal.toFixed(2)} €` : "0 €"}
-                  </Text>
+                <Text style={{ fontSize: 10, fontWeight: "800", letterSpacing: 1.4, textTransform: "uppercase", color: "rgba(255,255,255,0.5)", marginBottom: 2 }}>Total panier</Text>
+                <Animated.View style={[totalAnimatedStyle, { flexDirection: "row", alignItems: "flex-end" }]}>
+                  <Text style={{ fontSize: 42, fontWeight: "900", color: "#fff", letterSpacing: -1.2, lineHeight: 44 }}>{Math.floor(confirmedTotal)}</Text>
+                  <Text style={{ fontSize: 42, fontWeight: "900", color: "rgba(255,255,255,0.5)", letterSpacing: -1.2, lineHeight: 44 }}>,{(confirmedTotal % 1).toFixed(2).slice(2)}</Text>
+                  <Text style={{ fontSize: 22, fontWeight: "700", color: "rgba(255,255,255,0.7)", marginLeft: 4, marginBottom: 5 }}>€</Text>
                 </Animated.View>
-                {hasCartItems && (
-                  <Text style={{ fontSize: 12, color: colors.textSubtle, fontWeight: "500", marginTop: 1 }}>
-                    {checked.length + session.virtualItems.length} article{checked.length + session.virtualItems.length > 1 ? "s" : ""}
-                  </Text>
-                )}
-                {estimatedRemainingTotal > 0 && unchecked.length > 0 && (
-                  <Text style={{ fontSize: 12, color: "#C4B8AF", fontWeight: "500", marginTop: 1 }}>
-                    ~{(confirmedTotal + estimatedRemainingTotal).toFixed(2)} € estimé final
-                  </Text>
-                )}
               </View>
-              <Pressable
-                onPress={() => setSplitEditOpen(true)}
-                style={({ pressed }) => ({
-                  width: 44, height: 44, borderRadius: 14,
-                  backgroundColor: splitSettings.enabled ? `${splitSettings.members[0]?.color ?? "#E8571C"}15` : (pressed ? "#EDEAE4" : "#F0EDE8"),
-                  alignItems: "center", justifyContent: "center",
-                  borderWidth: splitSettings.enabled ? 1.5 : 0,
-                  borderColor: splitSettings.enabled ? `${splitSettings.members[0]?.color ?? "#E8571C"}40` : "transparent",
-                })}
-              >
-                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={splitSettings.enabled ? (splitSettings.members[0]?.color ?? "#E8571C") : "#78716C"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <Path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
-                  <Path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                </Svg>
-              </Pressable>
+              <View style={{ alignItems: "flex-end", gap: 2 }}>
+                <Text style={{ fontSize: 10, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase", color: "rgba(255,255,255,0.5)" }}>Progression</Text>
+                <Pressable onPress={() => setSplitEditOpen(true)} hitSlop={12} style={{ flexDirection: "row", alignItems: "baseline", gap: 1 }}>
+                  <Text style={{ fontSize: 18, fontWeight: "900", color: "#fff", letterSpacing: -0.4 }}>{checked.length}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: "rgba(255,255,255,0.4)" }}>/{list?.items.length ?? 0}</Text>
+                </Pressable>
+              </View>
             </View>
 
+            {/* Progress bar with shimmer */}
+            {(list?.items.length ?? 0) > 0 && (
+              <View style={{ marginTop: 14 }}>
+                <ShimmerProgressBar progress={(list?.items.length ?? 0) > 0 ? checked.length / (list?.items.length ?? 1) : 0} />
+              </View>
+            )}
+
+            {/* CR/HC global (carte resto on, split off) */}
+            {splitSettings.carteRestoEnabled && !splitSettings.enabled && confirmedTotal > 0 && (() => {
+              const m0 = splitSettings.members[0];
+              const cap = m0?.budgetCap ?? 25;
+              const crPct = Math.min(cap > 0 ? globalCRTotal / cap : 0, 1);
+              const hcPct = Math.min(cap > 0 ? globalHCTotal / cap : 0, 1);
+              return (
+                <View style={{ marginTop: 14 }}>
+                  <View style={{ backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 14, padding: 11 }}>
+                    <Text style={{ fontSize: 18, fontWeight: "900", color: "#fff", letterSpacing: -0.4, marginBottom: 8 }}>
+                      {confirmedTotal.toFixed(2).replace(".", ",")} €
+                    </Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 4 }}>
+                      <View style={{ width: 16, height: 14, borderRadius: 3, backgroundColor: "#4ADE80", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <Text style={{ fontSize: 8, fontWeight: "900", color: "#0D3F1E", letterSpacing: 0.4 }}>CR</Text>
+                      </View>
+                      <View style={{ flex: 1, height: 4, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                        <View style={{ width: `${crPct * 100}%`, height: 4, borderRadius: 999, backgroundColor: "#4ADE80" }} />
+                      </View>
+                      <Text style={{ fontSize: 9, fontWeight: "700", color: "rgba(255,255,255,0.65)", flexShrink: 0 }}>{Math.round(globalCRTotal)}/{cap}</Text>
+                    </View>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                      <View style={{ width: 16, height: 14, borderRadius: 3, backgroundColor: "#F9A8D4", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <Text style={{ fontSize: 8, fontWeight: "900", color: "#5A1636", letterSpacing: 0.4 }}>HC</Text>
+                      </View>
+                      <View style={{ flex: 1, height: 4, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                        <View style={{ width: `${hcPct * 100}%`, height: 4, borderRadius: 999, backgroundColor: "#F9A8D4" }} />
+                      </View>
+                      <Text style={{ fontSize: 9, fontWeight: "700", color: "rgba(255,255,255,0.65)", flexShrink: 0 }}>{Math.round(globalHCTotal)} €</Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            })()}
+
+            {/* Per-person CR/HC mini cards */}
             {splitSettings.enabled && splitSettings.members.length >= 2 && (
-              <View style={{ flexDirection: "row", gap: 8 }}>
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
                 {splitSettings.members.map((m, i) => {
-                  const total = memberTotals[i] ?? 0;
                   const carteTotal = memberCarteTotals[i] ?? 0;
-                  const capTotal = splitSettings.carteRestoEnabled ? carteTotal : total;
-                  const over = capTotal > m.budgetCap;
+                  const horsCarteTotal = memberHorsCarteTotals[i] ?? 0;
+                  const total = memberTotals[i] ?? 0;
+                  const crPct = Math.min(m.crMode === "CR" && m.budgetCap > 0 ? carteTotal / m.budgetCap : 0, 1);
+                  const hcPct = m.crMode === "HC"
+                    ? Math.min(total > 0 ? horsCarteTotal / total : 1, 1)
+                    : Math.min(m.budgetCap > 0 ? horsCarteTotal / m.budgetCap : 0, 1);
                   return (
-                    <View key={i} style={{
-                      flexDirection: "row", alignItems: "center", gap: 6,
-                      backgroundColor: `${m.color}12`, borderRadius: 10,
-                      paddingHorizontal: 10, paddingVertical: 6,
-                    }}>
-                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: m.color }} />
-                      <Text style={{ fontSize: 12, fontWeight: "700", color: "#44403C" }}>{m.name}</Text>
-                      <Text style={{ fontSize: 12, fontWeight: "900", color: over ? colors.danger : colors.text }}>
-                        {splitSettings.carteRestoEnabled ? carteTotal.toFixed(2) : total.toFixed(2)} €
+                    <View key={i} style={{ flex: 1, backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 14, padding: 11 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                        <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: m.color }} />
+                        <Text style={{ fontSize: 11, fontWeight: "700", color: "rgba(255,255,255,0.65)" }}>{m.name}</Text>
+                      </View>
+                      <Text style={{ fontSize: 18, fontWeight: "900", color: "#fff", letterSpacing: -0.4, marginBottom: splitSettings.carteRestoEnabled ? 8 : 0 }}>
+                        {total.toFixed(2).replace(".", ",")} €
                       </Text>
-                      {splitSettings.carteRestoEnabled && memberHorsCarteTotals[i] > 0 && (
-                        <Text style={{ fontSize: 10, color: colors.textMuted, fontWeight: "600" }}>
-                          +{(memberHorsCarteTotals[i] ?? 0).toFixed(2)} HC
-                        </Text>
+                      {splitSettings.carteRestoEnabled && m.crMode === "CR" && (
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 4 }}>
+                          <View style={{ width: 16, height: 14, borderRadius: 3, backgroundColor: "#4ADE80", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <Text style={{ fontSize: 8, fontWeight: "900", color: "#0D3F1E", letterSpacing: 0.4 }}>CR</Text>
+                          </View>
+                          <View style={{ flex: 1, height: 4, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                            <View style={{ width: `${crPct * 100}%`, height: 4, borderRadius: 999, backgroundColor: "#4ADE80" }} />
+                          </View>
+                          <Text style={{ fontSize: 9, fontWeight: "700", color: "rgba(255,255,255,0.65)", flexShrink: 0 }}>{Math.round(carteTotal)}/{m.budgetCap}</Text>
+                        </View>
+                      )}
+                      {splitSettings.carteRestoEnabled && (
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                          <View style={{ width: 16, height: 14, borderRadius: 3, backgroundColor: "#F9A8D4", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <Text style={{ fontSize: 8, fontWeight: "900", color: "#5A1636", letterSpacing: 0.4 }}>HC</Text>
+                          </View>
+                          <View style={{ flex: 1, height: 4, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                            <View style={{ width: `${hcPct * 100}%`, height: 4, borderRadius: 999, backgroundColor: "#F9A8D4" }} />
+                          </View>
+                          <Text style={{ fontSize: 9, fontWeight: "700", color: "rgba(255,255,255,0.65)", flexShrink: 0 }}>{Math.round(horsCarteTotal)}€</Text>
+                        </View>
                       )}
                     </View>
                   );
@@ -2011,28 +2239,92 @@ export function ModeCourses() {
               </View>
             )}
 
-            {(list?.items.length ?? 0) > 0 && (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <View style={{ flex: 1, height: 3, borderRadius: 99, backgroundColor: "#F0EDE8" }}>
-                  <View style={{
-                    height: 3, borderRadius: 99, backgroundColor: colors.accent,
-                    width: `${((list?.items.length ?? 0) > 0 ? (checked.length / (list?.items.length ?? 1)) * 100 : 0)}%`,
-                  }} />
-                </View>
-                <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textSubtle }}>
-                  {checked.length}/{list?.items.length ?? 0}
-                </Text>
-              </View>
-            )}
             {hasCartItems && (
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, paddingTop: 2 }}>
-                <Text style={{ fontSize: 12, fontWeight: "700", color: colors.accent }}>Voir le récap</Text>
-                <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, marginTop: 10 }}>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: "#E8571C" }}>Voir le récap</Text>
+                <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#E8571C" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                   <Polyline points="9 18 15 12 9 6" />
                 </Svg>
               </View>
             )}
           </Pressable>
+
+          {nextItem && (
+            <View style={{ marginHorizontal: 14, marginBottom: 8 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 8, paddingLeft: 4 }}>
+                <View style={{ width: 5, height: 5, borderRadius: 999, backgroundColor: "#E8571C" }} />
+                <Text style={{ fontSize: 10, fontWeight: "800", letterSpacing: 1.4, textTransform: "uppercase", color: "#E8571C" }}>Prochain article</Text>
+              </View>
+              <Pressable
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); openScanForItem(nextItem); }}
+                style={({ pressed }) => ({
+                  backgroundColor: pressed ? "#F5F1ED" : "#fff",
+                  borderRadius: 20, padding: 14,
+                  flexDirection: "row", alignItems: "center", gap: 14,
+                  shadowColor: "#1A1A1A", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 3,
+                  borderWidth: 1, borderColor: "rgba(26,26,26,0.04)",
+                })}
+              >
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4, alignSelf: "flex-start", backgroundColor: "#F0EDE8", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
+                    <Svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                      <Path d="M12 21s-7-6-7-12a7 7 0 0 1 14 0c0 6-7 12-7 12z" /><Circle cx={12} cy={9} r={2.5} />
+                    </Svg>
+                    <Text style={{ fontSize: 10, fontWeight: "800", color: "#1A1A1A", letterSpacing: -0.1 }}>
+                      {activeCategory ?? "Autre"}
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 17, fontWeight: "800", color: "#1A1A1A", letterSpacing: -0.3, lineHeight: 20 }} numberOfLines={1}>
+                    {nextItem.customName}
+                  </Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
+                    {nextItem.quantity > 0 && (
+                      <Text style={{ fontSize: 11, fontWeight: "600", color: "#9B8E86" }}>
+                        {nextItem.quantity}{nextItem.unit ? ` ${nextItem.unit}` : ""}
+                      </Text>
+                    )}
+                    {nextItem.quantity > 0 && getPrefillPrice(nextItem) ? <Text style={{ fontSize: 10, color: "#9B8E86" }}>·</Text> : null}
+                    {getPrefillPrice(nextItem) ? (
+                      <Text style={{ fontSize: 12, fontWeight: "700", color: "#3A3330" }}>~{getPrefillPrice(nextItem)} €</Text>
+                    ) : null}
+                  </View>
+                </View>
+                <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#9B8E86" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                  <Path d="M9 6l6 6-6 6" />
+                </Svg>
+              </Pressable>
+              <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+                <Pressable
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); checkItemWithoutPrice(nextItem); }}
+                  style={({ pressed }) => ({
+                    flex: 1, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6,
+                    backgroundColor: pressed ? "#E8E3DC" : "#F0EDE8",
+                  })}
+                >
+                  <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M6 6l12 12M18 6L6 18" />
+                  </Svg>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: "#1A1A1A", letterSpacing: -0.1 }}>Introuvable</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    if (!nextItem) return;
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setSkippedItemIds((prev) => new Set([...prev, nextItem.id]));
+                  }}
+                  style={({ pressed }) => ({
+                    flex: 1, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6,
+                    backgroundColor: pressed ? "#E8E3DC" : "#F0EDE8",
+                  })}
+                >
+                  <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M9 6l6 6-6 6" />
+                  </Svg>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: "#1A1A1A", letterSpacing: -0.1 }}>Passer</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
 
           {hasRecipeItems && (
             <View style={{ flexDirection: "row", gap: 6, paddingHorizontal: 16, paddingBottom: 10 }}>
@@ -2070,56 +2362,77 @@ export function ModeCourses() {
                 ? (CATEGORY_COLORS[key] ?? "#9ca3af")
                 : (key === "__manual" ? "#9ca3af" : colors.accent);
               const label = groupBy === "category" ? key : (key === "__manual" ? "Hors recette" : key);
+              const isActive = groupBy === "category" && key === activeCategory;
               return (
-                <View key={key} style={{ marginTop: groupIdx === 0 ? 4 : 20 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 4, paddingBottom: 8 }}>
-                    <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: color }} />
-                    <Text style={{ flex: 1, fontSize: 11, fontWeight: "700", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1.5 }}>{label}</Text>
-                    <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textSubtle }}>{groupItems.length}</Text>
-                  </View>
-                  <View style={{ borderRadius: 14, backgroundColor: colors.bgCard, overflow: "hidden" }}>
+                <View key={key} style={{ marginTop: groupIdx === 0 ? 4 : 16, opacity: isActive ? 1 : 0.88 }}>
+                  <Pressable
+                    onPress={() => {
+                      if (groupBy !== "category") return;
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      if (isActive && pinnedCategory === key) setPinnedCategory(null);
+                      else setPinnedCategory(key);
+                    }}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8, paddingLeft: 4 }}
+                  >
+                    <View style={{
+                      flexDirection: "row", alignItems: "center", gap: 7,
+                      paddingHorizontal: 11, paddingVertical: 5, borderRadius: 999,
+                      backgroundColor: isActive ? colors.text : "#F0EDE8",
+                    }}>
+                      <Svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke={isActive ? "#fff" : colors.text} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                        <Path d="M12 21s-7-6-7-12a7 7 0 0 1 14 0c0 6-7 12-7 12z" /><Circle cx={12} cy={9} r={2.5} />
+                      </Svg>
+                      <Text style={{ fontSize: 11, fontWeight: "800", color: isActive ? "#fff" : colors.text, letterSpacing: -0.1 }}>{label}</Text>
+                      {groupBy === "recipe" && label !== key && (
+                        <Text style={{ fontSize: 10, fontWeight: "600", color: isActive ? "rgba(255,255,255,0.65)" : colors.textMuted }}>· {label}</Text>
+                      )}
+                    </View>
+                    {isActive && (
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                        <PulsingDot color="#E8571C" size={5} />
+                        <Text style={{ fontSize: 10, fontWeight: "800", color: "#E8571C", letterSpacing: 0.8, textTransform: "uppercase" }}>Tu es ici</Text>
+                      </View>
+                    )}
+                    <Text style={{ marginLeft: "auto", fontSize: 10, fontWeight: "600", color: colors.textMuted }}>{groupItems.length} art.</Text>
+                  </Pressable>
+                  <View style={{
+                    borderRadius: 16, backgroundColor: "#fff", overflow: "hidden",
+                    borderWidth: isActive ? 1.5 : 1,
+                    borderColor: isActive ? colors.text : "rgba(26,26,26,0.08)",
+                  }}>
                     {groupItems.map((item, i) => {
                       return (
                         <View key={item.id}>
                           <Pressable
                             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); openScanForItem(item); }}
                             style={({ pressed }) => ({
-                              flexDirection: "row", alignItems: "center", gap: 14,
-                              paddingHorizontal: 16, paddingVertical: 16,
-                              backgroundColor: pressed ? "#FAFAF8" : "transparent", minHeight: 64,
+                              flexDirection: "row", alignItems: "center", gap: 12,
+                              paddingHorizontal: 14, paddingVertical: 11,
+                              backgroundColor: pressed ? "#F8F5F0" : "transparent",
                             })}
                           >
-                            <View style={{ width: 30, height: 30, borderRadius: 15, borderWidth: 2, borderColor: "#D1D5DB", flexShrink: 0 }} />
-                            <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8 }}>
-                              {item.quantity > 0 && (
-                                <View style={{ borderRadius: 6, backgroundColor: "#FEF3ED", paddingHorizontal: 7, paddingVertical: 3, flexShrink: 0 }}>
-                                  <Text style={{ fontSize: 12, fontWeight: "700", color: colors.accent }}>
-                                    {item.quantity}{item.unit ? ` ${item.unit}` : ""}
-                                  </Text>
-                                </View>
-                              )}
-                              <Text style={{ flex: 1, fontSize: 15, fontWeight: "600", color: colors.text }} numberOfLines={1}>
+                            <View style={{ width: 22, height: 22, borderRadius: 7, borderWidth: 1.5, borderColor: "rgba(26,26,26,0.22)", flexShrink: 0 }} />
+                            <View style={{ flex: 1, minWidth: 0 }}>
+                              <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text, letterSpacing: -0.1 }} numberOfLines={1}>
                                 {item.customName}
                               </Text>
+                              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
+                                {item.quantity > 0 && (
+                                  <Text style={{ fontSize: 10.5, fontWeight: "600", color: "#9B8E86" }}>
+                                    {item.quantity}{item.unit ? ` ${item.unit}` : ""}
+                                  </Text>
+                                )}
+                                {item.quantity > 0 && getPrefillPrice(item) ? <Text style={{ fontSize: 10, color: "#9B8E86" }}>·</Text> : null}
+                                {getPrefillPrice(item) ? (
+                                  <Text style={{ fontSize: 11, fontWeight: "700", color: "#3A3330" }}>~{getPrefillPrice(item)} €</Text>
+                                ) : null}
+                              </View>
                             </View>
-                            {getPrefillPrice(item) ? (
-                              <Text style={{ fontSize: 12, fontWeight: "600", color: "#C4B8AF" }}>~{getPrefillPrice(item)} €</Text>
-                            ) : null}
-                            {(item.productId || item.allStorePrices.length > 0) && (
-                              <Pressable
-                                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setDetailItem(item); }}
-                                hitSlop={8}
-                                style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center" }}
-                              >
-                                <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke={colors.textSubtle} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                                  <Circle cx={12} cy={12} r={10} />
-                                  <Line x1={12} y1={16} x2={12} y2={12} />
-                                  <Line x1={12} y1={8} x2={12} y2={8} />
-                                </Svg>
-                              </Pressable>
-                            )}
+                            <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#9B8E86" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                              <Path d="M9 6l6 6-6 6" />
+                            </Svg>
                           </Pressable>
-                          {i < groupItems.length - 1 && <View style={{ height: 1, backgroundColor: colors.bgSurface, marginLeft: 60 }} />}
+                          {i < groupItems.length - 1 && <View style={{ height: 0.5, backgroundColor: "rgba(26,26,26,0.08)", marginLeft: 48 }} />}
                         </View>
                       );
                     })}
@@ -2130,13 +2443,64 @@ export function ModeCourses() {
 
             {hasCartItems && (
               <View style={{ marginTop: 32 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 4, paddingBottom: 8 }}>
-                  <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.accent }} />
-                  <Text style={{ flex: 1, fontSize: 11, fontWeight: "700", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1.5 }}>
-                    Dans le panier
-                  </Text>
-                  <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textSubtle }}>{checked.length + session.virtualItems.length}</Text>
+                <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8, paddingHorizontal: 6, paddingBottom: 8 }}>
+                  <Text style={{ flex: 1, fontSize: 11, fontWeight: "800", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1.2 }}>Dans le panier</Text>
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: colors.textMuted, opacity: 0.6 }}>{checked.length + session.virtualItems.length}</Text>
+                  <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowFullCart((v) => !v); }} hitSlop={8}>
+                    <Text style={{ fontSize: 11, fontWeight: "700", color: "#E8571C" }}>
+                      {showFullCart ? "Réduire" : "Voir tout"}
+                    </Text>
+                  </Pressable>
                 </View>
+                {!showFullCart && (
+                  <View style={{ borderRadius: 16, backgroundColor: "#fff", overflow: "hidden" }}>
+                    {checked.slice(-3).map((item, i, sliced) => {
+                      const price = session.confirmedPrices.get(item.id);
+                      const memberIdx = session.assignments.get(item.id) ?? 0;
+                      const member = splitSettings.enabled && splitSettings.members.length >= 2 ? splitSettings.members[memberIdx] : null;
+                      const isHC = session.horsCarteIds.has(item.id);
+                      return (
+                        <View key={item.id}>
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 11 }}>
+                            <View style={{ width: 22, height: 22, borderRadius: 7, backgroundColor: colors.text, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+                                <Path d="M5 12.5l4.5 4.5L19 7.5" />
+                              </Svg>
+                            </View>
+                            <View style={{ flex: 1, minWidth: 0 }}>
+                              <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text, letterSpacing: -0.1 }} numberOfLines={1}>{item.customName}</Text>
+                              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
+                                {splitSettings.carteRestoEnabled && (
+                                  <View style={{ borderRadius: 3, paddingHorizontal: 5, paddingVertical: 1, backgroundColor: isHC ? "rgba(249,168,212,0.28)" : "rgba(74,222,128,0.22)" }}>
+                                    <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? "#F9A8D4" : "#4ADE80", letterSpacing: 0.4 }}>{isHC ? "HC" : "CR"}</Text>
+                                  </View>
+                                )}
+                                {member && (
+                                  <View style={{ borderRadius: 3, paddingHorizontal: 5, paddingVertical: 1, backgroundColor: `${member.color}25` }}>
+                                    <Text style={{ fontSize: 9, fontWeight: "700", color: member.color }}>{member.name.slice(0, 3)}</Text>
+                                  </View>
+                                )}
+                              </View>
+                            </View>
+                            {price !== undefined && <Text style={{ fontSize: 14, fontWeight: "800", color: colors.text }}>{price.toFixed(2).replace(".", ",")} €</Text>}
+                          </View>
+                          {i < sliced.length - 1 && <View style={{ height: 0.5, backgroundColor: "rgba(26,26,26,0.08)", marginLeft: 48 }} />}
+                        </View>
+                      );
+                    })}
+                    {(checked.length > 3 || session.virtualItems.length > 0) && (
+                      <Pressable
+                        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowFullCart(true); }}
+                        style={{ paddingVertical: 12, alignItems: "center", borderTopWidth: 1, borderTopColor: colors.bgSurface }}
+                      >
+                        <Text style={{ fontSize: 12, fontWeight: "700", color: colors.accent }}>
+                          {checked.length > 3 ? `+ ${checked.length - 3 + session.virtualItems.length} autres` : `+ ${session.virtualItems.length} ajout${session.virtualItems.length > 1 ? "s" : ""} manuel${session.virtualItems.length > 1 ? "s" : ""}`}
+                        </Text>
+                      </Pressable>
+                    )}
+                  </View>
+                )}
+                {showFullCart && (
                 <View style={{ borderRadius: 14, backgroundColor: colors.bgCard, overflow: "hidden" }}>
                 {checked.map((item, i) => {
                   const price = session.confirmedPrices.get(item.id);
@@ -2175,73 +2539,53 @@ export function ModeCourses() {
                           </View>
                         )}
                       >
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 16, paddingVertical: 14, backgroundColor: colors.bgCard }}>
-                          <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 11, backgroundColor: colors.bgCard }}>
+                          <View style={{ width: 22, height: 22, borderRadius: 7, backgroundColor: colors.text, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                             <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-                              <Polyline points="20 6 9 17 4 12" />
+                              <Path d="M5 12.5l4.5 4.5L19 7.5" />
                             </Svg>
                           </View>
-                          <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8 }}>
-                            {item.quantity > 0 && (
-                              <View style={{ borderRadius: 6, backgroundColor: colors.bgSurface, paddingHorizontal: 7, paddingVertical: 3, flexShrink: 0 }}>
-                                <Text style={{ fontSize: 12, fontWeight: "700", color: colors.textSubtle }}>
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text, letterSpacing: -0.1 }} numberOfLines={1}>{item.customName}</Text>
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
+                              {item.quantity > 0 && (
+                                <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: "600" }}>
                                   {item.quantity}{item.unit ? ` ${item.unit}` : ""}
                                 </Text>
-                              </View>
-                            )}
-                            <Text style={{ flex: 1, fontSize: 14, color: colors.textSubtle, textDecorationLine: "line-through" }} numberOfLines={1}>
-                              {item.customName}
-                            </Text>
+                              )}
+                              {splitSettings.carteRestoEnabled && (() => {
+                                const isHC = session.horsCarteIds.has(item.id);
+                                return (
+                                  <Pressable onPress={() => toggleHorsCarte(item.id)} hitSlop={8} style={{ borderRadius: 3, paddingHorizontal: 5, paddingVertical: 1, backgroundColor: isHC ? "rgba(249,168,212,0.28)" : "rgba(74,222,128,0.22)" }}>
+                                    <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? "#F9A8D4" : "#4ADE80", letterSpacing: 0.4 }}>{isHC ? "HC" : "CR"}</Text>
+                                  </Pressable>
+                                );
+                              })()}
+                              {member && (
+                                <Pressable
+                                  onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                    setSession((prev) => {
+                                      const members = splitRef.current.members;
+                                      const current = prev.assignments.get(item.id) ?? 0;
+                                      const next = (current + 1) % members.length;
+                                      return { ...prev, assignments: new Map(prev.assignments).set(item.id, next), lockedAssignments: new Set(prev.lockedAssignments).add(item.id) };
+                                    });
+                                  }}
+                                  hitSlop={8}
+                                  style={{ borderRadius: 3, paddingHorizontal: 5, paddingVertical: 1, backgroundColor: `${member.color}25` }}
+                                >
+                                  <Text style={{ fontSize: 9, fontWeight: "700", color: member.color }}>{member.name.slice(0, 3)}</Text>
+                                </Pressable>
+                              )}
+                            </View>
                           </View>
-                          {price !== undefined && (
-                            <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text }}>{price.toFixed(2)} €</Text>
-                          )}
+                          {price !== undefined && <Text style={{ fontSize: 14, fontWeight: "800", color: colors.text }}>{price.toFixed(2).replace(".", ",")} €</Text>}
                           {item.productId && (
-                            <Pressable
-                              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setDetailItem(item); }}
-                              hitSlop={8}
-                              style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center" }}
-                            >
+                            <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setDetailItem(item); }} hitSlop={8} style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: colors.bgSurface, alignItems: "center", justifyContent: "center" }}>
                               <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke={colors.textSubtle} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                                <Circle cx={12} cy={12} r={10} />
-                                <Line x1={12} y1={16} x2={12} y2={12} />
-                                <Line x1={12} y1={8} x2={12} y2={8} />
+                                <Circle cx={12} cy={12} r={10} /><Line x1={12} y1={16} x2={12} y2={12} /><Line x1={12} y1={8} x2={12} y2={8} />
                               </Svg>
-                            </Pressable>
-                          )}
-                          {splitSettings.carteRestoEnabled && splitSettings.enabled && (() => {
-                            const isHC = session.horsCarteIds.has(item.id);
-                            return (
-                              <Pressable
-                                onPress={() => toggleHorsCarte(item.id)}
-                                hitSlop={8}
-                                style={{ borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, backgroundColor: isHC ? colors.dangerBg : "#F0FDF4" }}
-                              >
-                                <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? colors.danger : "#16A34A", letterSpacing: 0.5 }}>
-                                  {isHC ? "HC" : "CR"}
-                                </Text>
-                              </Pressable>
-                            );
-                          })()}
-                          {member && (
-                            <Pressable
-                              onPress={() => {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                setSession((prev) => {
-                                  const members = splitRef.current.members;
-                                  const current = prev.assignments.get(item.id) ?? 0;
-                                  const next = (current + 1) % members.length;
-                                  return {
-                                    ...prev,
-                                    assignments: new Map(prev.assignments).set(item.id, next),
-                                    lockedAssignments: new Set(prev.lockedAssignments).add(item.id),
-                                  };
-                                });
-                              }}
-                              hitSlop={8}
-                              style={{ borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, backgroundColor: `${member.color}20` }}
-                            >
-                              <Text style={{ fontSize: 10, fontWeight: "700", color: member.color }}>{member.name.slice(0, 3)}</Text>
                             </Pressable>
                           )}
                         </View>
@@ -2275,51 +2619,42 @@ export function ModeCourses() {
                           </View>
                         )}
                       >
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 16, paddingVertical: 14, backgroundColor: colors.bgCard }}>
-                          <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 11, backgroundColor: colors.bgCard }}>
+                          <View style={{ width: 22, height: 22, borderRadius: 7, backgroundColor: colors.text, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                             <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-                              <Polyline points="20 6 9 17 4 12" />
+                              <Path d="M5 12.5l4.5 4.5L19 7.5" />
                             </Svg>
                           </View>
-                          <Text style={{ flex: 1, fontSize: 14, color: colors.textSubtle, textDecorationLine: "line-through", fontStyle: "italic" }} numberOfLines={1}>
-                            {v.customName}
-                          </Text>
-                          <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text }}>{v.price.toFixed(2)} €</Text>
-                          {splitSettings.carteRestoEnabled && splitSettings.enabled && (() => {
-                            const isHC = session.horsCarteIds.has(v.id);
-                            return (
-                              <Pressable
-                                onPress={() => toggleHorsCarte(v.id)}
-                                hitSlop={8}
-                                style={{ borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, backgroundColor: isHC ? colors.dangerBg : "#F0FDF4" }}
-                              >
-                                <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? colors.danger : "#16A34A", letterSpacing: 0.5 }}>
-                                  {isHC ? "HC" : "CR"}
-                                </Text>
-                              </Pressable>
-                            );
-                          })()}
-                          {member && (
-                            <Pressable
-                              onPress={() => {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                setSession((prev) => {
-                                  const members = splitRef.current.members;
-                                  const next = (v.memberIdx + 1) % members.length;
-                                  return { ...prev, virtualItems: prev.virtualItems.map((vi) => vi.id === v.id ? { ...vi, memberIdx: next } : vi) };
-                                });
-                              }}
-                              hitSlop={8}
-                              style={{ borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, backgroundColor: `${member.color}20` }}
-                            >
-                              <Text style={{ fontSize: 10, fontWeight: "700", color: member.color }}>{member.name.slice(0, 3)}</Text>
-                            </Pressable>
-                          )}
-                          <Pressable onPress={() => handleRemoveVirtualItem(v.id)} hitSlop={12} style={{ padding: 4 }}>
-                            <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#A8A29E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                              <Line x1={18} y1={6} x2={6} y2={18} /><Line x1={6} y1={6} x2={18} y2={18} />
-                            </Svg>
-                          </Pressable>
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text, letterSpacing: -0.1, fontStyle: "italic" }} numberOfLines={1}>{v.customName}</Text>
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
+                              {splitSettings.carteRestoEnabled && (() => {
+                                const isHC = session.horsCarteIds.has(v.id);
+                                return (
+                                  <Pressable onPress={() => toggleHorsCarte(v.id)} hitSlop={8} style={{ borderRadius: 3, paddingHorizontal: 5, paddingVertical: 1, backgroundColor: isHC ? "rgba(249,168,212,0.28)" : "rgba(74,222,128,0.22)" }}>
+                                    <Text style={{ fontSize: 9, fontWeight: "800", color: isHC ? "#F9A8D4" : "#4ADE80", letterSpacing: 0.4 }}>{isHC ? "HC" : "CR"}</Text>
+                                  </Pressable>
+                                );
+                              })()}
+                              {member && (
+                                <Pressable
+                                  onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                    setSession((prev) => {
+                                      const members = splitRef.current.members;
+                                      const next = (v.memberIdx + 1) % members.length;
+                                      return { ...prev, virtualItems: prev.virtualItems.map((vi) => vi.id === v.id ? { ...vi, memberIdx: next } : vi) };
+                                    });
+                                  }}
+                                  hitSlop={8}
+                                  style={{ borderRadius: 3, paddingHorizontal: 5, paddingVertical: 1, backgroundColor: `${member.color}25` }}
+                                >
+                                  <Text style={{ fontSize: 9, fontWeight: "700", color: member.color }}>{member.name.slice(0, 3)}</Text>
+                                </Pressable>
+                              )}
+                            </View>
+                          </View>
+                          <Text style={{ fontSize: 14, fontWeight: "800", color: colors.text }}>{v.price.toFixed(2).replace(".", ",")} €</Text>
                         </View>
                       </ReanimatedSwipeable>
                       {i < session.virtualItems.length - 1 && <View style={{ height: 1, backgroundColor: colors.bgSurface, marginLeft: 60 }} />}
@@ -2327,6 +2662,7 @@ export function ModeCourses() {
                   );
                 })}
                 </View>
+                )}
               </View>
             )}
           </ScrollView>
@@ -2348,6 +2684,48 @@ export function ModeCourses() {
               <Line x1={4} y1={12} x2={20} y2={12} />
             </Svg>
           </Pressable>
+
+          {scanToast && (
+            <Animated.View style={[{
+              position: "absolute", bottom: insets.bottom + 80, left: 14, right: 14,
+              borderRadius: 14, backgroundColor: "#1A1A1A",
+              flexDirection: "row", alignItems: "center", gap: 12,
+              paddingHorizontal: 14, paddingVertical: 11,
+              shadowColor: "#1A1A1A", shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.25, shadowRadius: 32, elevation: 8,
+            }, toastAnimStyle]}>
+              <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: "#4ADE80", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#0D3F1E" strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round">
+                  <Path d="M5 12.5l4.5 4.5L19 7.5" />
+                </Svg>
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={{ fontSize: 13, fontWeight: "800", color: "#fff", letterSpacing: -0.1 }} numberOfLines={1}>{scanToast.itemName} ajouté</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 1 }}>
+                  {scanToast.price !== null && (
+                    <Text style={{ fontSize: 12, fontWeight: "800", color: "#fff" }}>+{scanToast.price.toFixed(2).replace(".", ",")} €</Text>
+                  )}
+                  {scanToast.price !== null && <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>·</Text>}
+                  {splitSettings.enabled && (
+                    <View style={{ borderRadius: 3, paddingHorizontal: 5, paddingVertical: 1, backgroundColor: scanToast.isHC ? "rgba(249,168,212,0.28)" : "rgba(74,222,128,0.22)" }}>
+                      <Text style={{ fontSize: 9, fontWeight: "800", color: scanToast.isHC ? "#F9A8D4" : "#4ADE80", letterSpacing: 0.4 }}>{scanToast.isHC ? "HC" : "CR"}</Text>
+                    </View>
+                  )}
+                  {scanToast.memberIdx !== null && splitSettings.enabled && splitSettings.members[scanToast.memberIdx] && (
+                    <Text style={{ fontSize: 11, fontWeight: "600", color: "rgba(255,255,255,0.6)" }}>
+                      · {splitSettings.members[scanToast.memberIdx].name}
+                    </Text>
+                  )}
+                </View>
+              </View>
+              <Pressable
+                onPress={handleUndoLastScan}
+                hitSlop={8}
+                style={{ borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: "rgba(255,255,255,0.14)" }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: "800", color: "#fff", letterSpacing: -0.1 }}>Annuler</Text>
+              </Pressable>
+            </Animated.View>
+          )}
         </>
 
       {(() => {
@@ -2403,6 +2781,8 @@ export function ModeCourses() {
           memberCarteTotals={memberCarteTotals}
           memberHorsCarteTotals={memberHorsCarteTotals}
           confirmedTotal={confirmedTotal}
+          sessionMinutes={sessionMinutes}
+          selectedStore={selectedStore}
           onClose={() => setCheckoutOpen(false)}
           onFinish={async () => {
             if (list?.id) {

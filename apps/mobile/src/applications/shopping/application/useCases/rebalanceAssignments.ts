@@ -30,12 +30,16 @@ export function rebalanceAssignments(
       }
       horsCarteTotals[best] += price;
     } else {
-      let bestRem = members[0].budgetCap - carteTotals[0];
+      let bestRem = members[0].crMode === "HC" ? -Infinity : members[0].budgetCap - carteTotals[0];
       for (let i = 1; i < members.length; i++) {
-        const rem = members[i].budgetCap - carteTotals[i];
+        const rem = members[i].crMode === "HC" ? -Infinity : members[i].budgetCap - carteTotals[i];
         if (rem > bestRem) { bestRem = rem; best = i; }
       }
-      carteTotals[best] += price;
+      if (members[best].crMode === "HC") {
+        horsCarteTotals[best] += price;
+      } else {
+        carteTotals[best] += price;
+      }
     }
     newAssignments.set(id, best);
   }

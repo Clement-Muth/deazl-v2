@@ -78,21 +78,24 @@ const RULES: { category: string; keywords: string[] }[] = [
   {
     category: "Hygiène & Beauté",
     keywords: [
-      "shampoing", "apres-shampoing", "savon", "gel douche", "dentifrice",
+      "shampoing", "shampooing", "apres-shampoing", "savon", "gel douche", "dentifrice",
       "brosse a dents", "deodorant", "rasoir", "mousse a raser", "creme hydratante",
       "lotion", "parfum", "coton", "maquillage", "fond de teint", "mascara",
       "rouge a levres", "coupe-ongles", "lime", "coton-tige", "serviette hygienique",
-      "tampon", "protege-slip",
+      "tampon", "protege-slip", "mouchoir", "lingette", "couche", "protection bebe",
+      "gel hydroalcoolique", "masque chirurgical", "masque ffp", "serum", "baume",
+      "huile essentielle", "creme solaire", "after sun", "coupe ongle",
     ],
   },
   {
     category: "Entretien",
     keywords: [
       "lessive", "adoucissant", "liquide vaisselle", "nettoyant",
-      "desinfectant", "eau de javel", "deboucheur", "anti-calcaire",
-      "eponge", "torchon", "essuie-tout", "sopalin",
+      "desinfectant", "eau de javel", "javel", "deboucheur", "anti-calcaire",
+      "eponge", "torchon", "essuie-tout", "sopalin", "serpillere", "balai",
       "papier toilette", "sac poubelle", "sac congelation", "film plastique",
       "papier aluminium", "papier cuisson", "allumettes", "briquet",
+      "lavette", "microfibre", "gant menage", "produit nettoyant", "spray",
     ],
   },
 ];
